@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from pyparsing import Char
 from my_functions import * # type: ignore
 
-from config_BA import *  
+from scripts.config_Optimization import *  
 from my_cables import * # type: ignore
 from shapely.geometry import Point
 import sys

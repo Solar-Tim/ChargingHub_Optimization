@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 # Import all the needed variables from config_BA
-from config_BA import (
+from scripts.config_Optimization import (
     aluminium_kabel, 
     mv_capacity_fee, 
     hv_capacity_fee, 
