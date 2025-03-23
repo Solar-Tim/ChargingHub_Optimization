@@ -1,4 +1,5 @@
 ⚡ Grid Connection Optimization for E-Truck Charging Hubs
+
 Cost-optimal planning of electric grid connections for high-power charging infrastructure used in heavy-duty electric truck (BE-LKW) hubs in Germany.
 
 This project models the complex trade-offs between cable sizing, transformer selection, battery storage integration, and grid connection types — to minimize infrastructure investment costs while meeting high-performance demands.
