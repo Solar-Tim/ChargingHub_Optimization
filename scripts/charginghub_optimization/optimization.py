@@ -14,10 +14,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from pyparsing import Char
-from my_functions import * # type: ignore
+from scripts.charginghub_optimization.functions import * # type: ignore
 
-from scripts.config_Optimization import *  
-from my_cables import * # type: ignore
+from scripts.charginghub_optimization.config import *  
+from scripts.charginghub_optimization.cables import * # type: ignore
 from shapely.geometry import Point
 import sys
 import os
@@ -28,7 +28,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Add the path to the distance calculation module
 sys.path.append(os.path.join(BASE_DIR, '01_Distance-Calc'))
 
-from distance_functions import calculate_all_distances # type: ignore
+from scripts.charginghub_optimization.distance.distance_functions import calculate_all_distances # type: ignore
 
 # Clear the console for better readability
 subprocess.run('cls', shell=True) # Clear the console

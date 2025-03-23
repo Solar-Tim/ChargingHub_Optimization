@@ -5,7 +5,7 @@ from shapely.geometry import Point
 import folium
 from folium.features import DivIcon
 from datetime import datetime
-from distance_lines import calc_power_lines
+from scripts.charginghub_optimization.distance.distance_lines import calc_power_lines
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculate the great circle distance between two points on Earth in meters."""
