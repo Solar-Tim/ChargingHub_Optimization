@@ -5,6 +5,7 @@ from shapely.geometry import Point, LineString
 import folium
 from folium.features import DivIcon
 from datetime import datetime
+import os
 
 # Earth's radius in kilometers
 R = 6371.0
@@ -195,10 +196,9 @@ def calc_power_lines(ref_point: Point, map: bool = False) -> Optional[Tuple[floa
     Returns:
         Optional tuple containing (distance, line_data, nearest_point) or None if no lines found
     """
+    # Update paths to match project structure
     voltage_files = [
-        "01_Distance-Calc/osm_power_line_380.geojson", # Irrelevant for this example
-        "01_Distance-Calc/osm_power_line_220.geojson", # Irrelevant for this example
-        "01_Distance-Calc/osm_power_line_110.geojson"
+        "data/osm/osm_sub_transmission.geojson",  # Use transmission data for power lines
     ]
     
     overall_min_distance = float('inf')
@@ -221,7 +221,8 @@ def calc_power_lines(ref_point: Point, map: bool = False) -> Optional[Tuple[floa
                     overall_min_distance = distance
                     overall_nearest_line = line
                     overall_nearest_point = point
-        except Exception:
+        except Exception as e:
+            print(f"Error loading {filename}: {str(e)}")
             continue
 
     if overall_nearest_line is None:
@@ -237,7 +238,9 @@ def calc_power_lines(ref_point: Point, map: bool = False) -> Optional[Tuple[floa
                 combined_power_line_data,
                 max_display_distance=10000
             )
-            map_name = f"10_Maps/{datetime.now().strftime('%m%d_%H%M')}_power_line_map.html"
+            # Create results directory if it doesn't exist
+            os.makedirs("results/maps", exist_ok=True)
+            map_name = f"results/maps/{datetime.now().strftime('%m%d_%H%M')}_power_line_map.html"
             result_map.save(map_name)
             print(f"Map saved as: {map_name}")
         except Exception as e:

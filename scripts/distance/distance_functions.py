@@ -179,9 +179,9 @@ def calc_substations(ref_point: Point, map: bool = False):
     :return: (distribution_result, transmission_result) 
              The closest distribution and transmission substations.
     """
-    # Load GeoJSON data
-    distribution_data = load_geojson("01_Distance-Calc/osm_sub_distribution_V2.geojson")
-    transmission_data = load_geojson("01_Distance-Calc/osm_sub_transmission.geojson")
+    # Update file paths to match project structure
+    distribution_data = load_geojson("data/osm/osm_sub_distribution_V2.geojson")
+    transmission_data = load_geojson("data/osm/osm_sub_transmission.geojson")
 
     # Find closest substations
     distribution_result, transmission_result = find_closest_substations(
