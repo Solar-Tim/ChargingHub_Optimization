@@ -1,3 +1,2 @@
-# Ignore everything in the data folder...
-data/*
-
+data/* 
+!data/.gitkeep
