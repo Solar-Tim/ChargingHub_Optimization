@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-# Import all the needed variables from config_Optimization
-from scripts.charginghub_optimization.config import (
+# Import all the needed variables from config
+from config import (
     aluminium_kabel, 
     mv_capacity_fee, 
     hv_capacity_fee, 
