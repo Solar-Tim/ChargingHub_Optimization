@@ -4,6 +4,7 @@ Cost-optimal planning of electric grid connections for high-power charging infra
 This project models the complex trade-offs between cable sizing, transformer selection, battery storage integration, and grid connection types — to minimize infrastructure investment costs while meeting high-performance demands.
 
 🧠 What This Repo Does
+
 This repo builds a multi-step optimization pipeline that:
 
 Estimates site-specific charging demand
