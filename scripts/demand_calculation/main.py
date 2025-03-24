@@ -8,7 +8,6 @@ import sys
 import logging
 from functools import wraps
 from pathlib import Path
-from turtle import Turtle
 
 import pandas as pd
 import geopandas as gpd
@@ -17,17 +16,11 @@ import matplotlib.pyplot as plt
 from breaks_assignement import assign_breaks_to_locations
 from toll_matching import toll_section_matching_and_daily_demand, find_nearest_traffic_point, scale_charging_sessions
 from new_breaks import calculate_new_breaks
+from config_demand import FILES, OUTPUT_DIR, FINAL_OUTPUT_DIR, DEFAULT_LOCATION, CHARGING_DEMAND, CSV, neue_pausen
 
 # ------------------- Setup Logging -------------------
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-# ------------------- Define Directories -------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))  # Up two levels to project root
-INPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "raw_data")
-OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "interim_results")
-FINAL_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "final_traffic")
 
 # Create output directory structure
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -49,7 +42,7 @@ def safe_file_operation(func):
     return wrapper
 
 @safe_file_operation
-def load_csv_file(file_path, skiprows=0, sep=';', decimal=','):
+def load_csv_file(file_path, skiprows=0, sep=CSV['DEFAULT_SEPARATOR'], decimal=CSV['DEFAULT_DECIMAL']):
     """
     Load a CSV file with support for different encodings.
     """
@@ -76,7 +69,7 @@ def load_data_file(file_path, skiprows=0):
     else:
         raise ValueError(f"Unsupported file type: {file_path.suffix}")
 
-def save_dataframe(df, output_path, sep=';', decimal=','):
+def save_dataframe(df, output_path, sep=CSV['DEFAULT_SEPARATOR'], decimal=CSV['DEFAULT_DECIMAL']):
     """Save DataFrame to CSV file."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,34 +79,29 @@ def save_dataframe(df, output_path, sep=';', decimal=','):
 def main():
     # Load shared data files once
     logger.info("Loading shared data files...")
-    maut_file = os.path.join(INPUT_DIR, 'Mauttabelle.xlsx')
-    befahrungen_file = os.path.join(INPUT_DIR, 'Befahrungen_25_1Q.csv')
-    df_mauttabelle = load_data_file(maut_file, skiprows=1)
-    df_befahrung = load_data_file(befahrungen_file)
+    df_mauttabelle = load_data_file(FILES['MAUT_TABLE'], skiprows=1)
+    df_befahrung = load_data_file(FILES['BEFAHRUNGEN'])
     
     # Create a single reference location
     df_location = pd.DataFrame({
-        'Laengengrad': [6.214618953523452],
-        'Breitengrad': [50.816300910540406]
+        'Laengengrad': [DEFAULT_LOCATION['LONGITUDE']],
+        'Breitengrad': [DEFAULT_LOCATION['LATITUDE']]
     })
     
-    # Load Germany NUTS data
-    nuts_file = os.path.join(INPUT_DIR, "DE_NUTS5000.gpkg")
-    
-    # Decide whether to calculate new breaks or load existing ones
-    neue_pausen = False  # Set to True to calculate new breaks, False to load existing ones
     if neue_pausen:
         logger.info("Calculating new breaks...")
         # Pass the correct input directory path
-        df_breaks = calculate_new_breaks(base_path=INPUT_DIR)
-        save_dataframe(df_breaks, os.path.join(OUTPUT_DIR, 'breaks.csv'))
+        input_dir = os.path.dirname(FILES['TRAFFIC_FLOW'])
+        df_breaks = calculate_new_breaks(base_path=input_dir)
+        save_dataframe(df_breaks, FILES['BREAKS_OUTPUT'])
     else:
-        breaks_file = os.path.join(OUTPUT_DIR, 'breaks.csv')
-        df_breaks = pd.read_csv(breaks_file, sep=';', decimal=',', index_col=0)
+        df_breaks = load_csv_file(FILES['BREAKS_OUTPUT'])
     
     # Process breaks and assign to locations
     logger.info("Assigning breaks to locations...")
-    results_df, grouped_short, grouped_long = assign_breaks_to_locations(df_location, df_breaks, nuts_file)
+    results_df, grouped_short, grouped_long = assign_breaks_to_locations(
+        df_location, df_breaks, FILES['NUTS_DATA']
+    )
     
     # Match toll sections and calculate daily demand
     logger.info("Matching toll sections and calculating daily demand...")
@@ -124,8 +112,7 @@ def main():
     df_mauttabelle.loc[:, 'midpoint_laenge'] = (df_mauttabelle['Länge Von'] + df_mauttabelle['Länge Nach']) / 2
     df_mauttabelle.loc[:, 'midpoint_breite'] = (df_mauttabelle['Breite Von'] + df_mauttabelle['Breite Nach']) / 2
     results_df = toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahrung)
-    final_output = os.path.join(FINAL_OUTPUT_DIR, "laden_mauttabelle.csv")
-    save_dataframe(results_df, final_output)
+    save_dataframe(results_df, FILES['FINAL_OUTPUT'])
     
     # Calculate robust charging demand scaling
     try:
@@ -136,17 +123,19 @@ def main():
         reference_id = find_nearest_traffic_point(lat, lon, df_mauttabelle, df_befahrung)
         logger.info(f"Reference toll section ID: {reference_id}")
         
-        robust_sessions = scale_charging_sessions(reference_id, 
-                                                annual_hpc_sessions=10000, 
-                                                annual_ncs_sessions=3000,
-                                                df_befahrung=df_befahrung)
+        robust_sessions = scale_charging_sessions(
+            reference_id, 
+            annual_hpc_sessions=CHARGING_DEMAND['DEFAULT_ANNUAL_HPC_SESSIONS'], 
+            annual_ncs_sessions=CHARGING_DEMAND['DEFAULT_ANNUAL_NCS_SESSIONS'],
+            df_befahrung=df_befahrung
+        )
         
-        save_dataframe(robust_sessions, os.path.join(OUTPUT_DIR, "charging_demand.csv"))
+        save_dataframe(robust_sessions, FILES['CHARGING_DEMAND'])
         logger.info("Robust charging sessions scaling completed")
     except Exception as e:
         logger.error(f"Error in robust scaling: {e}")
     
-    logger.info(f"Processing complete. Final results saved to {final_output}")
+    logger.info(f"Processing complete. Final results saved to {FILES['FINAL_OUTPUT']}")
 
 if __name__ == "__main__":
     main()

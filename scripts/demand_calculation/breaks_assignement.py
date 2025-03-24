@@ -8,27 +8,26 @@ import geopandas as gpd
 import numpy as np
 import logging
 import os
+from config_demand import SPATIAL, SCENARIOS
 
 logger = logging.getLogger(__name__)
 
-def create_point_gdf(df, lon_col, lat_col, crs='EPSG:4326'):
+def create_point_gdf(df, lon_col, lat_col, crs=SPATIAL['DEFAULT_CRS']):
     """Create a GeoDataFrame from latitude/longitude columns and transform to a target CRS."""
     gdf = gpd.GeoDataFrame(
         df,
         geometry=gpd.points_from_xy(df[lon_col], df[lat_col]),
         crs=crs
     ).drop(columns=[lon_col, lat_col])
-    return gdf.to_crs(epsg=32632)
+    return gdf.to_crs(epsg=int(SPATIAL['TARGET_CRS'].split(':')[1]))
 
 def calculate_scenarios(df_location, grouped_short, grouped_long):
     """
     Calculate charging scenarios (e.g. for 2030, 2035, 2040) using break counts.
     """
     def calculate_year(df, year):
-        r_bev_values = {'2030': 0.15, '2035': 0.5, '2040': 0.8}
-        r_traffic_values = {'2030': 1.0, '2035': 1.06, '2040': 1.12}
-        r_bev = r_bev_values[year]
-        r_traffic = r_traffic_values[year]
+        r_bev = SCENARIOS['R_BEV'][year]
+        r_traffic = SCENARIOS['R_TRAFFIC'][year]
         df[f'HPC_{year}'] = df['short_breaks_2030'] * r_bev * r_traffic
         df[f'NCS_{year}'] = df['long_breaks_2030'] * r_bev * r_traffic
         return df
@@ -36,11 +35,13 @@ def calculate_scenarios(df_location, grouped_short, grouped_long):
     results_df = df_location.copy()
     results_df['short_breaks_2030'] = grouped_short.get(0, 0)
     results_df['long_breaks_2030'] = grouped_long.get(0, 0)
-    for year in ['2030', '2035', '2040']:
+    
+    for year in SCENARIOS['TARGET_YEARS']:
         results_df = calculate_year(results_df, year)
+    
     return results_df
 
-def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_radius=25000):
+def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_radius=SPATIAL['BUFFER_RADIUS']):
     """
     Assign breaks to locations based on spatial proximity.
     
@@ -53,7 +54,7 @@ def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_ra
     nuts_data_file : str
         Path to the NUTS GeoPackage file
     buffer_radius : int, optional
-        Radius in meters for the buffer around locations, defaults to 25000
+        Radius in meters for the buffer around locations, defaults to SPATIAL['BUFFER_RADIUS']
         
     Returns:
     --------
@@ -76,7 +77,7 @@ def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_ra
     # Prepare and transform Germany NUTS data
     gdf_deutschland_nuts0 = gdf_deutschland_nuts1.dissolve(by='NUTS_LEVEL')[['geometry']]
     gdf_deutschland_nuts0.reset_index(drop=True, inplace=True)
-    gdf_deutschland_nuts0 = gdf_deutschland_nuts0.to_crs(epsg=32632)
+    gdf_deutschland_nuts0 = gdf_deutschland_nuts0.to_crs(epsg=int(SPATIAL['TARGET_CRS'].split(':')[1]))
     
     # Create a buffer around the location
     gdf_location_buffer = gdf_location.copy()

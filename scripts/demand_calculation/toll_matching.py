@@ -7,21 +7,9 @@ import pandas as pd
 import numpy as np
 import logging
 from functools import wraps
+from config_demand import DAY_MAPPING, GERMAN_DAYS, TIME
 
 logger = logging.getLogger(__name__)
-
-# Constants
-WEEKS_PER_YEAR = 52
-DAY_MAPPING = {
-    'Montag': 'Monday',
-    'Dienstag': 'Tuesday',
-    'Mittwoch': 'Wednesday',
-    'Donnerstag': 'Thursday', 
-    'Freitag': 'Friday',
-    'Samstag': 'Saturday',
-    'Sonntag': 'Sunday'
-}
-GERMAN_DAYS = list(DAY_MAPPING.keys())
 
 def haversine_distance(lat1, lon1, lat2, lon2):
     """
@@ -93,7 +81,7 @@ def toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahr
     df_mauttabelle.loc[:, 'midpoint_laenge'] = (df_mauttabelle['Länge Von'] + df_mauttabelle['Länge Nach']) / 2
     df_mauttabelle.loc[:, 'midpoint_breite'] = (df_mauttabelle['Breite Von'] + df_mauttabelle['Breite Nach']) / 2
     
-    weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
+    weekdays = GERMAN_DAYS
     traffic_mapping = df_befahrung.set_index('Strecken-ID')
     df_mauttabelle = df_mauttabelle.join(traffic_mapping[weekdays], on='Abschnitts-ID', how='left')
 
@@ -121,8 +109,8 @@ def toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahr
     weekly_totals = results_df[weekdays].sum(axis=1)
     for day in weekdays:
         results_df.loc[:, day] = results_df[day].div(weekly_totals, fill_value=0)
-        results_df.loc[:, f'{day}_HPC'] = (results_df[day] * results_df['HPC_2035'] / WEEKS_PER_YEAR).round()
-        results_df.loc[:, f'{day}_NCS'] = (results_df[day] * results_df['NCS_2035'] / WEEKS_PER_YEAR).round()
+        results_df.loc[:, f'{day}_HPC'] = (results_df[day] * results_df['HPC_2035'] / TIME['WEEKS_PER_YEAR']).round()
+        results_df.loc[:, f'{day}_NCS'] = (results_df[day] * results_df['NCS_2035'] / TIME['WEEKS_PER_YEAR']).round()
     
     return results_df
 
@@ -152,8 +140,8 @@ def scale_charging_sessions(reference_point_id, annual_hpc_sessions, annual_ncs_
     result = pd.DataFrame(index=scaling_factors.index)
     for day in result.index:
         scale = scaling_factors.loc[day, 'ScalingFactor']
-        result.loc[day, 'HPC_Sessions'] = round(scale * annual_hpc_sessions / WEEKS_PER_YEAR)
-        result.loc[day, 'NCS_Sessions'] = round(scale * annual_ncs_sessions / WEEKS_PER_YEAR)
+        result.loc[day, 'HPC_Sessions'] = round(scale * annual_hpc_sessions / TIME['WEEKS_PER_YEAR'])
+        result.loc[day, 'NCS_Sessions'] = round(scale * annual_ncs_sessions / TIME['WEEKS_PER_YEAR'])
     result.loc['Total', 'HPC_Sessions'] = result['HPC_Sessions'].sum()
     result.loc['Total', 'NCS_Sessions'] = result['NCS_Sessions'].sum()
     return result

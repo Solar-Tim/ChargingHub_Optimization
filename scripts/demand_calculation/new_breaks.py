@@ -9,21 +9,9 @@ import numpy as np
 import logging
 from typing import Dict, List, Tuple, Any
 from functools import lru_cache
+from config_demand import BREAKS, FILES, CSV
 
 logger = logging.getLogger(__name__)
-
-# Configuration constants
-CONFIG = {
-    'INPUT_FILE_TRAFFIC_FLOW': '01_Trucktrafficflow.csv',
-    'INPUT_FILE_EDGES': '04_network-edges.csv',
-    'INPUT_FILE_NODES': '03_network-nodes.csv',
-    'OUTPUT_BREAKS': 'breaks.csv',
-    'DISTANCE_THRESHOLD': 360,  # km -> Distance after which a break is required
-    'MAX_DISTANCE_SINGLEDRIVER': 4320,  # km -> Limit between single and double driver routes
-    'RANDOM_RANGE': (-50, 50),  # Random variation for break distances
-    'TWO_DRIVER_SHORT_BREAKS_BEFORE_LONG': 2  # Number of short breaks before a long break for two drivers
-}
-
 
 @lru_cache(maxsize=1024)
 def parse_edge_string(edge_str: str) -> list:
@@ -61,9 +49,9 @@ def load_data(base_path: str) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
     input_dir = base_path
     
     logger.info(f"Loading input data from {input_dir}...")
-    traffic_flow_path = os.path.join(input_dir, CONFIG['INPUT_FILE_TRAFFIC_FLOW'])
-    edges_path = os.path.join(input_dir, CONFIG['INPUT_FILE_EDGES'])
-    nodes_path = os.path.join(input_dir, CONFIG['INPUT_FILE_NODES'])
+    traffic_flow_path = os.path.join(input_dir, os.path.basename(FILES['TRAFFIC_FLOW']))
+    edges_path = os.path.join(input_dir, os.path.basename(FILES['EDGES']))
+    nodes_path = os.path.join(input_dir, os.path.basename(FILES['NODES']))
     
     df_traffic_flow = pd.read_csv(traffic_flow_path, sep=',', decimal='.', index_col=0)
     df_edges = pd.read_csv(edges_path, sep=',', decimal='.', index_col=0)
@@ -84,7 +72,7 @@ def filter_traffic_flows(df_traffic_flow: pd.DataFrame) -> Tuple[pd.DataFrame, p
     Returns:
         Tuple of (single_driver_df, two_driver_df)
     """
-    max_singledriver_dist = CONFIG['MAX_DISTANCE_SINGLEDRIVER']
+    max_singledriver_dist = BREAKS['MAX_DISTANCE_SINGLEDRIVER']
     
     # Calculate total distance once
     df_traffic_flow['total_distance'] = (
@@ -155,8 +143,8 @@ def process_single_driver_breaks(
     if random_seed is not None:
         np.random.seed(random_seed)
     
-    trip_distance_threshold = CONFIG['DISTANCE_THRESHOLD']
-    random_range = CONFIG['RANDOM_RANGE']
+    trip_distance_threshold = BREAKS['DISTANCE_THRESHOLD']
+    random_range = BREAKS['RANDOM_RANGE']
     
     # Pre-allocate results
     breaks_data = {
@@ -238,9 +226,9 @@ def process_two_driver_breaks(
     if random_seed is not None:
         np.random.seed(random_seed)
     
-    trip_distance_threshold = CONFIG['DISTANCE_THRESHOLD']
-    random_range = CONFIG['RANDOM_RANGE']
-    short_breaks_before_long = CONFIG['TWO_DRIVER_SHORT_BREAKS_BEFORE_LONG']
+    trip_distance_threshold = BREAKS['DISTANCE_THRESHOLD']
+    random_range = BREAKS['RANDOM_RANGE']
+    short_breaks_before_long = BREAKS['TWO_DRIVER_SHORT_BREAKS_BEFORE_LONG']
     
     # Pre-allocate results
     breaks_data = {
@@ -389,11 +377,11 @@ def calculate_new_breaks(base_path=None, random_seed=None, export=True):
     
     # 10. Export results if required
     if export:
-        output_dir = os.path.join(base_path, 'output')
-        os.makedirs(output_dir, exist_ok=True)
+        output_path = FILES['BREAKS_OUTPUT']
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
-        output_path = os.path.join(output_dir, CONFIG['OUTPUT_BREAKS'])
-        result_df.to_csv(output_path, sep=';', decimal=',', index=False)
+        result_df.to_csv(output_path, sep=CSV['DEFAULT_SEPARATOR'], 
+                         decimal=CSV['DEFAULT_DECIMAL'], index=False)
         logger.info(f"Results exported to: {output_path}")
     
     # Log summary statistics
