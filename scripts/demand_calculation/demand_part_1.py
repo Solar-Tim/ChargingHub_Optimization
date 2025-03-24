@@ -1,7 +1,4 @@
-#!/usr/bin/env python
 """
-Master_V2.py
--------------
 This version integrates the original break processing and toll matching with additional,
 robust functions for file operations, scaling charging demand, and finding the nearest
 traffic measurement point.
@@ -24,13 +21,14 @@ logger = logging.getLogger(__name__)
 
 # ------------------- Define Directories -------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_DIR = os.path.join(BASE_DIR, "Input")
-# Output directories are structured into subfolders similar to the original master code
-OUTPUT_DIR = os.path.join(BASE_DIR, "Output")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))  # Up two levels to project root
+INPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "raw_data")
+OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "interim_results")
+FINAL_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "final_traffic")
+
+# Create output directory structure
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-os.makedirs(os.path.join(OUTPUT_DIR, "1-Output"), exist_ok=True)
-os.makedirs(os.path.join(OUTPUT_DIR, "2-Output"), exist_ok=True)
-os.makedirs(os.path.join(OUTPUT_DIR, "3-Output"), exist_ok=True)
+
 
 # ------------------- Robust File Operation Functions -------------------
 
@@ -67,8 +65,13 @@ def load_data_file(file_path, skiprows=0):
     file_path = Path(file_path)
     if not file_path.exists():
         raise FileNotFoundError(f"{file_path} does not exist")
-    if file_path.suffix.lower() in ['.csv']:
+    
+    suffix = file_path.suffix.lower()
+    if suffix == '.csv':
         return load_csv_file(file_path, skiprows=skiprows)
+    elif suffix in ['.xlsx', '.xls']:
+        logger.info(f"Loading Excel data from {file_path}")
+        return pd.read_excel(file_path, skiprows=skiprows)
     else:
         raise ValueError(f"Unsupported file type: {file_path.suffix}")
 
@@ -309,7 +312,7 @@ def main():
         logger.info("New break calculation not implemented in this version.")
         sys.exit(0)
     else:
-        breaks_file = os.path.join(OUTPUT_DIR, '1-Output', 'breaks.csv')
+        breaks_file = os.path.join(OUTPUT_DIR, 'breaks.csv')
         df_breaks = pd.read_csv(breaks_file, sep=';', decimal=',', index_col=0)
     
     # Split breaks into short and long types
@@ -361,7 +364,7 @@ def main():
     
     logger.info("Matching toll sections and calculating daily demand...")
     results_df = toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahrung)
-    final_output = os.path.join(OUTPUT_DIR, "3-Output", "ausschreibung_deutschlandnetz_laden_mauttabelle.csv")
+    final_output = os.path.join(FINAL_OUTPUT_DIR, "laden_mauttabelle.csv")
     results_df.to_csv(final_output, sep=';', decimal=',', index=False)
     
     # --- New Robust Charging Demand Scaling Section ---
