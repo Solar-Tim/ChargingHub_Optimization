@@ -39,6 +39,9 @@ def find_nearest_traffic_point(lat, lon, df_mauttabelle, df_befahrung):
     """
     Find the nearest traffic measurement point for a given location.
     """
+    # Make a copy to avoid SettingWithCopyWarning
+    df_mauttabelle = df_mauttabelle.copy(deep=True)
+    
     # Filter to only include Autobahn sections (not B-roads)
     if 'Bundesfernstraße' in df_mauttabelle.columns:
         df_mauttabelle = df_mauttabelle[~df_mauttabelle['Bundesfernstraße'].str.contains('B')]
@@ -52,18 +55,18 @@ def find_nearest_traffic_point(lat, lon, df_mauttabelle, df_befahrung):
     # Convert to numeric if not already
     for col in coord_cols:
         if df_mauttabelle[col].dtype == 'object':
-            df_mauttabelle[col] = df_mauttabelle[col].str.replace(',', '.', regex=False)
-        df_mauttabelle[col] = pd.to_numeric(df_mauttabelle[col], errors='coerce')
+            df_mauttabelle.loc[:, col] = df_mauttabelle[col].str.replace(',', '.', regex=False)
+        df_mauttabelle.loc[:, col] = pd.to_numeric(df_mauttabelle[col], errors='coerce')
     
     df_mauttabelle = df_mauttabelle.dropna(subset=coord_cols)
     
     if df_mauttabelle.empty:
         raise ValueError("No valid coordinate data after filtering")
     
-    df_mauttabelle['mid_lat'] = (df_mauttabelle[lat_col] + df_mauttabelle[lat_end_col]) / 2
-    df_mauttabelle['mid_lon'] = (df_mauttabelle[lon_col] + df_mauttabelle[lon_end_col]) / 2
+    df_mauttabelle.loc[:, 'mid_lat'] = (df_mauttabelle[lat_col] + df_mauttabelle[lat_end_col]) / 2
+    df_mauttabelle.loc[:, 'mid_lon'] = (df_mauttabelle[lon_col] + df_mauttabelle[lon_end_col]) / 2
     
-    df_mauttabelle['distance'] = df_mauttabelle.apply(
+    df_mauttabelle.loc[:, 'distance'] = df_mauttabelle.apply(
         lambda row: haversine_distance(lat, lon, row['mid_lat'], row['mid_lon']),
         axis=1
     )
@@ -79,13 +82,16 @@ def toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahr
     """
     Match toll sections to locations and calculate normalized daily demand.
     """
+    # Make a deep copy to avoid SettingWithCopyWarning
+    df_mauttabelle = df_mauttabelle.copy(deep=True)
+    
     # Data cleaning
     df_mauttabelle = df_mauttabelle[~df_mauttabelle['Bundesfernstraße'].str.contains('B')]
-    df_mauttabelle['Bundesfernstraße'] = df_mauttabelle['Bundesfernstraße'].str.strip()
+    df_mauttabelle.loc[:, 'Bundesfernstraße'] = df_mauttabelle['Bundesfernstraße'].str.strip()
     
     # Pre-calculate midpoints for toll sections
-    df_mauttabelle['midpoint_laenge'] = (df_mauttabelle['Länge Von'] + df_mauttabelle['Länge Nach']) / 2
-    df_mauttabelle['midpoint_breite'] = (df_mauttabelle['Breite Von'] + df_mauttabelle['Breite Nach']) / 2
+    df_mauttabelle.loc[:, 'midpoint_laenge'] = (df_mauttabelle['Länge Von'] + df_mauttabelle['Länge Nach']) / 2
+    df_mauttabelle.loc[:, 'midpoint_breite'] = (df_mauttabelle['Breite Von'] + df_mauttabelle['Breite Nach']) / 2
     
     weekdays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
     traffic_mapping = df_befahrung.set_index('Strecken-ID')
@@ -109,11 +115,14 @@ def toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahr
     closest_rows = results_df.apply(find_closest_row, axis=1)
     results_df = pd.concat([results_df, closest_rows], axis=1)
 
+    # Create a copy of results_df to avoid warnings
+    results_df = results_df.copy(deep=True)
+    
     weekly_totals = results_df[weekdays].sum(axis=1)
     for day in weekdays:
-        results_df[day] = results_df[day].div(weekly_totals, fill_value=0)
-        results_df[f'{day}_HPC'] = (results_df[day] * results_df['HPC_2035'] / WEEKS_PER_YEAR).round()
-        results_df[f'{day}_NCS'] = (results_df[day] * results_df['NCS_2035'] / WEEKS_PER_YEAR).round()
+        results_df.loc[:, day] = results_df[day].div(weekly_totals, fill_value=0)
+        results_df.loc[:, f'{day}_HPC'] = (results_df[day] * results_df['HPC_2035'] / WEEKS_PER_YEAR).round()
+        results_df.loc[:, f'{day}_NCS'] = (results_df[day] * results_df['NCS_2035'] / WEEKS_PER_YEAR).round()
     
     return results_df
 

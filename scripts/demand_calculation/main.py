@@ -8,6 +8,7 @@ import sys
 import logging
 from functools import wraps
 from pathlib import Path
+from turtle import Turtle
 
 import pandas as pd
 import geopandas as gpd
@@ -100,10 +101,11 @@ def main():
     nuts_file = os.path.join(INPUT_DIR, "DE_NUTS5000.gpkg")
     
     # Decide whether to calculate new breaks or load existing ones
-    neue_pausen = False
+    neue_pausen = False  # Set to True to calculate new breaks, False to load existing ones
     if neue_pausen:
         logger.info("Calculating new breaks...")
-        df_breaks = calculate_new_breaks()
+        # Pass the correct input directory path
+        df_breaks = calculate_new_breaks(base_path=INPUT_DIR)
         save_dataframe(df_breaks, os.path.join(OUTPUT_DIR, 'breaks.csv'))
     else:
         breaks_file = os.path.join(OUTPUT_DIR, 'breaks.csv')
@@ -115,6 +117,12 @@ def main():
     
     # Match toll sections and calculate daily demand
     logger.info("Matching toll sections and calculating daily demand...")
+    # Create a deep copy of the dataframe to avoid SettingWithCopyWarning
+    df_mauttabelle = df_mauttabelle.copy(deep=True)
+    # Use .loc accessor for setting values
+    df_mauttabelle.loc[:, 'Bundesfernstraße'] = df_mauttabelle['Bundesfernstraße'].str.strip()
+    df_mauttabelle.loc[:, 'midpoint_laenge'] = (df_mauttabelle['Länge Von'] + df_mauttabelle['Länge Nach']) / 2
+    df_mauttabelle.loc[:, 'midpoint_breite'] = (df_mauttabelle['Breite Von'] + df_mauttabelle['Breite Nach']) / 2
     results_df = toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahrung)
     final_output = os.path.join(FINAL_OUTPUT_DIR, "laden_mauttabelle.csv")
     save_dataframe(results_df, final_output)
