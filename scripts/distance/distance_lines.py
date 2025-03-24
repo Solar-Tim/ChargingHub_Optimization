@@ -198,7 +198,9 @@ def calc_power_lines(ref_point: Point, map: bool = False) -> Optional[Tuple[floa
     """
     # Update paths to match project structure
     voltage_files = [
-        "data/osm/osm_sub_transmission.geojson",  # Use transmission data for power lines
+        #"data/osm/osm_power_line_380.geojson",  # 380kV transmission lines
+        "data/osm/osm_power_line_220.geojson",  # 220kV transmission lines
+        "data/osm/osm_power_line_110.geojson",  # 110kV transmission lines
     ]
     
     overall_min_distance = float('inf')

@@ -1,3 +1,4 @@
+import os
 import json
 from typing import Any, Dict, List, Optional, Tuple
 from math import radians, sin, cos, atan2, sqrt
@@ -6,6 +7,18 @@ import folium
 from folium.features import DivIcon
 from datetime import datetime
 from .distance_lines import calc_power_lines
+
+# Add function to get the map directory
+def get_map_directory():
+    """Get the path to the map directory, ensuring it exists."""
+    # Navigate from current file to project root, then to results/maps
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    map_dir = os.path.join(project_root, "results", "maps")
+    
+    # Create directory if it doesn't exist
+    os.makedirs(map_dir, exist_ok=True)
+    
+    return map_dir
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculate the great circle distance between two points on Earth in meters."""
@@ -191,7 +204,8 @@ def calc_substations(ref_point: Point, map: bool = False):
     # Create and save map if requested
     if map:
         result_map = create_map(ref_point, distribution_result, transmission_result)
-        map_name = f"10_Maps/{datetime.now().strftime('%m%d_%H%M')}_substation_map.html"
+        timestamp = datetime.now().strftime('%m%d_%H%M')
+        map_name = os.path.join(get_map_directory(), f"{timestamp}_substation_map.html")
         result_map.save(map_name)
         print(f"Map saved as: {map_name}")
 
@@ -267,7 +281,8 @@ def calculate_all_distances(ref_point: Point, create_map: bool) -> Dict[str, Any
             powerline_distance or 0, 
             nearest_point # type: ignore
         )
-        map_name = f"10_Maps/{datetime.now().strftime('%m%d_%H%M')}_combined_distance_map.html"
+        timestamp = datetime.now().strftime('%m%d_%H%M')
+        map_name = os.path.join(get_map_directory(), f"{timestamp}_combined_distance_map.html")
         map_obj.save(map_name)
         print(f"Map saved as: {map_name}")
     

@@ -5,9 +5,11 @@ import numpy as np
 
 debug_mode = False                  # Set to True to enable debug mode for detailed output
 
-use_distance_calculation = False    # Set to False to use manual distances instead
+use_distance_calculation = True    # Set to False to use manual distances instead
 
 create_plot = True                  # Set to False to disable plot generation of optimization results
+
+create_distance_maps = False        # Set to True to generate maps of distance calculations
 
 include_battery = True              # Toggle for including battery in optimization
 

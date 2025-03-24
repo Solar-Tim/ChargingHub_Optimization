@@ -37,7 +37,7 @@ ref_point = Point(6.214699333123033, 50.81648528837548)  # Example coordinates
 
 # Toggle between calculated distances and manual distances
 if use_distance_calculation:
-    distances = calculate_all_distances(ref_point, create_map=False)
+    distances = calculate_all_distances(ref_point, create_distance_maps)
     print("Using calculated distances")
 else:
     distances = manual_distances
