@@ -9,7 +9,7 @@ import numpy as np
 import logging
 from typing import Dict, List, Tuple, Any
 from functools import lru_cache
-from config_demand import BREAKS, FILES, CSV
+from config_demand import BREAKS, FILES, CSV, get_traffic_flow_column, BASE_YEAR
 
 logger = logging.getLogger(__name__)
 
@@ -332,11 +332,14 @@ def calculate_new_breaks(base_path=None, random_seed=None, export=True):
     lookups = create_lookup_dictionaries(df_edges, df_nodes)
     
     # 5. Get lists of origin distances and traffic flows
+    # Use dynamic column name based on configuration
+    traffic_flow_column = get_traffic_flow_column()
+    
     single_driver_origin_distances = df_single_driver['Distance_from_origin_region_to_E_road'].tolist()
-    single_driver_traffic_flows = df_single_driver['Traffic_flow_trucks_2030'].tolist()
+    single_driver_traffic_flows = df_single_driver[traffic_flow_column].tolist()
     
     two_driver_origin_distances = df_two_driver['Distance_from_origin_region_to_E_road'].tolist()
-    two_driver_traffic_flows = df_two_driver['Traffic_flow_trucks_2030'].tolist()
+    two_driver_traffic_flows = df_two_driver[traffic_flow_column].tolist()
     
     # 6. Process breaks
     logger.info("Processing single-driver breaks...")
