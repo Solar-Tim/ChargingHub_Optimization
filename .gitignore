@@ -4,4 +4,6 @@ data/*
 results/*
 !results/.gitkeep
 
+.vscode/*
+
 optimization_results/*
