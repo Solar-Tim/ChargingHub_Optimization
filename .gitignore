@@ -5,3 +5,6 @@ results/*
 !results/.gitkeep
 
 .vscode/*
+
+
+optimization_results/*
