@@ -11,6 +11,8 @@ from pathlib import Path
 
 # Decide whether to calculate new breaks or load existing ones
 neue_pausen = False  # Set to True to calculate new breaks, False to load existing ones
+# Decide whether to preprocess toll midpoints or load existing ones
+neue_toll_midpoints = True  # Set to True to recalculate toll midpoints, False to load existing ones
 
 # Base directories
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,7 @@ FILES = {
     
     # Output files
     'BREAKS_OUTPUT': os.path.join(OUTPUT_DIR, 'breaks.csv'),
+    'TOLL_MIDPOINTS_OUTPUT': os.path.join(OUTPUT_DIR, 'toll_midpoints.csv'),
     'CHARGING_DEMAND': os.path.join(OUTPUT_DIR, 'charging_demand.csv'),
     'FINAL_OUTPUT': os.path.join(FINAL_OUTPUT_DIR, 'laden_mauttabelle.csv')
 }

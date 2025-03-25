@@ -16,7 +16,9 @@ import matplotlib.pyplot as plt
 from breaks_assignement import assign_breaks_to_locations
 from toll_matching import toll_section_matching_and_daily_demand, find_nearest_traffic_point, scale_charging_sessions
 from new_breaks import calculate_new_breaks
-from config_demand import FILES, OUTPUT_DIR, FINAL_OUTPUT_DIR, DEFAULT_LOCATION, CHARGING_DEMAND, CSV, neue_pausen
+from new_toll_midpoints import get_toll_midpoints
+from config_demand import (FILES, OUTPUT_DIR, FINAL_OUTPUT_DIR, DEFAULT_LOCATION, 
+                           CHARGING_DEMAND, CSV, neue_pausen, neue_toll_midpoints, SPATIAL)
 
 # ------------------- Setup Logging -------------------
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -79,7 +81,6 @@ def save_dataframe(df, output_path, sep=CSV['DEFAULT_SEPARATOR'], decimal=CSV['D
 def main():
     # Load shared data files once
     logger.info("Loading shared data files...")
-    df_mauttabelle = load_data_file(FILES['MAUT_TABLE'], skiprows=1)
     df_befahrung = load_data_file(FILES['BEFAHRUNGEN'])
     
     # Create a single reference location
@@ -88,6 +89,7 @@ def main():
         'Breitengrad': [DEFAULT_LOCATION['LATITUDE']]
     })
     
+    # Handle breaks calculation
     if neue_pausen:
         logger.info("Calculating new breaks...")
         # Pass the correct input directory path
@@ -97,20 +99,22 @@ def main():
     else:
         df_breaks = load_csv_file(FILES['BREAKS_OUTPUT'])
     
+    # Handle toll midpoints calculation
+    df_mauttabelle = get_toll_midpoints(
+        FILES['MAUT_TABLE'], 
+        FILES['TOLL_MIDPOINTS_OUTPUT'], 
+        skiprows=1,
+        force_recalculate=neue_toll_midpoints
+    )
+    
     # Process breaks and assign to locations
     logger.info("Assigning breaks to locations...")
     results_df, grouped_short, grouped_long = assign_breaks_to_locations(
-        df_location, df_breaks, FILES['NUTS_DATA']
+        df_location, df_breaks, FILES['NUTS_DATA'], SPATIAL['BUFFER_RADIUS']
     )
     
     # Match toll sections and calculate daily demand
     logger.info("Matching toll sections and calculating daily demand...")
-    # Create a deep copy of the dataframe to avoid SettingWithCopyWarning
-    df_mauttabelle = df_mauttabelle.copy(deep=True)
-    # Use .loc accessor for setting values
-    df_mauttabelle.loc[:, 'Bundesfernstraße'] = df_mauttabelle['Bundesfernstraße'].str.strip()
-    df_mauttabelle.loc[:, 'midpoint_laenge'] = (df_mauttabelle['Länge Von'] + df_mauttabelle['Länge Nach']) / 2
-    df_mauttabelle.loc[:, 'midpoint_breite'] = (df_mauttabelle['Breite Von'] + df_mauttabelle['Breite Nach']) / 2
     results_df = toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahrung)
     save_dataframe(results_df, FILES['FINAL_OUTPUT'])
     

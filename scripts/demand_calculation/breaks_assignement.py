@@ -41,7 +41,7 @@ def calculate_scenarios(df_location, grouped_short, grouped_long):
     
     return results_df
 
-def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_radius=SPATIAL['BUFFER_RADIUS']):
+def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_radius):
     """
     Assign breaks to locations based on spatial proximity.
     
