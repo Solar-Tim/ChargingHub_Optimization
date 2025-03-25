@@ -6,7 +6,7 @@ results/*
 
 .vscode/*
 
-optimization_results/*
+optimization_results.png
 
 # Python bytecode
 __pycache__/
