@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import logging
 from functools import wraps
-from config_demand import DAY_MAPPING, GERMAN_DAYS, TIME
+from config_demand import DAY_MAPPING, GERMAN_DAYS, TIME, year, get_charging_column, validate_year
 
 logger = logging.getLogger(__name__)
 
@@ -139,12 +139,25 @@ def toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahr
     # Create a copy of results_df to avoid warnings
     results_df = results_df.copy(deep=True)
     
-    weekly_totals = results_df[weekdays].sum(axis=1)
-    for day in weekdays:
-        # Handle division by zero
-        results_df.loc[:, day] = results_df[day].div(weekly_totals, fill_value=0)
-        results_df.loc[:, f'{day}_HPC'] = (results_df[day] * results_df['HPC_2035'] / TIME['WEEKS_PER_YEAR']).round()
-        results_df.loc[:, f'{day}_NCS'] = (results_df[day] * results_df['NCS_2035'] / TIME['WEEKS_PER_YEAR']).round()
+    # Ensure the forecast year is valid
+    try:
+        current_year = validate_year(year)
+        logger.info(f"Calculating daily demand using {current_year} projections")
+        
+        weekly_totals = results_df[weekdays].sum(axis=1)
+        for day in weekdays:
+            # Handle division by zero
+            results_df.loc[:, day] = results_df[day].div(weekly_totals, fill_value=0)
+            
+            # Use the dynamic column name function
+            hpc_col = get_charging_column('HPC', current_year)
+            ncs_col = get_charging_column('NCS', current_year)
+            
+            results_df.loc[:, f'{day}_HPC'] = (results_df[day] * results_df[hpc_col] / TIME['WEEKS_PER_YEAR']).round()
+            results_df.loc[:, f'{day}_NCS'] = (results_df[day] * results_df[ncs_col] / TIME['WEEKS_PER_YEAR']).round()
+    except ValueError as e:
+        logger.error(f"Error in year validation: {e}")
+        raise
     
     return results_df
 

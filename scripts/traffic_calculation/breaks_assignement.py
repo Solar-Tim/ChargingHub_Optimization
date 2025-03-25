@@ -8,7 +8,7 @@ import geopandas as gpd
 import numpy as np
 import logging
 import os
-from config_demand import SPATIAL, SCENARIOS
+from config_demand import SPATIAL, SCENARIOS, get_breaks_column, get_charging_column, BASE_YEAR, validate_year
 
 logger = logging.getLogger(__name__)
 
@@ -43,24 +43,26 @@ def calculate_scenarios(df_location, grouped_short, grouped_long):
 
 def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_radius):
     """
-    Assign breaks to locations based on spatial proximity.
+    Assign breaks to a single location based on spatial proximity.
     
     Parameters:
     -----------
     df_location : DataFrame
-        DataFrame containing location data with latitude and longitude columns
+        DataFrame containing a single location with latitude and longitude columns
     df_breaks : DataFrame
         DataFrame containing breaks data
     nuts_data_file : str
         Path to the NUTS GeoPackage file
-    buffer_radius : int, optional
-        Radius in meters for the buffer around locations, defaults to SPATIAL['BUFFER_RADIUS']
+    buffer_radius : int
+        Radius in meters for the buffer around location
         
     Returns:
     --------
-    tuple
-        (results_df, grouped_short, grouped_long) containing the calculated scenarios and 
-        grouped break counts
+    dict
+        A dictionary containing:
+        - 'results_df': DataFrame with the calculated charging demand scenarios
+        - 'short_breaks_count': Total number of short breaks assigned to the location
+        - 'long_breaks_count': Total number of long breaks assigned to the location
     """
     # Load Germany NUTS data
     gdf_deutschland_nuts1 = gpd.read_file(nuts_data_file, layer='nuts5000_n1')
@@ -82,7 +84,6 @@ def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_ra
     # Create a buffer around the location
     gdf_location_buffer = gdf_location.copy()
     gdf_location_buffer['geometry'] = gdf_location['geometry'].buffer(buffer_radius)
-    gdf_location_buffer['kreis_id'] = gdf_location_buffer.index
     
     # Spatial join: Filter breaks within Germany
     gdf_short_breaks_germany = gpd.sjoin(gdf_short_breaks, gdf_deutschland_nuts0, predicate='within', how='inner').reset_index(drop=True)
@@ -92,20 +93,51 @@ def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_ra
     gdf_short_breaks_germany = gdf_short_breaks_germany.drop(columns=['index_right'] if 'index_right' in gdf_short_breaks_germany.columns else [])
     gdf_long_breaks_germany = gdf_long_breaks_germany.drop(columns=['index_right'] if 'index_right' in gdf_long_breaks_germany.columns else [])
     
-    # Prepare a clean GeoDataFrame for the location buffer
-    gdf_location_kreis = gdf_location.copy()
-    gdf_location_kreis['geometry'] = gdf_location['geometry'].buffer(buffer_radius)
-    gdf_location_kreis = gdf_location_kreis.reset_index(drop=True)
-    gdf_location_kreis['kreis_id'] = gdf_location_kreis.index
+    # For a single location, we don't need IDs - just find breaks within the buffer
+    short_breaks_within = gpd.sjoin(gdf_short_breaks_germany, gdf_location_buffer[['geometry']], predicate='within')
+    long_breaks_within = gpd.sjoin(gdf_long_breaks_germany, gdf_location_buffer[['geometry']], predicate='within')
     
-    # Assign breaks to the location using spatial join
-    joined_short = gpd.sjoin(gdf_short_breaks_germany, gdf_location_kreis[['geometry', 'kreis_id']], predicate='within', how='left')
-    grouped_short = joined_short.groupby('kreis_id')['Break_Number'].sum()
+    # Calculate total breaks
+    short_breaks_count = short_breaks_within['Break_Number'].sum() if not short_breaks_within.empty else 0
+    long_breaks_count = long_breaks_within['Break_Number'].sum() if not long_breaks_within.empty else 0
     
-    joined_long = gpd.sjoin(gdf_long_breaks_germany, gdf_location_kreis[['geometry', 'kreis_id']], predicate='within', how='left')
-    grouped_long = joined_long.groupby('kreis_id')['Break_Number'].sum()
+    logger.info(f"Found {short_breaks_count} short breaks and {long_breaks_count} long breaks within buffer")
     
-    logger.info("Calculating scenarios for charging demand...")
-    results_df = calculate_scenarios(df_location, grouped_short, grouped_long)
+    # Calculate estimated charging sessions based on base year BEV adoption rate
+    r_bev_base = SCENARIOS['R_BEV'][BASE_YEAR]
+    estimated_hpc_sessions = short_breaks_count * r_bev_base
+    estimated_ncs_sessions = long_breaks_count * r_bev_base
     
-    return results_df, grouped_short, grouped_long
+    logger.info(f"Estimated potential charging demand for {BASE_YEAR} (with {r_bev_base*100:.0f}% BEV adoption):")
+    logger.info(f"  - HPC potential: {estimated_hpc_sessions:.0f} sessions (from {short_breaks_count} short breaks)")
+    logger.info(f"  - NCS potential: {estimated_ncs_sessions:.0f} sessions (from {long_breaks_count} long breaks)")
+    logger.info(f"Note: Actual charging sessions will depend on BEV adoption rates, traffic growth, and charging behavior")
+    
+    # Create simplified results dataframe with direct counts using dynamic column names
+    results_df = df_location.copy()
+    results_df[get_breaks_column('short')] = short_breaks_count
+    results_df[get_breaks_column('long')] = long_breaks_count
+    
+    # Calculate scenarios for charging demand
+    for target_year in SCENARIOS['TARGET_YEARS']:
+        try:
+            # Validate year exists in scenarios
+            validate_year(target_year)
+            
+            r_bev = SCENARIOS['R_BEV'][target_year]
+            r_traffic = SCENARIOS['R_TRAFFIC'][target_year]
+            
+            # Use dynamic column names
+            short_breaks_col = get_breaks_column('short')
+            results_df[get_charging_column('HPC', target_year)] = results_df[short_breaks_col] * r_bev * r_traffic
+            
+            long_breaks_col = get_breaks_column('long')
+            results_df[get_charging_column('NCS', target_year)] = results_df[long_breaks_col] * r_bev * r_traffic
+        except ValueError as e:
+            logger.warning(f"Skipping year {target_year}: {e}")
+    
+    return {
+        'results_df': results_df,
+        'short_breaks_count': short_breaks_count,
+        'long_breaks_count': long_breaks_count
+    }
