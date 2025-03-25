@@ -6,10 +6,12 @@ results/*
 
 .vscode/*
 
+
 optimization_results.png
 
 # Python bytecode
 __pycache__/
 *.py[cod]
 *$py.class
+
 
