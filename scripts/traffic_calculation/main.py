@@ -127,10 +127,16 @@ def main():
         reference_id = find_nearest_traffic_point(lat, lon, df_mauttabelle, df_befahrung)
         logger.info(f"Reference toll section ID: {reference_id}")
         
+        # Use the calculated annual break values instead of default values
+        annual_hpc_sessions = grouped_short.iloc[0] if not grouped_short.empty else 0
+        annual_ncs_sessions = grouped_long.iloc[0] if not grouped_long.empty else 0
+        
+        logger.info(f"Using calculated annual break values - HPC: {annual_hpc_sessions}, NCS: {annual_ncs_sessions}")
+        
         robust_sessions = scale_charging_sessions(
             reference_id, 
-            annual_hpc_sessions=CHARGING_DEMAND['DEFAULT_ANNUAL_HPC_SESSIONS'], 
-            annual_ncs_sessions=CHARGING_DEMAND['DEFAULT_ANNUAL_NCS_SESSIONS'],
+            annual_hpc_sessions=annual_hpc_sessions,
+            annual_ncs_sessions=annual_ncs_sessions,
             df_befahrung=df_befahrung
         )
         
