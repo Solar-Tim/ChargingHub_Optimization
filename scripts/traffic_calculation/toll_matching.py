@@ -23,6 +23,33 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     r = 6371  # Earth's radius in km
     return c * r
 
+def standardize_coordinates(df, coord_columns):
+    """
+    Standardize coordinate columns to numeric values.
+    
+    Args:
+        df: DataFrame containing coordinate columns
+        coord_columns: List of column names containing coordinates
+        
+    Returns:
+        DataFrame with standardized coordinate values
+    """
+    df = df.copy(deep=True)
+    
+    for col in coord_columns:
+        if col not in df.columns:
+            logger.warning(f"Column {col} not found in DataFrame")
+            continue
+            
+        if df[col].dtype == 'object':
+            # Replace comma with period for decimal separator
+            df.loc[:, col] = df[col].str.replace(',', '.', regex=False)
+        
+        # Convert to numeric, coercing errors to NaN
+        df.loc[:, col] = pd.to_numeric(df[col], errors='coerce')
+    
+    return df
+
 def find_nearest_traffic_point(lat, lon, df_mauttabelle, df_befahrung):
     """
     Find the nearest traffic measurement point for a given location.
@@ -40,11 +67,8 @@ def find_nearest_traffic_point(lat, lon, df_mauttabelle, df_befahrung):
     lon_end_col = 'Länge Nach'
     
     coord_cols = [lat_col, lon_col, lat_end_col, lon_end_col]
-    # Convert to numeric if not already
-    for col in coord_cols:
-        if df_mauttabelle[col].dtype == 'object':
-            df_mauttabelle.loc[:, col] = df_mauttabelle[col].str.replace(',', '.', regex=False)
-        df_mauttabelle.loc[:, col] = pd.to_numeric(df_mauttabelle[col], errors='coerce')
+    # Standardize coordinates
+    df_mauttabelle = standardize_coordinates(df_mauttabelle, coord_cols)
     
     df_mauttabelle = df_mauttabelle.dropna(subset=coord_cols)
     
@@ -77,6 +101,10 @@ def toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahr
     df_mauttabelle = df_mauttabelle[~df_mauttabelle['Bundesfernstraße'].str.contains('B')]
     df_mauttabelle.loc[:, 'Bundesfernstraße'] = df_mauttabelle['Bundesfernstraße'].str.strip()
     
+    # Standardize coordinate columns
+    coord_cols = ['Länge Von', 'Länge Nach', 'Breite Von', 'Breite Nach']
+    df_mauttabelle = standardize_coordinates(df_mauttabelle, coord_cols)
+    
     # Pre-calculate midpoints for toll sections
     df_mauttabelle.loc[:, 'midpoint_laenge'] = (df_mauttabelle['Länge Von'] + df_mauttabelle['Länge Nach']) / 2
     df_mauttabelle.loc[:, 'midpoint_breite'] = (df_mauttabelle['Breite Von'] + df_mauttabelle['Breite Nach']) / 2
@@ -90,14 +118,19 @@ def toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahr
         laengengrad = ausschreibung_row['Laengengrad']
         breitengrad = ausschreibung_row['Breitengrad']
         
-        # Calculate distance to all toll sections
-        distances = np.sqrt(
-            (df_mauttabelle['midpoint_laenge'] - laengengrad)**2 +
-            (df_mauttabelle['midpoint_breite'] - breitengrad)**2
+        # Check for missing coordinates
+        if pd.isna(laengengrad) or pd.isna(breitengrad):
+            logger.warning(f"Missing coordinates for row {ausschreibung_row.name}")
+            return pd.Series(index=df_mauttabelle.columns)
+        
+        # Calculate Haversine distance instead of Euclidean distance
+        df_mauttabelle['distance'] = df_mauttabelle.apply(
+            lambda row: haversine_distance(breitengrad, laengengrad, row['midpoint_breite'], row['midpoint_laenge']),
+            axis=1
         )
         
-        min_idx = distances.idxmin()
-        min_distances.append(distances[min_idx])
+        min_idx = df_mauttabelle['distance'].idxmin()
+        min_distances.append(df_mauttabelle.loc[min_idx, 'distance'])
         return df_mauttabelle.loc[min_idx]
         
     closest_rows = results_df.apply(find_closest_row, axis=1)
@@ -108,6 +141,7 @@ def toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahr
     
     weekly_totals = results_df[weekdays].sum(axis=1)
     for day in weekdays:
+        # Handle division by zero
         results_df.loc[:, day] = results_df[day].div(weekly_totals, fill_value=0)
         results_df.loc[:, f'{day}_HPC'] = (results_df[day] * results_df['HPC_2035'] / TIME['WEEKS_PER_YEAR']).round()
         results_df.loc[:, f'{day}_NCS'] = (results_df[day] * results_df['NCS_2035'] / TIME['WEEKS_PER_YEAR']).round()

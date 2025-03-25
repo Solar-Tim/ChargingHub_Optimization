@@ -12,7 +12,7 @@ from pathlib import Path
 # Decide whether to calculate new breaks or load existing ones
 neue_pausen = False  # Set to True to calculate new breaks, False to load existing ones
 # Decide whether to preprocess toll midpoints or load existing ones
-neue_toll_midpoints = True  # Set to True to recalculate toll midpoints, False to load existing ones
+neue_toll_midpoints = False  # Set to True to recalculate toll midpoints, False to load existing ones
 
 # Base directories
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -106,6 +106,6 @@ CSV = {
 
 # Default test location (for demo/default runs)
 DEFAULT_LOCATION = {
-    'LONGITUDE': 6.214618953523452,
-    'LATITUDE': 50.816300910540406
+    'LONGITUDE': 7.010174004183936,
+    'LATITUDE': 51.87423718853557
 }
