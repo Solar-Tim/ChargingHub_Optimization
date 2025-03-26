@@ -20,7 +20,7 @@ from new_toll_midpoints import get_toll_midpoints
 from json_utils import dataframe_to_json, json_to_dataframe, load_json_data, clear_terminal
 from config_demand import (FILES, OUTPUT_DIR, FINAL_OUTPUT_DIR, DEFAULT_LOCATION, CSV, 
                            neue_pausen, neue_toll_midpoints, SPATIAL, year, TIME, 
-                           validate_year, get_charging_column)
+                           validate_year, get_charging_column, GERMAN_DAYS)
 
 # ------------------- Setup Logging -------------------
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -145,7 +145,13 @@ def main():
     logger.info("Matching toll sections and calculating daily demand...")
     results_df = toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahrung)
     
-    # Save results as structured JSON
+    # Find nearest traffic point and scale charging sessions
+    lat = df_location['Breitengrad'].iloc[0]
+    lon = df_location['Laengengrad'].iloc[0]
+    reference_id = find_nearest_traffic_point(lat, lon, df_mauttabelle, df_befahrung)
+    logger.info(f"Reference toll section ID: {reference_id}")
+
+    # Create enriched metadata with toll section information
     metadata = {
         "forecast_year": year,
         "base_year": year,
@@ -153,19 +159,23 @@ def main():
         "location": {
             "latitude": DEFAULT_LOCATION['LATITUDE'],
             "longitude": DEFAULT_LOCATION['LONGITUDE']
+        },
+        "toll_section": {
+            "id": reference_id,
+            "highway": df_mauttabelle[df_mauttabelle['Abschnitts-ID'] == reference_id]['Bundesfernstraße'].iloc[0] if reference_id in df_mauttabelle['Abschnitts-ID'].values else "Unknown"
         }
     }
+    
+    # Add traffic information if available
+    if reference_id in df_befahrung['Strecken-ID'].values:
+        traffic_data = df_befahrung[df_befahrung['Strecken-ID'] == reference_id].iloc[0]
+        metadata["toll_section"]["traffic"] = {day: int(traffic_data[day]) for day in GERMAN_DAYS if day in traffic_data}
+
+    # Save results as structured JSON
     dataframe_to_json(results_df, FILES['FINAL_OUTPUT'], metadata=metadata, structure_type='demand')
     
     # Calculate robust charging demand scaling
     try:
-        lat = df_location['Breitengrad'].iloc[0]
-        lon = df_location['Laengengrad'].iloc[0]
-        
-        # Find nearest traffic point and scale charging sessions
-        reference_id = find_nearest_traffic_point(lat, lon, df_mauttabelle, df_befahrung)
-        logger.info(f"Reference toll section ID: {reference_id}")
-
         # Use pre-calculated values from results_df with dynamic column names
         hpc_col = get_charging_column('HPC', year)
         ncs_col = get_charging_column('NCS', year)

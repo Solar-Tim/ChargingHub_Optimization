@@ -12,7 +12,7 @@ from pathlib import Path
 # Decide whether to calculate new breaks or load existing ones
 neue_pausen = False  # Set to True to calculate new breaks, False to load existing ones
 # Decide whether to preprocess toll midpoints or load existing ones
-neue_toll_midpoints = True  # Set to True to recalculate toll midpoints, False to load existing ones
+neue_toll_midpoints = False  # Set to True to recalculate toll midpoints, False to load existing ones
 
 # Base year for calculations
 BASE_YEAR = '2030'  
