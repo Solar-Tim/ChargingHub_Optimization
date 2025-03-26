@@ -13,7 +13,8 @@ import pandas as pd
 import numpy as np
 import os
 from scipy.interpolate import interp1d
-import config as config_file
+import config
+
 
 np.random.seed(42)
 
@@ -48,7 +49,7 @@ def load_configurations():
     """
     Load and return the configurations for the simulation.
     """
-    path = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # Go up to project root
     freq = 5  # Frequency of updates (in minutes)
     return {
         'path': path,
@@ -71,7 +72,6 @@ def load_configurations():
             '3': 1200,
             '4': 1200
         },
-
         'pausentypen': ['Schnelllader', 'Nachtlader'],
         'pausenzeiten_lkws': {
             'Schnelllader': 45,
@@ -86,18 +86,60 @@ def load_input_data(path):
     """
     Load input data from CSV files for a single location.
     """
+    import json
+    
+    # Load distribution function from the actual location
     df_verteilungsfunktion = pd.read_csv(
-        os.path.join(path, 'input/verteilungsfunktion_mcs-ncs.csv'), sep=','
-    )
-    df_ladevorgaenge_daily = pd.read_csv(
-        os.path.join(path, 'input/ladevorgaenge_daily_cluster.csv'), sep=';', decimal=','
+        os.path.join(path, 'data', 'traffic', 'final_traffic', 'verteilungsfunktion_mcs-ncs.csv'),
+        sep=','
     )
     
-    # Simplify - if your input data still has clusters, just take the first one
-    # If your data is already for a single location, you can remove this
-    if 'Cluster' in df_ladevorgaenge_daily.columns:
-        cluster_id = df_ladevorgaenge_daily['Cluster'].iloc[0]  # Just take the first available cluster
-        df_ladevorgaenge_daily = df_ladevorgaenge_daily[df_ladevorgaenge_daily['Cluster'] == cluster_id]
+    # Load traffic data from laden_mauttabelle.json
+    with open(os.path.join(path, 'data', 'traffic', 'final_traffic', 'laden_mauttabelle.json'), 'r') as f:
+        laden_data = json.load(f)
+    
+    # Extract traffic data per day
+    traffic_data = laden_data['metadata']['toll_section']['traffic']
+    
+    # Create a dataframe for daily charging operations based on the traffic data
+    # This simulates the ladevorgaenge_daily_cluster.csv that was expected
+    rows = []
+    
+    # Map German day names to day numbers
+    day_to_num = {
+        'Montag': 1, 'Dienstag': 2, 'Mittwoch': 3, 'Donnerstag': 4, 
+        'Freitag': 5, 'Samstag': 6, 'Sonntag': 7
+    }
+    
+    # Calculate charging sessions from breaks data
+    short_breaks = laden_data['data']['breaks']['short_breaks_2030']
+    long_breaks = laden_data['data']['breaks']['long_breaks_2030']
+    
+    total_traffic = sum(traffic_data.values())
+    
+    for day, traffic in traffic_data.items():
+        # Calculate proportion of traffic for this day
+        day_proportion = traffic / total_traffic if total_traffic > 0 else 0
+        
+        # Map to Schnelllader (short breaks) and Nachtlader (long breaks)
+        schnelllader_count = int(short_breaks * day_proportion * 0.15)  # 15% BEV adoption from file
+        nachtlader_count = int(long_breaks * day_proportion * 0.15)     # 15% BEV adoption from file
+        
+        # Add to dataframe - Schnelllader
+        rows.append({
+            'Wochentag': day_to_num[day],
+            'Ladetype': 'Schnelllader',
+            'Anzahl': schnelllader_count
+        })
+        
+        # Add to dataframe - Nachtlader
+        rows.append({
+            'Wochentag': day_to_num[day],
+            'Ladetype': 'Nachtlader',
+            'Anzahl': nachtlader_count
+        })
+    
+    df_ladevorgaenge_daily = pd.DataFrame(rows)
     
     return df_verteilungsfunktion, df_ladevorgaenge_daily
 
@@ -132,6 +174,12 @@ def generate_truck_data(config, df_verteilungsfunktion, df_ladevorgaenge_daily):
     """
     Generate truck data for a single representative week at one location.
     """
+    # Create mapping from pausentyp to column name in CSV
+    pausentyp_to_column = {
+        'Schnelllader': 'HPC',  # Schnelllader maps to HPC column
+        'Nachtlader': 'NCS'     # Nachtlader maps to NCS column
+    }
+    
     dict_lkws = {
         'Tag': [],
         'Ankunftszeit': [],
@@ -169,9 +217,13 @@ def generate_truck_data(config, df_verteilungsfunktion, df_ladevorgaenge_daily):
                 pausenzeit = config['pausenzeiten_lkws'][pausentyp]
                 kapazitaet = config['kapazitaeten_lkws'][lkw_id]
                 leistung = config['leistungen_lkws'][lkw_id]
+                
+                # Use the mapping to get the correct column name
+                column_name = pausentyp_to_column[pausentyp]
+                
                 minuten = np.random.choice(
                     df_verteilungsfunktion['Zeit'],
-                    p=df_verteilungsfunktion[pausentyp]
+                    p=df_verteilungsfunktion[column_name]
                 )
                 soc = get_soc(minuten)
                 
@@ -192,7 +244,6 @@ def generate_truck_data(config, df_verteilungsfunktion, df_ladevorgaenge_daily):
                 dict_lkws['Pausenlaenge'].append(pausenzeit)
                 dict_lkws['Ankunftszeit'].append(minuten)
                 dict_lkws['Lkw_ID'].append(int(lkw_id))
-
 
     df_lkws = pd.DataFrame(dict_lkws)
     df_lkws.sort_values(by=['Tag', 'Ankunftszeit'], inplace=True)
@@ -292,7 +343,7 @@ def finalize_and_export_data(df_lkws, config):
     ]]
     
     # Ensure the directories exist
-    output_dir = os.path.join(config['path'], 'data', config_file.mode, 'lkw_eingehend')
+    output_dir = os.path.join(config['path'], 'results', 'lkw_eingehend')
     os.makedirs(output_dir, exist_ok=True)
 
     # Export the DataFrame to a CSV file
@@ -300,6 +351,7 @@ def finalize_and_export_data(df_lkws, config):
         os.path.join(output_dir, 'eingehende_lkws_ladesaeule.csv'),
         sep=';', decimal=','
     )
+    print(f"Data exported to {output_dir}/eingehende_lkws_ladesaeule.csv")
 
 # ======================================================
 # Analyze Charging Types

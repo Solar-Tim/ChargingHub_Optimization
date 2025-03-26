@@ -1,0 +1,27 @@
+2025-03-26 15:52:58,115; INFO; Starting charging hub configuration
+2025-03-26 15:52:58,117; INFO; Looking for truck data at C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\lkw_eingehend\eingehende_lkws_ladesaeule.csv
+2025-03-26 15:52:58,117; INFO; Loading truck data from C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\lkw_eingehend\eingehende_lkws_ladesaeule.csv
+2025-03-26 15:52:58,175; INFO; Configuration: Cluster=1, Load Quotas={'NCS': 0.8, 'HPC': 0.8, 'MCS': 0.8}, Charging Times={'Schnell': 45, 'Nacht': 540}
+2025-03-26 15:52:58,175; INFO; Using charging pause times: {'Schnell': 45, 'Nacht': 540}
+2025-03-26 15:52:59,910; WARNING; Added missing 'Cluster' column with value 1
+2025-03-26 15:52:59,947; INFO; Processing charging type: NCS, target quota: 0.80
+2025-03-26 15:53:05,360; INFO; [NCS], Stations=1, Quota=0.01, Trucks per station=1.86
+2025-03-26 15:53:16,917; INFO; [NCS], Stations=78, Quota=0.41, Trucks per station=0.95
+2025-03-26 15:53:30,310; INFO; [NCS], Stations=152, Quota=0.70, Trucks per station=0.84
+2025-03-26 15:53:45,674; INFO; [NCS], Stations=173, Quota=0.79, Trucks per station=0.82
+2025-03-26 15:54:00,365; INFO; [NCS], Stations=176, Quota=0.80, Trucks per station=0.82
+2025-03-26 15:54:00,472; INFO; Processing charging type: HPC, target quota: 0.80
+2025-03-26 15:54:09,133; INFO; [HPC], Stations=1, Quota=0.07, Trucks per station=15.14
+2025-03-26 15:54:29,042; INFO; [HPC], Stations=13, Quota=0.55, Trucks per station=9.71
+2025-03-26 15:54:50,592; INFO; [HPC], Stations=19, Quota=0.68, Trucks per station=8.25
+2025-03-26 15:55:14,329; INFO; [HPC], Stations=23, Quota=0.75, Trucks per station=7.49
+2025-03-26 15:55:38,193; INFO; [HPC], Stations=25, Quota=0.78, Trucks per station=7.18
+2025-03-26 15:56:03,077; INFO; [HPC], Stations=26, Quota=0.79, Trucks per station=7.04
+2025-03-26 15:56:26,834; INFO; [HPC], Stations=27, Quota=0.81, Trucks per station=6.91
+2025-03-26 15:56:26,968; INFO; Processing charging type: MCS, target quota: 0.80
+2025-03-26 15:56:34,107; INFO; [MCS], Stations=1, Quota=0.09, Trucks per station=15.57
+2025-03-26 15:56:49,336; INFO; [MCS], Stations=9, Quota=0.59, Trucks per station=11.08
+2025-03-26 15:57:07,340; INFO; [MCS], Stations=13, Quota=0.74, Trucks per station=9.66
+2025-03-26 15:57:26,174; INFO; [MCS], Stations=15, Quota=0.80, Trucks per station=9.08
+2025-03-26 15:57:26,373; INFO; Results saved with filename: cluster_1_quota_80-80-80_pause_45-540_Base
+2025-03-26 15:57:26,375; INFO; Charging hub configuration completed successfully
