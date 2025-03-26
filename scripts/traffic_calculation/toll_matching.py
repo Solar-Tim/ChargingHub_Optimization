@@ -8,6 +8,7 @@ import numpy as np
 import logging
 from functools import wraps
 from config_demand import DAY_MAPPING, GERMAN_DAYS, TIME, year, get_charging_column, validate_year
+from json_utils import dataframe_to_json
 
 logger = logging.getLogger(__name__)
 
@@ -183,12 +184,21 @@ def scale_charging_sessions(reference_point_id, annual_hpc_sessions, annual_ncs_
     """
     Calculate weekly charging sessions for HPC and NCS based on annual targets.
     """
-    scaling_factors = scale_charging_demand(reference_point_id, df_befahrung)
-    result = pd.DataFrame(index=scaling_factors.index)
-    for day in result.index:
-        scale = scaling_factors.loc[day, 'ScalingFactor']
-        result.loc[day, 'HPC_Sessions'] = round(scale * annual_hpc_sessions / TIME['WEEKS_PER_YEAR'])
-        result.loc[day, 'NCS_Sessions'] = round(scale * annual_ncs_sessions / TIME['WEEKS_PER_YEAR'])
+    reference_data = df_befahrung[df_befahrung['Strecken-ID'] == reference_point_id]
+    if reference_data.empty:
+        raise ValueError(f"Reference point ID {reference_point_id} not found")
+        
+    traffic_data = reference_data.iloc[0]
+    total_traffic = sum(traffic_data[day] for day in GERMAN_DAYS)
+    scaling_factors = {day: traffic_data[day] / total_traffic for day in GERMAN_DAYS}
+    
+    result = pd.DataFrame(index=list(DAY_MAPPING.values()))
+    for german_day, english_day in DAY_MAPPING.items():
+        scale = scaling_factors[german_day]
+        result.loc[english_day, 'HPC_Sessions'] = round(scale * annual_hpc_sessions / TIME['WEEKS_PER_YEAR'])
+        result.loc[english_day, 'NCS_Sessions'] = round(scale * annual_ncs_sessions / TIME['WEEKS_PER_YEAR'])
+    
     result.loc['Total', 'HPC_Sessions'] = result['HPC_Sessions'].sum()
     result.loc['Total', 'NCS_Sessions'] = result['NCS_Sessions'].sum()
+    
     return result

@@ -12,7 +12,7 @@ from pathlib import Path
 # Decide whether to calculate new breaks or load existing ones
 neue_pausen = False  # Set to True to calculate new breaks, False to load existing ones
 # Decide whether to preprocess toll midpoints or load existing ones
-neue_toll_midpoints = False  # Set to True to recalculate toll midpoints, False to load existing ones
+neue_toll_midpoints = True  # Set to True to recalculate toll midpoints, False to load existing ones
 
 # Base year for calculations
 BASE_YEAR = '2030'  
@@ -68,23 +68,23 @@ INPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "raw_data")
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "interim_results")
 FINAL_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "final_traffic")
 
-# File paths
+# File paths - Changed to use JSON instead of CSV
 FILES = {
-    # Input files
+    # Input files (unchanged)
     'MAUT_TABLE': os.path.join(INPUT_DIR, 'Mauttabelle.xlsx'),
     'BEFAHRUNGEN': os.path.join(INPUT_DIR, 'Befahrungen_25_1Q.csv'),
     'NUTS_DATA': os.path.join(INPUT_DIR, "DE_NUTS5000.gpkg"),
     
-    # New breaks input files
+    # New breaks input files (unchanged)
     'TRAFFIC_FLOW': os.path.join(INPUT_DIR, '01_Trucktrafficflow.csv'),
     'EDGES': os.path.join(INPUT_DIR, '04_network-edges.csv'),
     'NODES': os.path.join(INPUT_DIR, '03_network-nodes.csv'),
     
-    # Output files
-    'BREAKS_OUTPUT': os.path.join(OUTPUT_DIR, 'breaks.csv'),
-    'TOLL_MIDPOINTS_OUTPUT': os.path.join(OUTPUT_DIR, 'toll_midpoints.csv'),
-    'CHARGING_DEMAND': os.path.join(OUTPUT_DIR, 'charging_demand.csv'),
-    'FINAL_OUTPUT': os.path.join(FINAL_OUTPUT_DIR, 'laden_mauttabelle.csv')
+    # Output files (changed to JSON)
+    'BREAKS_OUTPUT': os.path.join(OUTPUT_DIR, 'breaks.json'),
+    'TOLL_MIDPOINTS_OUTPUT': os.path.join(OUTPUT_DIR, 'toll_midpoints.json'),
+    'CHARGING_DEMAND': os.path.join(OUTPUT_DIR, 'charging_demand.json'),
+    'FINAL_OUTPUT': os.path.join(FINAL_OUTPUT_DIR, 'laden_mauttabelle.json')
 }
 
 # Spatial analysis settings
@@ -119,9 +119,13 @@ TIME = {
     'WEEKS_PER_YEAR': 52
 }
 
+# JSON file settings
+JSON = {
+    'INDENT': 2,
+    'DEFAULT_ENCODING': 'utf-8'
+}
 
-
-# CSV file settings
+# CSV file settings (kept for backward compatibility)
 CSV = {
     'DEFAULT_SEPARATOR': ';',
     'DEFAULT_DECIMAL': ','

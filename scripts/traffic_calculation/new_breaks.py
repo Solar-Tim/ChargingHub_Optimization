@@ -10,6 +10,7 @@ import logging
 from typing import Dict, List, Tuple, Any
 from functools import lru_cache
 from config_demand import BREAKS, FILES, CSV, get_traffic_flow_column, BASE_YEAR
+from json_utils import dataframe_to_json, json_to_dataframe
 
 logger = logging.getLogger(__name__)
 
@@ -301,7 +302,7 @@ def calculate_new_breaks(base_path=None, random_seed=None, export=True):
     Args:
         base_path: Base directory path (defaults to script directory if None)
         random_seed: Seed for random number generation (optional)
-        export: Whether to export the results to CSV (default: True)
+        export: Whether to export the results to JSON (default: True)
     
     Returns:
         DataFrame containing break data
@@ -383,8 +384,13 @@ def calculate_new_breaks(base_path=None, random_seed=None, export=True):
         output_path = FILES['BREAKS_OUTPUT']
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
-        result_df.to_csv(output_path, sep=CSV['DEFAULT_SEPARATOR'], 
-                         decimal=CSV['DEFAULT_DECIMAL'], index=False)
+        # Save as JSON with structured format
+        metadata = {
+            'base_year': BASE_YEAR,
+            'random_seed': random_seed,
+            'calculation_time': time.time() - time_start
+        }
+        dataframe_to_json(result_df, output_path, metadata=metadata, structure_type='breaks')
         logger.info(f"Results exported to: {output_path}")
     
     # Log summary statistics

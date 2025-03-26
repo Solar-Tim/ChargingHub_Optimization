@@ -9,6 +9,7 @@ import numpy as np
 import logging
 import os
 from config_demand import SPATIAL, SCENARIOS, get_breaks_column, get_charging_column, BASE_YEAR, validate_year
+from json_utils import dataframe_to_json
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +136,29 @@ def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_ra
             results_df[get_charging_column('NCS', target_year)] = results_df[long_breaks_col] * r_bev * r_traffic
         except ValueError as e:
             logger.warning(f"Skipping year {target_year}: {e}")
+    
+    # Also prepare a detailed breakdown of the assigned breaks
+    if not short_breaks_within.empty or not long_breaks_within.empty:
+        assigned_breaks = pd.concat([short_breaks_within, long_breaks_within], ignore_index=True)
+        breaks_metadata = {
+            'buffer_radius_m': buffer_radius,
+            'location': {
+                'latitude': df_location['Breitengrad'].iloc[0],
+                'longitude': df_location['Laengengrad'].iloc[0]
+            },
+            'summary': {
+                'short_breaks_count': short_breaks_count,
+                'long_breaks_count': long_breaks_count,
+                'estimated_hpc': estimated_hpc_sessions,
+                'estimated_ncs': estimated_ncs_sessions,
+                'base_year': BASE_YEAR,
+                'bev_adoption_rate': r_bev_base
+            }
+        }
+        
+        # We could save this to a separate file if needed
+        # dataframe_to_json(assigned_breaks, 'assigned_breaks.json', 
+        #                   metadata=breaks_metadata, structure_type='breaks')
     
     return {
         'results_df': results_df,
