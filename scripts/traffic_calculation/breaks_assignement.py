@@ -9,6 +9,7 @@ import numpy as np
 import logging
 import os
 from config_demand import SPATIAL, SCENARIOS, get_breaks_column, get_charging_column, BASE_YEAR, validate_year
+from json_utils import dataframe_to_json
 
 logger = logging.getLogger(__name__)
 
@@ -93,48 +94,21 @@ def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_ra
     gdf_short_breaks_germany = gdf_short_breaks_germany.drop(columns=['index_right'] if 'index_right' in gdf_short_breaks_germany.columns else [])
     gdf_long_breaks_germany = gdf_long_breaks_germany.drop(columns=['index_right'] if 'index_right' in gdf_long_breaks_germany.columns else [])
     
-    # For a single location, we don't need IDs - just find breaks within the buffer
-    short_breaks_within = gpd.sjoin(gdf_short_breaks_germany, gdf_location_buffer[['geometry']], predicate='within')
-    long_breaks_within = gpd.sjoin(gdf_long_breaks_germany, gdf_location_buffer[['geometry']], predicate='within')
+    # Prepare a clean GeoDataFrame for the location buffer
+    gdf_location_kreis = gdf_location.copy()
+    gdf_location_kreis['geometry'] = gdf_location['geometry'].buffer(buffer_radius)
+    gdf_location_kreis = gdf_location_kreis.reset_index(drop=True)
+    gdf_location_kreis['kreis_id'] = gdf_location_kreis.index
     
-    # Calculate total breaks
-    short_breaks_count = short_breaks_within['Break_Number'].sum() if not short_breaks_within.empty else 0
-    long_breaks_count = long_breaks_within['Break_Number'].sum() if not long_breaks_within.empty else 0
+    # Assign breaks to the location using spatial join
+    joined_short = gpd.sjoin(gdf_short_breaks_germany, gdf_location_kreis[['geometry', 'kreis_id']], predicate='within', how='left')
+    grouped_short = joined_short.groupby('kreis_id')['Break_Number'].sum()
     
-    logger.info(f"Found {short_breaks_count} short breaks and {long_breaks_count} long breaks within buffer")
+    joined_long = gpd.sjoin(gdf_long_breaks_germany, gdf_location_kreis[['geometry', 'kreis_id']], predicate='within', how='left')
+    grouped_long = joined_long.groupby('kreis_id')['Break_Number'].sum()
     
-    # Calculate estimated charging sessions based on base year BEV adoption rate
-    r_bev_base = SCENARIOS['R_BEV'][BASE_YEAR]
-    estimated_hpc_sessions = short_breaks_count * r_bev_base
-    estimated_ncs_sessions = long_breaks_count * r_bev_base
-    
-    logger.info(f"Estimated potential charging demand for {BASE_YEAR} (with {r_bev_base*100:.0f}% BEV adoption):")
-    logger.info(f"  - HPC potential: {estimated_hpc_sessions:.0f} sessions (from {short_breaks_count} short breaks)")
-    logger.info(f"  - NCS potential: {estimated_ncs_sessions:.0f} sessions (from {long_breaks_count} long breaks)")
-    logger.info(f"Note: Actual charging sessions will depend on BEV adoption rates, traffic growth, and charging behavior")
-    
-    # Create simplified results dataframe with direct counts using dynamic column names
-    results_df = df_location.copy()
-    results_df[get_breaks_column('short')] = short_breaks_count
-    results_df[get_breaks_column('long')] = long_breaks_count
-    
-    # Calculate scenarios for charging demand
-    for target_year in SCENARIOS['TARGET_YEARS']:
-        try:
-            # Validate year exists in scenarios
-            validate_year(target_year)
-            
-            r_bev = SCENARIOS['R_BEV'][target_year]
-            r_traffic = SCENARIOS['R_TRAFFIC'][target_year]
-            
-            # Use dynamic column names
-            short_breaks_col = get_breaks_column('short')
-            results_df[get_charging_column('HPC', target_year)] = results_df[short_breaks_col] * r_bev * r_traffic
-            
-            long_breaks_col = get_breaks_column('long')
-            results_df[get_charging_column('NCS', target_year)] = results_df[long_breaks_col] * r_bev * r_traffic
-        except ValueError as e:
-            logger.warning(f"Skipping year {target_year}: {e}")
+    logger.info("Calculating scenarios for charging demand...")
+    results_df = calculate_scenarios(df_location, grouped_short, grouped_long)
     
     return {
         'results_df': results_df,

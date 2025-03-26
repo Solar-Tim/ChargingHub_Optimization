@@ -17,9 +17,10 @@ from breaks_assignement import assign_breaks_to_locations
 from toll_matching import toll_section_matching_and_daily_demand, find_nearest_traffic_point, scale_charging_sessions
 from new_breaks import calculate_new_breaks
 from new_toll_midpoints import get_toll_midpoints
+from json_utils import dataframe_to_json, json_to_dataframe, load_json_data, clear_terminal
 from config_demand import (FILES, OUTPUT_DIR, FINAL_OUTPUT_DIR, DEFAULT_LOCATION, CSV, 
                            neue_pausen, neue_toll_midpoints, SPATIAL, year, TIME, 
-                           validate_year, get_charging_column)
+                           validate_year, get_charging_column, GERMAN_DAYS)
 
 # ------------------- Setup Logging -------------------
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -28,6 +29,11 @@ logger = logging.getLogger(__name__)
 # Create output directory structure
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(FINAL_OUTPUT_DIR, exist_ok=True)
+
+
+# Clear the terminal at startup
+clear_terminal()
+logger.info("Terminal cleared. Starting charging hub demand calculation...")
 
 # Validate the configured year
 try:
@@ -65,7 +71,7 @@ def load_csv_file(file_path, skiprows=0, sep=CSV['DEFAULT_SEPARATOR'], decimal=C
 @safe_file_operation
 def load_data_file(file_path, skiprows=0):
     """
-    Load data from CSV or Excel based on file extension.
+    Load data from CSV, Excel, or JSON based on file extension.
     """
     file_path = Path(file_path)
     if not file_path.exists():
@@ -77,6 +83,9 @@ def load_data_file(file_path, skiprows=0):
     elif suffix in ['.xlsx', '.xls']:
         logger.info(f"Loading Excel data from {file_path}")
         return pd.read_excel(file_path, skiprows=skiprows)
+    elif suffix == '.json':
+        logger.info(f"Loading JSON data from {file_path}")
+        return json_to_dataframe(file_path)
     else:
         raise ValueError(f"Unsupported file type: {file_path.suffix}")
 
@@ -104,9 +113,14 @@ def main():
         # Pass the correct input directory path
         input_dir = os.path.dirname(FILES['TRAFFIC_FLOW'])
         df_breaks = calculate_new_breaks(base_path=input_dir)
-        save_dataframe(df_breaks, FILES['BREAKS_OUTPUT'])
     else:
-        df_breaks = load_csv_file(FILES['BREAKS_OUTPUT'])
+        # Load breaks from JSON if file exists, otherwise calculate new breaks
+        try:
+            df_breaks = json_to_dataframe(FILES['BREAKS_OUTPUT'])
+        except FileNotFoundError:
+            logger.warning(f"Breaks file not found at {FILES['BREAKS_OUTPUT']}. Calculating new breaks.")
+            input_dir = os.path.dirname(FILES['TRAFFIC_FLOW'])
+            df_breaks = calculate_new_breaks(base_path=input_dir)
     
     # Handle toll midpoints calculation
     df_mauttabelle = get_toll_midpoints(
@@ -130,17 +144,38 @@ def main():
     # Match toll sections and calculate daily demand
     logger.info("Matching toll sections and calculating daily demand...")
     results_df = toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahrung)
-    save_dataframe(results_df, FILES['FINAL_OUTPUT'])
+    
+    # Find nearest traffic point and scale charging sessions
+    lat = df_location['Breitengrad'].iloc[0]
+    lon = df_location['Laengengrad'].iloc[0]
+    reference_id = find_nearest_traffic_point(lat, lon, df_mauttabelle, df_befahrung)
+    logger.info(f"Reference toll section ID: {reference_id}")
+
+    # Create enriched metadata with toll section information
+    metadata = {
+        "forecast_year": year,
+        "base_year": year,
+        "buffer_radius_m": SPATIAL['BUFFER_RADIUS'],
+        "location": {
+            "latitude": DEFAULT_LOCATION['LATITUDE'],
+            "longitude": DEFAULT_LOCATION['LONGITUDE']
+        },
+        "toll_section": {
+            "id": reference_id,
+            "highway": df_mauttabelle[df_mauttabelle['Abschnitts-ID'] == reference_id]['Bundesfernstraße'].iloc[0] if reference_id in df_mauttabelle['Abschnitts-ID'].values else "Unknown"
+        }
+    }
+    
+    # Add traffic information if available
+    if reference_id in df_befahrung['Strecken-ID'].values:
+        traffic_data = df_befahrung[df_befahrung['Strecken-ID'] == reference_id].iloc[0]
+        metadata["toll_section"]["traffic"] = {day: int(traffic_data[day]) for day in GERMAN_DAYS if day in traffic_data}
+
+    # Save results as structured JSON
+    dataframe_to_json(results_df, FILES['FINAL_OUTPUT'], metadata=metadata, structure_type='demand')
     
     # Calculate robust charging demand scaling
     try:
-        lat = df_location['Breitengrad'].iloc[0]
-        lon = df_location['Laengengrad'].iloc[0]
-        
-        # Find nearest traffic point and scale charging sessions
-        reference_id = find_nearest_traffic_point(lat, lon, df_mauttabelle, df_befahrung)
-        logger.info(f"Reference toll section ID: {reference_id}")
-
         # Use pre-calculated values from results_df with dynamic column names
         hpc_col = get_charging_column('HPC', year)
         ncs_col = get_charging_column('NCS', year)
@@ -168,7 +203,27 @@ def main():
         logger.info(f"Weekly HPC sessions: {weekly_total:.0f}")
         logger.info(f"Yearly HPC sessions: {yearly_total:.0f} (estimated from weekly pattern)")
         
-        save_dataframe(robust_sessions, FILES['CHARGING_DEMAND'])
+        # Add detailed logging of HPC sessions
+        logger.info("Daily HPC charging sessions breakdown:")
+        weekday_sessions = robust_sessions.loc[robust_sessions.index != 'Total', 'HPC_Sessions']
+        for day, sessions in weekday_sessions.items():
+            logger.info(f"  {day}: {sessions:.0f} sessions")
+        
+        weekly_total = robust_sessions.loc['Total', 'HPC_Sessions']
+        yearly_total = weekly_total * TIME['WEEKS_PER_YEAR']
+        
+        logger.info(f"Weekly HPC sessions: {weekly_total:.0f}")
+        logger.info(f"Yearly HPC sessions: {yearly_total:.0f} (estimated from weekly pattern)")
+        
+        # Save charging demand as structured JSON
+        charging_metadata = {
+            "reference_toll_section_id": reference_id,
+            "weeks_per_year": TIME['WEEKS_PER_YEAR'],
+            "forecast_year": year
+        }
+        dataframe_to_json(robust_sessions, FILES['CHARGING_DEMAND'], 
+                          metadata=charging_metadata, structure_type='charging_sessions')
+        
         logger.info("Scaling of charging sessions completed")
     except Exception as e:
         logger.error(f"Error in scaling: {e}")

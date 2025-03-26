@@ -6,7 +6,9 @@ Creates a cached version of the toll section data with calculated geographic mid
 import os
 import logging
 import pandas as pd
+import datetime
 from pathlib import Path
+from json_utils import dataframe_to_json, json_to_dataframe
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -40,12 +42,14 @@ def process_toll_midpoints(maut_file_path, output_path, skiprows=1):
     df_mauttabelle.loc[:, 'midpoint_laenge'] = (df_mauttabelle['Länge Von'] + df_mauttabelle['Länge Nach']) / 2
     df_mauttabelle.loc[:, 'midpoint_breite'] = (df_mauttabelle['Breite Von'] + df_mauttabelle['Breite Nach']) / 2
     
-    # Ensure output directory exists
-    output_dir = os.path.dirname(output_path)
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    # Save processed data as structured JSON
+    metadata = {
+        "source_file": os.path.basename(maut_file_path),
+        "skiprows": skiprows,
+        "processing_date": datetime.datetime.now().isoformat()
+    }
+    dataframe_to_json(df_mauttabelle, output_path, metadata=metadata, structure_type='toll_midpoints')
     
-    # Save processed data
-    df_mauttabelle.to_csv(output_path, sep=';', decimal=',', index=False)
     logger.info(f"Processed toll section midpoints saved to {output_path}")
     
     return df_mauttabelle
@@ -69,4 +73,4 @@ def get_toll_midpoints(maut_file_path, output_path, skiprows=1, force_recalculat
         return process_toll_midpoints(maut_file_path, output_path, skiprows)
     else:
         logger.info(f"Loading preprocessed toll section midpoints from {output_path}")
-        return pd.read_csv(output_path, sep=';', decimal=',')
+        return json_to_dataframe(output_path)

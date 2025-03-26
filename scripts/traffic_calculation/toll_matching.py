@@ -8,6 +8,7 @@ import numpy as np
 import logging
 from functools import wraps
 from config_demand import DAY_MAPPING, GERMAN_DAYS, TIME, year, get_charging_column, validate_year
+from json_utils import dataframe_to_json, clean_json_structure
 
 logger = logging.getLogger(__name__)
 
@@ -57,35 +58,39 @@ def find_nearest_traffic_point(lat, lon, df_mauttabelle, df_befahrung):
     # Make a copy to avoid SettingWithCopyWarning
     df_mauttabelle = df_mauttabelle.copy(deep=True)
     
-    # Filter to only include Autobahn sections (not B-roads)
+    # Filter to only include Autobahn sections (not B-roads) if column exists
     if 'Bundesfernstraße' in df_mauttabelle.columns:
         df_mauttabelle = df_mauttabelle[~df_mauttabelle['Bundesfernstraße'].str.contains('B')]
+    else:
+        logger.warning("Column 'Bundesfernstraße' not found. Using all toll sections.")
     
-    lat_col = 'Breite Von'
-    lon_col = 'Länge Von'
-    lat_end_col = 'Breite Nach'
-    lon_end_col = 'Länge Nach'
-    
-    coord_cols = [lat_col, lon_col, lat_end_col, lon_end_col]
-    # Standardize coordinates
-    df_mauttabelle = standardize_coordinates(df_mauttabelle, coord_cols)
-    
-    df_mauttabelle = df_mauttabelle.dropna(subset=coord_cols)
-    
-    if df_mauttabelle.empty:
-        raise ValueError("No valid coordinate data after filtering")
-    
-    df_mauttabelle.loc[:, 'mid_lat'] = (df_mauttabelle[lat_col] + df_mauttabelle[lat_end_col]) / 2
-    df_mauttabelle.loc[:, 'mid_lon'] = (df_mauttabelle[lon_col] + df_mauttabelle[lon_end_col]) / 2
-    
-    df_mauttabelle.loc[:, 'distance'] = df_mauttabelle.apply(
-        lambda row: haversine_distance(lat, lon, row['mid_lat'], row['mid_lon']),
-        axis=1
-    )
+    # Check for coordinate columns
+    if all(col in df_mauttabelle.columns for col in ['midpoint_breite', 'midpoint_laenge']):
+        # Use pre-calculated midpoints
+        df_mauttabelle.loc[:, 'distance'] = df_mauttabelle.apply(
+            lambda row: haversine_distance(lat, lon, row['midpoint_breite'], row['midpoint_laenge']),
+            axis=1
+        )
+    elif all(col in df_mauttabelle.columns for col in ['Breite Von', 'Länge Von', 'Breite Nach', 'Länge Nach']):
+        # Standardize coordinates
+        coord_cols = ['Breite Von', 'Länge Von', 'Breite Nach', 'Länge Nach']
+        df_mauttabelle = standardize_coordinates(df_mauttabelle, coord_cols)
+        
+        # Calculate midpoints on the fly
+        df_mauttabelle.loc[:, 'mid_lat'] = (df_mauttabelle['Breite Von'] + df_mauttabelle['Breite Nach']) / 2
+        df_mauttabelle.loc[:, 'mid_lon'] = (df_mauttabelle['Länge Von'] + df_mauttabelle['Länge Nach']) / 2
+        
+        df_mauttabelle.loc[:, 'distance'] = df_mauttabelle.apply(
+            lambda row: haversine_distance(lat, lon, row['mid_lat'], row['mid_lon']),
+            axis=1
+        )
+    else:
+        raise ValueError("Missing required coordinate columns in toll section data")
     
     closest_row = df_mauttabelle.loc[df_mauttabelle['distance'].idxmin()]
-    section_id = int(closest_row['Abschnitts-ID'])
-    highway = closest_row['Bundesfernstraße'] if 'Bundesfernstraße' in closest_row else "Unknown"
+    section_id = int(closest_row['Abschnitts-ID']) if 'Abschnitts-ID' in closest_row else -1
+    highway = closest_row.get('Bundesfernstraße', "Unknown")
+    
     logger.info(f"Nearest traffic point ID: {section_id} on {highway} at distance {closest_row['distance']:.2f} km")
     
     return section_id
@@ -97,18 +102,39 @@ def toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahr
     # Make a deep copy to avoid SettingWithCopyWarning
     df_mauttabelle = df_mauttabelle.copy(deep=True)
     
-    # Data cleaning
-    df_mauttabelle = df_mauttabelle[~df_mauttabelle['Bundesfernstraße'].str.contains('B')]
-    df_mauttabelle.loc[:, 'Bundesfernstraße'] = df_mauttabelle['Bundesfernstraße'].str.strip()
+    # Data cleaning - check if column exists before filtering
+    if 'Bundesfernstraße' in df_mauttabelle.columns:
+        df_mauttabelle = df_mauttabelle[~df_mauttabelle['Bundesfernstraße'].str.contains('B')]
+        df_mauttabelle.loc[:, 'Bundesfernstraße'] = df_mauttabelle['Bundesfernstraße'].str.strip()
+    else:
+        logger.warning("Column 'Bundesfernstraße' not found in toll section data. Proceeding without filtering.")
     
-    # Standardize coordinate columns
+    # Standardize coordinate columns - check if columns exist
     coord_cols = ['Länge Von', 'Länge Nach', 'Breite Von', 'Breite Nach']
-    df_mauttabelle = standardize_coordinates(df_mauttabelle, coord_cols)
+    available_coord_cols = [col for col in coord_cols if col in df_mauttabelle.columns]
     
-    # Pre-calculate midpoints for toll sections
-    df_mauttabelle.loc[:, 'midpoint_laenge'] = (df_mauttabelle['Länge Von'] + df_mauttabelle['Länge Nach']) / 2
-    df_mauttabelle.loc[:, 'midpoint_breite'] = (df_mauttabelle['Breite Von'] + df_mauttabelle['Breite Nach']) / 2
+    if not available_coord_cols:
+        logger.warning("No standard coordinate columns found. Looking for midpoint columns.")
+        if 'midpoint_laenge' in df_mauttabelle.columns and 'midpoint_breite' in df_mauttabelle.columns:
+            # Skip coordinate standardization if we already have midpoints
+            pass
+        else:
+            raise ValueError("Neither coordinate columns nor midpoint columns found in toll section data")
+    else:
+        df_mauttabelle = standardize_coordinates(df_mauttabelle, available_coord_cols)
     
+    # Pre-calculate midpoints for toll sections if they don't exist already
+    if 'midpoint_laenge' not in df_mauttabelle.columns and all(col in df_mauttabelle.columns for col in ['Länge Von', 'Länge Nach']):
+        df_mauttabelle.loc[:, 'midpoint_laenge'] = (df_mauttabelle['Länge Von'] + df_mauttabelle['Länge Nach']) / 2
+        
+    if 'midpoint_breite' not in df_mauttabelle.columns and all(col in df_mauttabelle.columns for col in ['Breite Von', 'Breite Nach']):
+        df_mauttabelle.loc[:, 'midpoint_breite'] = (df_mauttabelle['Breite Von'] + df_mauttabelle['Breite Nach']) / 2
+    
+    # Make sure we have midpoints
+    if 'midpoint_laenge' not in df_mauttabelle.columns or 'midpoint_breite' not in df_mauttabelle.columns:
+        raise ValueError("Could not create or find midpoint coordinates")
+    
+    # Join with traffic data
     weekdays = GERMAN_DAYS
     traffic_mapping = df_befahrung.set_index('Strecken-ID')
     df_mauttabelle = df_mauttabelle.join(traffic_mapping[weekdays], on='Abschnitts-ID', how='left')
@@ -183,12 +209,21 @@ def scale_charging_sessions(reference_point_id, annual_hpc_sessions, annual_ncs_
     """
     Calculate weekly charging sessions for HPC and NCS based on annual targets.
     """
-    scaling_factors = scale_charging_demand(reference_point_id, df_befahrung)
-    result = pd.DataFrame(index=scaling_factors.index)
-    for day in result.index:
-        scale = scaling_factors.loc[day, 'ScalingFactor']
-        result.loc[day, 'HPC_Sessions'] = round(scale * annual_hpc_sessions / TIME['WEEKS_PER_YEAR'])
-        result.loc[day, 'NCS_Sessions'] = round(scale * annual_ncs_sessions / TIME['WEEKS_PER_YEAR'])
+    reference_data = df_befahrung[df_befahrung['Strecken-ID'] == reference_point_id]
+    if reference_data.empty:
+        raise ValueError(f"Reference point ID {reference_point_id} not found")
+        
+    traffic_data = reference_data.iloc[0]
+    total_traffic = sum(traffic_data[day] for day in GERMAN_DAYS)
+    scaling_factors = {day: traffic_data[day] / total_traffic for day in GERMAN_DAYS}
+    
+    result = pd.DataFrame(index=list(DAY_MAPPING.values()))
+    for german_day, english_day in DAY_MAPPING.items():
+        scale = scaling_factors[german_day]
+        result.loc[english_day, 'HPC_Sessions'] = round(scale * annual_hpc_sessions / TIME['WEEKS_PER_YEAR'])
+        result.loc[english_day, 'NCS_Sessions'] = round(scale * annual_ncs_sessions / TIME['WEEKS_PER_YEAR'])
+    
     result.loc['Total', 'HPC_Sessions'] = result['HPC_Sessions'].sum()
     result.loc['Total', 'NCS_Sessions'] = result['NCS_Sessions'].sum()
+    
     return result
