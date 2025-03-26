@@ -4,8 +4,6 @@ This script simulates the assignment of trucks to charging stations based on the
 
 """
 
-
-
 # ======================================================
 # Importing Required Libraries
 # ======================================================
