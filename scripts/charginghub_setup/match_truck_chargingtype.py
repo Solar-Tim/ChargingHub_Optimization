@@ -12,6 +12,8 @@ import numpy as np
 import os
 from scipy.interpolate import interp1d
 import config
+from pathlib import Path
+import logging
 
 
 np.random.seed(42)
@@ -86,60 +88,120 @@ def load_input_data(path):
     """
     import json
     
-    # Load distribution function from the actual location
-    df_verteilungsfunktion = pd.read_csv(
-        os.path.join(path, 'data', 'traffic', 'final_traffic', 'verteilungsfunktion_mcs-ncs.csv'),
-        sep=','
-    )
+    # Convert path to Path object if it's not already
+    path = Path(path)
     
-    # Load traffic data from laden_mauttabelle.json
-    with open(os.path.join(path, 'data', 'traffic', 'final_traffic', 'laden_mauttabelle.json'), 'r') as f:
-        laden_data = json.load(f)
+    # Define file paths
+    verteilungsfunktion_path = path / 'data' / 'traffic' / 'final_traffic' / 'verteilungsfunktion_mcs-ncs.csv'
+    laden_mauttabelle_path = path / 'data' / 'traffic' / 'final_traffic' / 'laden_mauttabelle.json'
     
-    # Extract traffic data per day
-    traffic_data = laden_data['metadata']['toll_section']['traffic']
+    # Create directories if they don't exist
+    verteilungsfunktion_path.parent.mkdir(exist_ok=True, parents=True)
     
-    # Create a dataframe for daily charging operations based on the traffic data
-    # This simulates the ladevorgaenge_daily_cluster.csv that was expected
-    rows = []
-    
-    # Map German day names to day numbers
-    day_to_num = {
-        'Montag': 1, 'Dienstag': 2, 'Mittwoch': 3, 'Donnerstag': 4, 
-        'Freitag': 5, 'Samstag': 6, 'Sonntag': 7
-    }
-    
-    # Calculate charging sessions from breaks data
-    short_breaks = laden_data['data']['breaks']['short_breaks_2030']
-    long_breaks = laden_data['data']['breaks']['long_breaks_2030']
-    
-    total_traffic = sum(traffic_data.values())
-    
-    for day, traffic in traffic_data.items():
-        # Calculate proportion of traffic for this day
-        day_proportion = traffic / total_traffic if total_traffic > 0 else 0
+    try:
+        # Load distribution function
+        if verteilungsfunktion_path.exists():
+            df_verteilungsfunktion = pd.read_csv(verteilungsfunktion_path, sep=',')
+        else:
+            logging.warning(f"File not found: {verteilungsfunktion_path}")
+            # Create a dummy distribution function if the file doesn't exist
+            df_verteilungsfunktion = pd.DataFrame({
+                'Zeit': list(range(0, 1440, 15)),  # Time in minutes
+                'HPC': [1/96] * 96,  # Uniform distribution
+                'NCS': [1/96] * 96   # Uniform distribution
+            })
         
-        # Map to Schnelllader (short breaks) and Nachtlader (long breaks)
-        schnelllader_count = int(short_breaks * day_proportion * 0.15)  # 15% BEV adoption from file
-        nachtlader_count = int(long_breaks * day_proportion * 0.15)     # 15% BEV adoption from file
+        # Load traffic data
+        if laden_mauttabelle_path.exists():
+            with open(laden_mauttabelle_path, 'r') as f:
+                laden_data = json.load(f)
+        else:
+            logging.warning(f"File not found: {laden_mauttabelle_path}")
+
         
-        # Add to dataframe - Schnelllader
-        rows.append({
-            'Wochentag': day_to_num[day],
-            'Ladetype': 'Schnelllader',
-            'Anzahl': schnelllader_count
-        })
+        # Get the forecast year from metadata (default to 2035)
+        forecast_year = laden_data.get('metadata', {}).get('forecast_year', '2035')
         
-        # Add to dataframe - Nachtlader
-        rows.append({
-            'Wochentag': day_to_num[day],
-            'Ladetype': 'Nachtlader',
-            'Anzahl': nachtlader_count
-        })
-    
-    df_ladevorgaenge_daily = pd.DataFrame(rows)
-    
-    return df_verteilungsfunktion, df_ladevorgaenge_daily
+        # Extract traffic data per day from metadata
+        traffic_data = laden_data['metadata']['toll_section']['traffic']
+        
+        # Extract break data for the specified forecast year (2035)
+        short_breaks_key = f"short_breaks_{forecast_year}"
+        long_breaks_key = f"long_breaks_{forecast_year}"
+        
+        # Get break counts from the JSON data
+        short_breaks = laden_data['data']['breaks'][short_breaks_key]
+        long_breaks = laden_data['data']['breaks'][long_breaks_key]
+        
+        # Create a dataframe for daily charging operations based on the data
+        rows = []
+        
+        # Map German day names to day numbers
+        day_to_num = {
+            'Montag': 1, 'Dienstag': 2, 'Mittwoch': 3, 'Donnerstag': 4, 
+            'Freitag': 5, 'Samstag': 6, 'Sonntag': 7
+        }
+        
+        # Check if daily distribution is available in the JSON
+        if 'daily_distribution' in laden_data['data']:
+            # Use provided daily distribution data for more precise values
+            daily_dist = laden_data['data']['daily_distribution']
+            hpc_key = f"HPC_{forecast_year}"
+            ncs_key = f"NCS_{forecast_year}"
+            
+            for entry in daily_dist:
+                day = entry['day']
+                day_num = day_to_num[day]
+                
+                # Add Schnelllader (HPC) entry
+                rows.append({
+                    'Wochentag': day_num,
+                    'Ladetype': 'Schnelllader',
+                    'Anzahl': entry[hpc_key]
+                })
+                
+                # Add Nachtlader (NCS) entry
+                rows.append({
+                    'Wochentag': day_num,
+                    'Ladetype': 'Nachtlader',
+                    'Anzahl': entry[ncs_key]
+                })
+        else:
+            # Calculate distribution based on traffic proportions
+            total_traffic = sum(traffic_data.values())
+            
+            # Default BEV adoption rate (can be parameterized if needed)
+            bev_adoption_rate = 0.15
+            
+            for day, traffic in traffic_data.items():
+                # Calculate proportion of traffic for this day
+                day_proportion = traffic / total_traffic if total_traffic > 0 else 0
+                
+                # Calculate number of charging sessions based on break data and traffic proportion
+                schnelllader_count = int(short_breaks * day_proportion * bev_adoption_rate)
+                nachtlader_count = int(long_breaks * day_proportion * bev_adoption_rate)
+                
+                # Add to dataframe - Schnelllader
+                rows.append({
+                    'Wochentag': day_to_num[day],
+                    'Ladetype': 'Schnelllader',
+                    'Anzahl': schnelllader_count
+                })
+                
+                # Add to dataframe - Nachtlader
+                rows.append({
+                    'Wochentag': day_to_num[day],
+                    'Ladetype': 'Nachtlader',
+                    'Anzahl': nachtlader_count
+                })
+        
+        df_ladevorgaenge_daily = pd.DataFrame(rows)
+        
+        return df_verteilungsfunktion, df_ladevorgaenge_daily
+        
+    except Exception as e:
+        logging.error(f"Error loading input data: {e}")
+        raise
 
 # ======================================================
 # Helper Functions
@@ -318,7 +380,7 @@ def assign_charging_stations(df_lkws, config):
 # ======================================================
 def finalize_and_export_data(df_lkws, config):
     """
-    Finalize the DataFrame, add datetime, and export to a CSV file.
+    Finalize the DataFrame, add datetime, and export to CSV and JSON files.
     """
     # Use a generic week starting from Monday
     df_lkws['Zeit_DateTime'] = pd.to_datetime(
@@ -344,12 +406,51 @@ def finalize_and_export_data(df_lkws, config):
     output_dir = os.path.join(config['path'], 'results', 'lkw_eingehend')
     os.makedirs(output_dir, exist_ok=True)
 
-    # Export the DataFrame to a CSV file
-    df_lkws.to_csv(
-        os.path.join(output_dir, 'eingehende_lkws_ladesaeule.csv'),
-        sep=';', decimal=','
-    )
-    print(f"Data exported to {output_dir}/eingehende_lkws_ladesaeule.csv")
+    # Export the DataFrame to a CSV file (keep original export)
+    csv_path = os.path.join(output_dir, 'eingehende_lkws_ladesaeule.csv')
+    df_lkws.to_csv(csv_path, sep=';', decimal=',')
+    
+    # Create a structured JSON output
+    # First, prepare the metadata
+    charger_counts = df_lkws['Ladesäule'].value_counts().to_dict()
+    
+    # Create JSON structure
+    json_output = {
+        "metadata": {
+            "total_trucks": len(df_lkws),
+            "simulation_period_days": 7,
+            "start_date": "2024-01-01",
+            "charging_types": charger_counts
+        },
+        "trucks": []
+    }
+    
+    # Convert each truck row to a JSON object
+    for _, row in df_lkws.iterrows():
+        truck_obj = {
+            "id": row['Nummer'],
+            "arrival_day": int(row['Tag']),
+            "arrival_time_minutes": int(row['Ankunftszeit']),
+            "pause_type": row['Pausentyp'],
+            "capacity_kwh": float(row['Kapazitaet']),
+            "max_power_kw": float(row['Max_Leistung']),
+            "initial_soc": float(row['SOC']),
+            "target_soc": float(row['SOC_Target']),
+            "pause_duration_minutes": int(row['Pausenlaenge']),
+            "truck_type_id": int(row['Lkw_ID']),
+            "assigned_charger": row['Ladesäule'],
+            "arrival_datetime": row['Zeit_DateTime'].strftime('%Y-%m-%d %H:%M:%S')
+        }
+        json_output["trucks"].append(truck_obj)
+    
+    # Export to JSON file
+    json_path = os.path.join(output_dir, 'eingehende_lkws_ladesaeule.json')
+    with open(json_path, 'w', encoding='utf-8') as f:
+        import json
+        json.dump(json_output, f, ensure_ascii=False, indent=2)
+    
+    print(f"Data exported to CSV: {csv_path}")
+    print(f"Data exported to JSON: {json_path}")
 
 # ======================================================
 # Analyze Charging Types

@@ -14,11 +14,14 @@ neue_pausen = False  # Set to True to calculate new breaks, False to load existi
 # Decide whether to preprocess toll midpoints or load existing ones
 neue_toll_midpoints = False  # Set to True to recalculate toll midpoints, False to load existing ones
 
-# Base year for calculations
-BASE_YEAR = '2030'  
+# Current simulation year (can be changed to run different scenarios)
+year = '2035'  # Set to 2030 by default
 
-# Choose a specific forecast year (e.g., 2035)
-year = BASE_YEAR  # or another target year
+# Default test location (for demo/default runs)
+DEFAULT_LOCATION = {
+    'LONGITUDE': 7.010174004183936,
+    'LATITUDE': 51.87423718853557
+}
 
 # Scenario parameters for future years
 SCENARIOS = {
@@ -38,19 +41,6 @@ SCENARIOS = {
     'TARGET_YEARS': ['2030', '2035', '2040']
 }
 
-# Utility functions for dynamic column names
-def get_breaks_column(break_type):
-    """Return column name for breaks based on break_type and BASE_YEAR."""
-    return f"{break_type}_breaks_{BASE_YEAR}"
-
-def get_charging_column(charging_type, target_year):
-    """Return column name for charging sessions based on charging_type and year."""
-    return f"{charging_type}_{target_year}"
-
-def get_traffic_flow_column():
-    """Return the traffic flow column name using the base year."""
-    return f"Traffic_flow_trucks_{BASE_YEAR}"
-
 def validate_year(year_value):
     """Validate that the given year exists in the SCENARIOS dictionaries."""
     if year_value not in SCENARIOS['R_BEV']:
@@ -59,50 +49,21 @@ def validate_year(year_value):
         raise ValueError(f"Year {year_value} not found in SCENARIOS['R_TRAFFIC']")
     return year_value
 
-# Base year for calculations
-BASE_YEAR = '2030'  
-
-# Choose a specific forecast year (e.g., 2035)
-year = BASE_YEAR  # or another target year
-
-# Scenario parameters for future years
-SCENARIOS = {
-    # BEV adoption rates for different years
-    'R_BEV': {
-        '2030': 0.15,
-        '2035': 0.50,
-        '2040': 0.80
-    },
-    # Traffic growth factors for different years
-    'R_TRAFFIC': {
-        '2030': 1.00,
-        '2035': 1.06,
-        '2040': 1.12
-    },
-    # Default target years for scenario calculation
-    'TARGET_YEARS': ['2030', '2035', '2040']
-}
+# Validate the year immediately
+validate_year(year)
 
 # Utility functions for dynamic column names
 def get_breaks_column(break_type):
-    """Return column name for breaks based on break_type and BASE_YEAR."""
-    return f"{break_type}_breaks_{BASE_YEAR}"
+    """Return column name for breaks based on break_type and current year."""
+    return f"{break_type}_breaks_{year}"
 
 def get_charging_column(charging_type, target_year):
     """Return column name for charging sessions based on charging_type and year."""
     return f"{charging_type}_{target_year}"
 
 def get_traffic_flow_column():
-    """Return the traffic flow column name using the base year."""
-    return f"Traffic_flow_trucks_{BASE_YEAR}"
-
-def validate_year(year_value):
-    """Validate that the given year exists in the SCENARIOS dictionaries."""
-    if year_value not in SCENARIOS['R_BEV']:
-        raise ValueError(f"Year {year_value} not found in SCENARIOS['R_BEV']")
-    if year_value not in SCENARIOS['R_TRAFFIC']:
-        raise ValueError(f"Year {year_value} not found in SCENARIOS['R_TRAFFIC']")
-    return year_value
+    """Return the traffic flow column name using the current year."""
+    return f"Traffic_flow_trucks_{year}"
 
 # Base directories
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -137,7 +98,6 @@ SPATIAL = {
     'DEFAULT_CRS': 'EPSG:4326',
     'TARGET_CRS': 'EPSG:32632',  # UTM Zone 32N for Central Europe
     'BUFFER_RADIUS': 10000,  # meters - radius for location buffer
-    'BUFFER_RADIUS': 10000,  # meters - radius for location buffer
 }
 
 # Driver break calculation settings
@@ -165,16 +125,9 @@ TIME = {
     'WEEKS_PER_YEAR': 52
 }
 
-
-
 # CSV file settings (kept for backward compatibility)
 CSV = {
     'DEFAULT_SEPARATOR': ';',
     'DEFAULT_DECIMAL': ','
 }
 
-# Default test location (for demo/default runs)
-DEFAULT_LOCATION = {
-    'LONGITUDE': 7.010174004183936,
-    'LATITUDE': 51.87423718853557
-}

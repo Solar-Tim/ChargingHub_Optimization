@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import datetime
 import os
+from config_demand import get_breaks_column, get_charging_column, year
 from pathlib import Path
 
 def dataframe_to_json(df, output_path, metadata=None, structure_type='demand'):
@@ -17,57 +18,81 @@ def dataframe_to_json(df, output_path, metadata=None, structure_type='demand'):
         df: DataFrame with traffic data
         output_path: Path to save the output file
         metadata: Dictionary with metadata
-        structure_type: Type of structure to create ('demand', 'charging_sessions', or 'toll_midpoints')
+        structure_type: Type of structure to create ('demand', 'charging_sessions', etc.)
     """
     # Create initial data structure
     data_dict = {"metadata": metadata or {}, "data": {}}
     
     if structure_type == 'demand':
-        # Extract location data
-        if 'location' in metadata:
-            data_dict["data"]["location"] = metadata["location"]
+        # Extract breaks data for all years
+        breaks_data = {}
+        for break_type in ["short", "long"]:
+            for yr in ["2030", "2035", "2040"]:
+                # Try year-specific column first
+                col_name = f"{break_type}_breaks_{yr}"
+                if col_name in df.columns:
+                    breaks_data[col_name] = df[col_name].iloc[0] if not df.empty else 0
+                else:
+                    # Fall back to general column if needed
+                    from config_demand import get_breaks_column
+                    general_col = get_breaks_column(break_type)
+                    if general_col in df.columns:
+                        breaks_data[col_name] = df[general_col].iloc[0] if not df.empty else 0
         
-        # Extract breaks data
-        breaks_cols = [col for col in df.columns if 'breaks' in col.lower()]
-        if breaks_cols:
-            data_dict["data"]["breaks"] = {}
-            for col in breaks_cols:
-                data_dict["data"]["breaks"][col] = df[col].iloc[0] if not df.empty else 0
+        data_dict["data"]["breaks"] = breaks_data
         
-        # Extract charging demand
-        years = ["2030", "2035", "2040"]
-        data_dict["data"]["charging_demand"] = {}
-        for yr in years:
+        # Extract charging demand for all years
+        charging_demand = {}
+        for yr in ["2030", "2035", "2040"]:
             hpc_col = f"HPC_{yr}"
             ncs_col = f"NCS_{yr}"
             if hpc_col in df.columns and ncs_col in df.columns:
-                data_dict["data"]["charging_demand"][yr] = {
+                charging_demand[yr] = {
                     "HPC": df[hpc_col].iloc[0] if not df.empty else 0,
                     "NCS": df[ncs_col].iloc[0] if not df.empty else 0
                 }
         
-        # Extract daily demand pattern
+        data_dict["data"]["charging_demand"] = charging_demand
+        
+        # Extract daily demand pattern for all years
         days = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
-        data_dict["data"]["daily_demand"] = {}
+        daily_demand = {}
         for day in days:
             if day in df.columns:
-                dist_factor = df[day].iloc[0] if not df.empty else 0
-                hpc_val = df[f"{day}_HPC"].iloc[0] if f"{day}_HPC" in df.columns and not df.empty else 0
-                ncs_val = df[f"{day}_NCS"].iloc[0] if f"{day}_NCS" in df.columns and not df.empty else 0
-                
-                data_dict["data"]["daily_demand"][day] = {
-                    "distribution_factor": dist_factor,
-                    "HPC": hpc_val,
-                    "NCS": ncs_val
+                daily_info = {
+                    "distribution_factor": df[day].iloc[0] if not df.empty else 0
                 }
+                
+                # Add HPC and NCS values for each year
+                for yr in ["2030", "2035", "2040"]:
+                    # Try year-specific day columns first
+                    hpc_day_col = f"{day}_HPC_{yr}"
+                    ncs_day_col = f"{day}_NCS_{yr}"
+                    
+                    # Fall back to general day columns if needed
+                    if hpc_day_col not in df.columns:
+                        hpc_day_col = f"{day}_HPC"
+                    if ncs_day_col not in df.columns:
+                        ncs_day_col = f"{day}_NCS"
+                    
+                    if hpc_day_col in df.columns:
+                        daily_info[f"HPC_{yr}"] = df[hpc_day_col].iloc[0] if not df.empty else 0
+                    if ncs_day_col in df.columns:
+                        daily_info[f"NCS_{yr}"] = df[ncs_day_col].iloc[0] if not df.empty else 0
+                
+                daily_demand[day] = daily_info
+        
+        data_dict["data"]["daily_demand"] = daily_demand
     
+    # Other structure types remain unchanged
     elif structure_type == 'charging_sessions':
-        # For charging sessions, the DataFrame is already in the right format
         data_dict["data"] = df.to_dict(orient='index')
     
     elif structure_type == 'toll_midpoints':
-        # For toll midpoints, directly add the dataframe records to the structure
         data_dict["data"]["toll_sections"] = df.to_dict(orient='records')
+    
+    elif structure_type == 'breaks':
+        data_dict["data"] = df.to_dict(orient='records')
     
     # Apply cleaning function to create optimized structure
     clean_data = clean_json_structure(data_dict, structure_type)
@@ -183,15 +208,16 @@ def clean_json_structure(data_dict, structure_type='demand'):
     
     Args:
         data_dict: Original data dictionary with redundant information
-        structure_type: Type of structure to create ('demand' or 'charging_sessions')
+        structure_type: Type of structure to create ('demand', 'charging_sessions', etc.)
         
     Returns:
         Dict with cleaned structure
     """
     if structure_type == 'demand':
-        # Create new demand structure
+        # Create new demand structure with all forecast years
         clean_data = {
             "metadata": {
+                "forecast_years": data_dict.get("metadata", {}).get("forecast_years", ["2030", "2035", "2040"]),
                 "forecast_year": data_dict.get("metadata", {}).get("forecast_year", ""),
                 "base_year": data_dict.get("metadata", {}).get("base_year", ""),
                 "buffer_radius_m": data_dict.get("metadata", {}).get("buffer_radius_m", 0),
@@ -205,24 +231,92 @@ def clean_json_structure(data_dict, structure_type='demand'):
         
         # Add data section
         clean_data["data"] = {
-            "breaks": {
-                "short_breaks_2030": round(data_dict.get("data", {}).get("breaks", {}).get("short_breaks_2030", 0)),
-                "long_breaks_2030": round(data_dict.get("data", {}).get("breaks", {}).get("long_breaks_2030", 0))
-            },
+            "breaks": {},
             "charging_demand": {},
             "daily_distribution": []
         }
         
-        # Rest of the function remains unchanged
-
+        # Add break data for all years
+        breaks_data = data_dict.get("data", {}).get("breaks", {})
+        for break_type in ["short", "long"]:
+            for year in ["2030", "2035", "2040"]:
+                break_key = f"{break_type}_breaks_{year}"
+                
+                # Try to get the specific year's break data
+                if break_key in breaks_data:
+                    clean_data["data"]["breaks"][break_key] = round(breaks_data[break_key])
+                else:
+                    # If not found, use the column from the dataframe if available
+                    generic_key = get_breaks_column(break_type)
+                    if generic_key in breaks_data:
+                        clean_data["data"]["breaks"][break_key] = round(breaks_data[generic_key])
+        
+        # Add charging demand data for all years
+        daily_demand = data_dict.get("data", {}).get("daily_demand", {})
+        charging_demand = data_dict.get("data", {}).get("charging_demand", {})
+        
+        for target_year in ["2030", "2035", "2040"]:
+            # Try to get from charging_demand structure
+            if target_year in charging_demand:
+                clean_data["data"]["charging_demand"][target_year] = {
+                    "HPC": round(charging_demand[target_year].get("HPC", 0)),
+                    "NCS": round(charging_demand[target_year].get("NCS", 0))
+                }
+            else:
+                # Calculate from columns if available
+                hpc_col = f"HPC_{target_year}"
+                ncs_col = f"NCS_{target_year}"
+                
+                hpc_value = 0
+                ncs_value = 0
+                
+                # Check in daily_demand first
+                for day, day_data in daily_demand.items():
+                    if hpc_col in day_data:
+                        hpc_value += day_data[hpc_col]
+                    if ncs_col in day_data:
+                        ncs_value += day_data[ncs_col]
+                
+                # If no daily values found, check direct columns
+                if hpc_value == 0 and ncs_value == 0:
+                    for key, val in data_dict.get("data", {}).items():
+                        if key == hpc_col:
+                            hpc_value = val
+                        elif key == ncs_col:
+                            ncs_value = val
+                
+                clean_data["data"]["charging_demand"][target_year] = {
+                    "HPC": round(hpc_value),
+                    "NCS": round(ncs_value)
+                }
+        
+        # Add daily distribution data
+        daily_demand = data_dict.get("data", {}).get("daily_demand", {})
+        for day, values in daily_demand.items():
+            day_data = {
+                "day": day,
+                "distribution_factor": values.get("distribution_factor", 0),
+            }
+            
+            # Add charging demand for each day for all years
+            for target_year in ["2030", "2035", "2040"]:
+                hpc_col = f"HPC_{target_year}"
+                ncs_col = f"NCS_{target_year}"
+                
+                # Try to get specific year values or use default
+                day_data[hpc_col] = round(values.get(hpc_col, 0))
+                day_data[ncs_col] = round(values.get(ncs_col, 0))
+            
+            clean_data["data"]["daily_distribution"].append(day_data)
+    
+    # Other structure types remain the same
     elif structure_type == 'charging_sessions':
-        # Handle charging sessions format
+        # Existing charging_sessions code
         clean_data = {
             "metadata": data_dict.get("metadata", {}),
             "data": []
         }
         
-        # Extract data from DataFrame format
         sessions_data = data_dict.get("data", {})
         for day, row in sessions_data.items():
             if day != 'Total':  # Skip the total row
@@ -244,11 +338,20 @@ def clean_json_structure(data_dict, structure_type='demand'):
             }
             
     elif structure_type == 'toll_midpoints':
-        # Create structure for toll midpoints
+        # Existing toll_midpoints code
         clean_data = {
             "metadata": data_dict.get("metadata", {}),
             "data": {
                 "toll_sections": data_dict.get("data", {}).get("toll_sections", [])
+            }
+        }
+    
+    elif structure_type == 'breaks':
+        # Existing breaks code
+        clean_data = {
+            "metadata": data_dict.get("metadata", {}),
+            "data": {
+                "breaks": data_dict.get("data", {}) if isinstance(data_dict.get("data"), list) else []
             }
         }
             

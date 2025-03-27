@@ -8,7 +8,7 @@ import geopandas as gpd
 import numpy as np
 import logging
 import os
-from config_demand import SPATIAL, SCENARIOS, get_breaks_column, get_charging_column, BASE_YEAR, validate_year
+from config_demand import SPATIAL, SCENARIOS, get_breaks_column, get_charging_column, year, validate_year
 from json_utils import dataframe_to_json
 
 logger = logging.getLogger(__name__)
@@ -26,19 +26,25 @@ def calculate_scenarios(df_location, grouped_short, grouped_long):
     """
     Calculate charging scenarios (e.g. for 2030, 2035, 2040) using break counts.
     """
-    def calculate_year(df, year):
-        r_bev = SCENARIOS['R_BEV'][year]
-        r_traffic = SCENARIOS['R_TRAFFIC'][year]
-        df[f'HPC_{year}'] = df['short_breaks_2030'] * r_bev * r_traffic
-        df[f'NCS_{year}'] = df['long_breaks_2030'] * r_bev * r_traffic
-        return df
-        
     results_df = df_location.copy()
-    results_df['short_breaks_2030'] = grouped_short.get(0, 0)
-    results_df['long_breaks_2030'] = grouped_long.get(0, 0)
     
-    for year in SCENARIOS['TARGET_YEARS']:
-        results_df = calculate_year(results_df, year)
+    # Store base break counts using the current year format for backward compatibility
+    short_breaks_col = get_breaks_column('short')
+    long_breaks_col = get_breaks_column('long')
+    results_df[short_breaks_col] = grouped_short.get(0, 0)
+    results_df[long_breaks_col] = grouped_long.get(0, 0)
+    
+    # Store break data for all years explicitly
+    for target_year in SCENARIOS['TARGET_YEARS']:
+        # Store break counts for each specific year
+        results_df[f'short_breaks_{target_year}'] = grouped_short.get(0, 0)
+        results_df[f'long_breaks_{target_year}'] = grouped_long.get(0, 0)
+        
+        # Calculate charging demand based on breaks for each year
+        r_bev = SCENARIOS['R_BEV'][target_year]
+        r_traffic = SCENARIOS['R_TRAFFIC'][target_year]
+        results_df[f'HPC_{target_year}'] = grouped_short.get(0, 0) * r_bev * r_traffic
+        results_df[f'NCS_{target_year}'] = grouped_long.get(0, 0) * r_bev * r_traffic
     
     return results_df
 
@@ -109,6 +115,10 @@ def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_ra
     
     logger.info("Calculating scenarios for charging demand...")
     results_df = calculate_scenarios(df_location, grouped_short, grouped_long)
+    
+    # Calculate total break counts
+    short_breaks_count = grouped_short.get(0, 0)  # Fixed missing variable
+    long_breaks_count = grouped_long.get(0, 0)  # Fixed missing variable
     
     return {
         'results_df': results_df,

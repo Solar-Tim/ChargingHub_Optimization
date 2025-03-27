@@ -1,6 +1,6 @@
 leistung_ladetyp = {
     'NCS': 100,
-    'HPC': 350,
+    'HPC': 400,
     'MCS': 1000
 }
 

@@ -15,24 +15,24 @@ include_battery = True              # Toggle for including battery in optimizati
 
 M_value = 1000000  # Big M value for the optimization
 
-existing_mv_connection_cost = 0  # Cost of existing MV connection (EUR)
+existing_mv_connection_cost = 0  # Cost of existing MV connection (EUR) - Hier ist nur die Rede von Kabelkosten, nicht von dem Baukostenzuschuss
 
 # Manual distance values when not using distance calculation
 manual_distances = {
-    'distribution_distance': 20500,    # Distance to nearest distribution substation (m)
+    'distribution_distance': 10000,    # Distance to nearest distribution substation (m)
     'transmission_distance': 9999999,   # Distance to nearest transmission substation (m)
     'powerline_distance': 9999999,      # Distance to nearest HV power line (m)
 }
 
-# Placeholder for the number of chargers
+# Placeholder for the number of chargers - Wird bei der Optimierung automatisch ermittelt
 MCS_count = 5  # Number of MCS chargers
 HPC_count = 10  # Number of HPC chargers
 NCS_count = 25  # Number of NCS chargers
 
-# Charger fixed costs (EUR)
-MCS_cost = 75000  # Cost per MCS charger
-HPC_cost = 50000  # Cost per HPC charger
-NCS_cost = 10000  # Cost per NCS charger
+# Charger fixed costs (EUR) - Akutell Werte aus Felix MA - Problematisch weil die Charger oft die Gleichrichter mit beinhalten und sie aktuell doppelt bezahlt werden
+MCS_cost = 375000  # Cost per MCS charger
+HPC_cost = 110000  # Cost per HPC charger
+NCS_cost = 35000  # Cost per NCS charger
 
 # Battery parameters
 battery_cost_per_kwh = 200    # Battery storage cost per kWh
@@ -42,22 +42,21 @@ battery_charge_rate_max = 999999 # Maximum charge/discharge rate in kW
 battery_efficiency = 0.95      # Round-trip battery efficiency
 battery_min_soc = 0        # Minimum state of charge
 battery_max_soc = 1         # Maximum state of charge
-battery_lifetime = 10         # Expected battery lifetime in years
 
 
 
-# Define capacity fee parameters (€/kW) - adjust these to realistic values
-hv_capacity_fee = 200  # Higher fee for HV connections
-mv_capacity_fee = 180   # Lower fee for MV connections
+# Define capacity fee parameters (€/kW) - Baukostenzuschuss https://www.regionetz.de/fileadmin/regionetz/content/Dokumente/Preisbl%C3%A4tter/2025_Preisblatt_Baukostenzuschuss_oberhalb_der_Niederspannung.pdf
+hv_capacity_fee = 111,14   # Based of BKZ from Regionetz OHNE Reduzierung durch Regionetz *0.5 
+mv_capacity_fee = 183,56   # Based of BKZ from Regionetz OHNE Reduzierung durch Regionetz *0.5 
 
 
-# Line capacities (in kW)
-existing_mv_capacity       = 2000  # 2 MW capacity for existing MV line
-distribution_substation_capacity = 10000  # 10 MW for distribution substation
-transmission_substation_capacity = 20000  # 20 MW for transmission substation
-hv_line_capacity           = 100000  # 100 MW for HV line
+# Line capacities (in kW) - in Anlehnung an https://www.regionetz.de/fileadmin/regionetz/content/Dokumente/TAB/TAB_MS_2023_Regionetz.pdf
+existing_mv_capacity       = 5500  # 5,5 MW capacity for existing MV line
+distribution_substation_capacity = 15000  # 15 MW for distribution substation
+transmission_substation_capacity = 15000  # 15 MW for transmission substation
+hv_line_capacity           = 100000  # 100 MW for HV line and a new substation
 
-# Substation expansion parameters
+# Substation expansion parameters - Unsicher ab wann die Erweiterung notwendig ist
 distribution_existing_capacity = 2000  # Initial available capacity (kW)
 distribution_max_expansion = 5000      # Maximum additional expansion (kW)
 transmission_existing_capacity = 10000 # Initial available capacity (kW)
@@ -65,10 +64,10 @@ transmission_max_expansion = 10000     # Maximum additional expansion (kW)
 distribution_expansion_fixed_cost = 500000  # Fixed cost for expanding distribution substation (EUR)
 transmission_expansion_fixed_cost = 500000 # Fixed cost for expanding transmission substation (EUR)
 
-# HV Substation Cost estimate
+# HV Substation Cost estimate - Fixe Annahme auf Basis von Omexon
 HV_Substation_cost = 2500000 # Cost of a new HV substation ~2.5M EUR
 
-# Grid connection cost (EUR/kW for connectivity)
+# Grid connection cost (EUR/kW for connectivity) - Nicht genutzt aber ein guter Daumenwert zur Orientierung
 basecost_transformer = 20000    # Base transformer cost 1000kW
 cost_transformer_perkW = 200    # Cost per kW for transformer
 
@@ -229,3 +228,9 @@ charger_distance_increment = 4  # Distance increment between charger positions (
 mcs_power_kw = 350  # Power rating of MCS chargers (kW)
 hpc_power_kw = 150  # Power rating of HPC chargers (kW)
 ncs_power_kw = 22   # Power rating of NCS chargers (kW)
+
+leistung_ladetyp = {
+    'NCS': 100,
+    'HPC': 400,
+    'MCS': 1000
+} # Max Ladeleistung pro Ladepunkt in kW

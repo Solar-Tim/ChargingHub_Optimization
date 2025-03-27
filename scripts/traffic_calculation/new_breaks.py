@@ -9,7 +9,7 @@ import numpy as np
 import logging
 from typing import Dict, List, Tuple, Any
 from functools import lru_cache
-from config_demand import BREAKS, FILES, CSV, get_traffic_flow_column, BASE_YEAR
+from config_demand import BREAKS, FILES, CSV, get_traffic_flow_column, year
 from json_utils import dataframe_to_json, json_to_dataframe
 
 logger = logging.getLogger(__name__)
@@ -384,9 +384,9 @@ def calculate_new_breaks(base_path=None, random_seed=None, export=True):
         output_path = FILES['BREAKS_OUTPUT']
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
-        # Save as JSON with structured format
+        # Save as JSON with structured format - changed BASE_YEAR to year
         metadata = {
-            'base_year': BASE_YEAR,
+            'base_year': year,
             'random_seed': random_seed,
             'calculation_time': time.time() - time_start
         }
