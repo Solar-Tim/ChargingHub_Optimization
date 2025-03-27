@@ -2,9 +2,10 @@ from gurobipy import Model, GRB, quicksum
 import pandas as pd
 import time
 import os
+import json
 import config
 import logging
-import argparse
+from datetime import datetime
 
 logging.basicConfig(filename='logs.log', level=logging.DEBUG, format='%(asctime)s; %(levelname)s; %(message)s')
 
@@ -13,184 +14,218 @@ CONFIG = {
     # 'STRATEGIES': ["T_min", "Konstant"]
     # T_min: Minimierung der Ladezeit - Kein Lademanagement
     # Konstant: Möglichst konstante Ladeleistung - Minimierung der Netzanschlusslast - Lademanagement
+    'ladequote': 0.8,  # Ladequote in Prozent
+    'netz': 100,  # Netzanschluss in Prozent
+    'power': '100-100-100',  # Ladeleistung in Prozent (NCS-HPC-MCS)
+    'pause': '45-540',  # Pausenzeiten in Minuten (min-max)
 }
 
-def modellierung(szenario, target_week=1):
-    """
-    Optimiert den Ladehub für eine spezifische Woche.
-    
-    Args:
-        szenario: Szenario-String zur Bestimmung der Konfiguration
-        target_week: Welche Woche optimiert werden soll (Standard: 1)
-    """
-    print(f"Optimiere Woche {target_week} für Szenario {szenario}")
-    
-    base_case = 'cl_2_quote_80-80-80_netz_100_pow_100-100-100_pause_45-540_M_1_Base'
-    
-    dict_base = {
-        'ladequote': '80-80-80', # Ladequote in Prozent für NCS, HPC und MCS
-        'cluster': '2',
-        'pause': '45-540' # Pausenzeiten in Minuten
+def datetime_to_iso(dt_obj):
+    """Convert datetime objects to ISO 8601 format strings"""
+    if isinstance(dt_obj, pd.Timestamp):
+        return dt_obj.isoformat()
+    return str(dt_obj)
+
+def validate_truck_data(df):
+    """Validate and standardize truck data"""
+    # Map JSON structure to expected columns
+    column_mapping = {
+        'id': 'Nummer',
+        'arrival_day': 'Tag',
+        'arrival_time_minutes': 'Ankunftszeit_total',
+        'pause_duration_minutes': 'Pausenlaenge',
+        'assigned_charger': 'Ladesäule',
+        'initial_soc': 'SOC',
+        'capacity_kwh': 'Kapazitaet',
+        'max_power_kw': 'Max_Leistung',
+        'target_soc': 'SOC_Target'
     }
     
-    dict_szenario = {
-        'ladequote': szenario.split('_')[3],
-        'cluster': szenario.split('_')[1],
-        'pause': szenario.split('_')[9]
+    # Rename columns that exist in the DataFrame
+    for json_col, req_col in column_mapping.items():
+        if json_col in df.columns:
+            df.rename(columns={json_col: req_col}, inplace=True)
+    
+    # Add load status column if it doesn't exist
+    if 'LoadStatus' not in df.columns and 'load_status' in df.columns:
+        df.rename(columns={'load_status': 'LoadStatus'}, inplace=True)
+    elif 'LoadStatus' not in df.columns:
+        logging.warning("LoadStatus column not found. Adding default value of 1")
+        print("WARNING: LoadStatus column not found. Assuming all entries are valid (LoadStatus=1)")
+        df['LoadStatus'] = 1
+
+    # Ensure essential columns exist with default values
+    required_cols = {
+        'Nummer': lambda: range(len(df)),
+        'LoadStatus': lambda: 1,
+        'Ankunftszeit_total': lambda: 0,
+        'Pausenlaenge': lambda: 45, 
+        'Ladesäule': lambda: 'NCS',
+        'SOC': lambda: 0.2,
+        'Kapazitaet': lambda: 400, 
+        'Max_Leistung': lambda: 350,
+        'SOC_Target': lambda: 0.8
     }
     
+    missing_columns = []
+    for col, default_func in required_cols.items():
+        if col not in df.columns:
+            missing_columns.append(col)
+            logging.warning(f"Required column '{col}' not found in truck data. Adding default values.")
+            df[col] = [default_func() for _ in range(len(df))]
+    
+    if missing_columns:
+        logging.warning(f"Added default values for missing columns: {', '.join(missing_columns)}")
+        print(f"WARNING: Added default values for missing columns: {', '.join(missing_columns)}")
+    
+    return df
+
+def modellierung():
+    """
+    Optimizes the charging hub for a specific week using configuration from charging_config_base.json file.
+    The optimization prioritizes using trucks data from this file if available.
+    
+    Returns:
+        None: Results are saved to a JSON file
+    """
+    logging.info(f"Optimizing for scenario {CONFIG['STRATEGIES']}")
+    print(f"Optimizing for scenario {CONFIG['STRATEGIES']}")
+ 
+    # Extract parameters from configuration
+    dict_config = {
+        'ladequote': CONFIG['ladequote'],
+        'netz': CONFIG['netz'],
+        'power': CONFIG['power'],
+        'pause': CONFIG['pause']
+    }
+    logging.info(f"Using configuration parameters: {dict_config}")
+
     # Get script directory and root directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.dirname(os.path.dirname(script_dir))
     
+    logging.info(f"Script directory: {script_dir}")
+    logging.info(f"Root directory: {root_dir}")
     print(f"Script directory: {script_dir}")
     print(f"Root directory: {root_dir}")
     
-    # First try to find files in expected locations
-    if (dict_szenario['ladequote'] == dict_base['ladequote'] and 
-        dict_szenario['cluster'] == dict_base['cluster'] and 
-        dict_szenario['pause'] == dict_base['pause']):
-        lkw_filename = f'eingehende_lkws_loadstatus_{base_case}.csv'
-        ladehub_filename = f'anzahl_ladesaeulen_{base_case}.csv'
-    else:
-        lkw_filename = f'eingehende_lkws_loadstatus_{szenario}.csv'
-        ladehub_filename = f'anzahl_ladesaeulen_{szenario}.csv'
+    # ------------------------------
+    # Load charging hub configuration from JSON - this is our primary data source
+    # ------------------------------
+    ladehub_filepath = os.path.join(root_dir, 'data', 'load', 'truckdata', 'charging_config_base.json')
     
-    # Try different possible paths for LKW data
-    lkw_path_options = [
-        os.path.join(script_dir, 'data', 'epex', 'lkws', lkw_filename),
-        os.path.join(root_dir, 'results', 'lkws', lkw_filename),
-        os.path.join(root_dir, 'results', 'lkws', f'eingehende_lkws_loadstatus_cluster_{dict_szenario["cluster"]}_quota_{dict_szenario["ladequote"]}_pause_{dict_szenario["pause"]}_Base.csv')
-    ]
+    logging.info(f"Checking charging config path: {ladehub_filepath}")
+    print(f"Checking path: {ladehub_filepath}")
     
-    lkw_filepath = None
-    for path_option in lkw_path_options:
-        print(f"Checking path: {path_option}")
-        if os.path.exists(path_option):
-            lkw_filepath = path_option
-            print(f"Found LKW file: {lkw_filepath}")
-            break
-    
-    if not lkw_filepath:
-        print("ERROR: Could not find LKW data file in any expected location")
-        return None
-    
-    # Try different possible paths for Ladehub data
-    ladehub_path_options = [
-        os.path.join(script_dir, 'data', 'flex', 'konfiguration_ladehub', ladehub_filename),
-        os.path.join(root_dir, 'results', 'konfiguration_ladehub', ladehub_filename)
-    ]
-    
-    ladehub_filepath = None
-    for path_option in ladehub_path_options:
-        print(f"Checking path: {path_option}")
-        if os.path.exists(path_option):
-            ladehub_filepath = path_option
-            print(f"Found Ladehub file: {ladehub_filepath}")
-            break
-    
-    if not ladehub_filepath:
-        print("WARNING: Could not find Ladehub configuration file. Using default values.")
-        # Create a default dataframe for ladehub
-        df_ladehub = pd.DataFrame({
-            'NCS': [4],
-            'HPC': [2],
-            'MCS': [1]
-        })
+    if not os.path.exists(ladehub_filepath):
+        logging.warning("Could not find charging hub configuration file. Using default values.")
+        print("WARNING: Could not find charging hub configuration file. Using default values.")
+        # Create a default configuration
+        charging_config = {
+            "charging_stations": {
+                "NCS": {"count": 4},
+                "HPC": {"count": 2},
+                "MCS": {"count": 1}
+            }
+        }
+        # No truck data available from this source
+        truck_data_from_config = None
     else:
         try:
-            print(f"Loading Ladehub config from: {ladehub_filepath}")
-            df_ladehub = pd.read_csv(ladehub_filepath, sep=';', decimal=',')
-            print(f"Successfully loaded Ladehub data. Columns: {df_ladehub.columns.tolist()}")
+            logging.info(f"Loading charging hub config from: {ladehub_filepath}")
+            print(f"Loading charging hub config from: {ladehub_filepath}")
+            with open(ladehub_filepath, 'r') as f:
+                charging_config = json.load(f)
+            logging.info(f"Successfully loaded charging hub config")
+            print(f"Successfully loaded charging hub config")
+            
+            # Try to extract truck data from charging_config_base.json
+            if "trucks" in charging_config and charging_config["trucks"]:
+                truck_data_from_config = {"trucks": charging_config["trucks"]}
+                logging.info(f"Using truck data from charging_config_base.json - {len(charging_config['trucks'])} trucks found")
+                print(f"Using truck data from charging_config_base.json - {len(charging_config['trucks'])} trucks found")
+            else:
+                truck_data_from_config = None
+                logging.warning("No truck data found in charging_config_base.json")
+                print("WARNING: No truck data found in charging_config_base.json")
+                
         except Exception as e:
-            print(f"ERROR loading Ladehub data: {e}")
-            print("Using default values instead.")
-            df_ladehub = pd.DataFrame({
-                'NCS': [4],
-                'HPC': [2],
-                'MCS': [1]
-            })
+            logging.error(f"Error loading charging hub config: {e}")
+            print(f"ERROR loading charging hub data: {e}")
+            # Create default configuration on error
+            charging_config = {
+                "charging_stations": {
+                    "NCS": {"count": 4},
+                    "HPC": {"count": 2},
+                    "MCS": {"count": 1}
+                }
+            }
+            truck_data_from_config = None
     
-    # Load LKW data and check columns
-    try:
-        print(f"Loading LKW data from: {lkw_filepath}")
-        df_lkw = pd.read_csv(lkw_filepath, sep=';', decimal=',')
-        print(f"Successfully loaded LKW data. Shape: {df_lkw.shape}")
-        print(f"Columns: {df_lkw.columns.tolist()}")
+    # ------------------------------
+    # Only load truck data from separate file if not found in charging_config_base.json
+    # ------------------------------
+    if truck_data_from_config is None:
+        lkw_filepath = os.path.join(root_dir, 'data', 'load', 'truckdata', 'eingehende_lkws_ladesaeule.json')
         
-        # Map column names if necessary based on the actual columns in the file
-        column_mapping = {
-            'Nummer': 'Nummer',
-            'Ankunft': 'Ankunftszeit_total',
-            'Ankunftszeit_total': 'Ankunftszeit_total',
-            'Tag': 'Tag',
-            'KW': 'KW',
-            'Woche': 'KW',
-            'Ladetyp': 'Ladesäule',
-            'Pausenlaenge': 'Pausenlaenge',
-            'Kapazitaet': 'Kapazitaet',
-            'SOC': 'SOC',
-            'SOC_Target': 'SOC_Target',
-            'Max_Leistung': 'Max_Leistung',
-            'LoadStatus': 'LoadStatus'
-        }
+        logging.info(f"Checking truck data path: {lkw_filepath}")
+        print(f"Checking path: {lkw_filepath}")
         
-        # Check if columns exist or need to be renamed/created
-        if 'Ankunftszeit_total' not in df_lkw.columns and 'Ankunft' in df_lkw.columns:
-            df_lkw['Ankunftszeit_total'] = df_lkw['Ankunft']
+        if not os.path.exists(lkw_filepath):
+            logging.error("Could not find truck data file and no truck data in charging config")
+            print("ERROR: Could not find truck data file and no truck data in charging config")
+            return None
         
-        if 'KW' not in df_lkw.columns:
-            if 'Datum' in df_lkw.columns:
-                # Create KW from Datum if available
-                df_lkw['KW'] = pd.to_datetime(df_lkw['Datum']).dt.isocalendar().week
-            else:
-                # Assume all data is for the target week
-                df_lkw['KW'] = target_week
-        
-        if 'Ladesäule' not in df_lkw.columns and 'Ladetyp' in df_lkw.columns:
-            df_lkw['Ladesäule'] = df_lkw['Ladetyp']
-        
-        if 'LoadStatus' not in df_lkw.columns:
-            # If LoadStatus is missing, try to derive it from other columns or set a default
-            if 'LoadStatus' in df_lkw.columns:
-                df_lkw['LoadStatus'] = df_lkw['LoadStatus']
-            else:
-                print("WARNING: LoadStatus column not found. Assuming all entries are valid (LoadStatus=1).")
-                df_lkw['LoadStatus'] = 1
-        
-        # Add missing columns with default values if necessary
-        required_cols = ['KW', 'LoadStatus', 'Ankunftszeit_total', 'Pausenlaenge', 
-                         'Ladesäule', 'SOC', 'Kapazitaet', 'Max_Leistung', 'SOC_Target']
-        for col in required_cols:
-            if col not in df_lkw.columns:
-                print(f"WARNING: Required column {col} not found in data.")
-                return None
-        
-    except Exception as e:
-        print(f"ERROR loading LKW data: {e}")
+        # Load truck data from separate file
+        try:
+            logging.info(f"Loading truck data from: {lkw_filepath}")
+            print(f"Loading truck data from: {lkw_filepath}")
+            with open(lkw_filepath, 'r') as f:
+                truck_data = json.load(f)
+            
+            print(f"Successfully loaded truck data. Found {len(truck_data['trucks'])} trucks.")
+            logging.info(f"Successfully loaded truck data from external file.")
+        except Exception as e:
+            logging.error(f"Error loading truck data: {e}")
+            print(f"ERROR loading truck data: {e}")
+            return None
+    else:
+        # Use truck data from charging_config_base.json
+        truck_data = truck_data_from_config
+    
+    # Convert truck list to DataFrame
+    df_lkw = pd.DataFrame(truck_data["trucks"])
+    
+    # Validate and standardize the truck data columns
+    df_lkw = validate_truck_data(df_lkw)
+    
+    if df_lkw.empty:
+        logging.error("Truck data is empty after validation")
+        print("ERROR: Truck data is empty after validation")
         return None
     
-    # Maximale Leistung pro Ladesäulen-Typ
-    ladeleistung = {
-        'NCS': int(int(szenario.split('_')[7].split('-')[0]) / 100 * config.leistung_ladetyp['NCS']),
-        'HPC': int(int(szenario.split('_')[7].split('-')[1]) / 100 * config.leistung_ladetyp['HPC']),
-        'MCS': int(int(szenario.split('_')[7].split('-')[2]) / 100 * config.leistung_ladetyp['MCS'])
-    }
-
-    # Anzahl Ladesäulen
+    # Extract charging station counts from JSON
     max_saeulen = {
-        'NCS': int(df_ladehub['NCS'][0]),
-        'HPC': int(df_ladehub['HPC'][0]),
-        'MCS': int(df_ladehub['MCS'][0])
+        'NCS': charging_config["charging_stations"]["NCS"]["count"],
+        'HPC': charging_config["charging_stations"]["HPC"]["count"],
+        'MCS': charging_config["charging_stations"]["MCS"]["count"]
     }
-
-    netzanschlussfaktor = float(int(szenario.split('_')[5]) / 100)
+    
+    # Calculate charging power based on scenario
+    power_values = CONFIG['power'].split('-')
+    ladeleistung = {
+        'NCS': int(int(power_values[0]) / 100 * config.leistung_ladetyp['NCS']),
+        'HPC': int(int(power_values[1]) / 100 * config.leistung_ladetyp['HPC']),
+        'MCS': int(int(power_values[2]) / 100 * config.leistung_ladetyp['MCS'])
+    }
+    
+    # Calculate grid connection capacity
+    netzanschlussfaktor = float(CONFIG['netz'] / 100)
     netzanschluss = (
         max_saeulen['NCS'] * ladeleistung['NCS'] +
         max_saeulen['HPC'] * ladeleistung['HPC'] +
         max_saeulen['MCS'] * ladeleistung['MCS']
     ) * netzanschlussfaktor
-
     
     # -------------------------------------
     # Vorbereitung: Lastgang-Arrays
@@ -207,17 +242,18 @@ def modellierung(szenario, target_week=1):
     Delta_t = TIMESTEP / 60.0
 
     # Start date for this specific week
-    start_date = pd.Timestamp('2024-01-01 00:00:00') + pd.Timedelta(days=7*(target_week-1))
+    start_date = pd.Timestamp('2024-01-01 00:00:00') + pd.Timedelta(days=7)
 
     # Vorbefüllen der Liste mit allen Zeitpunkten und Strategien - nur für eine Woche
     rows = []
-    for strategie in CONFIG['STRATEGIES']:
-        for i in range(N):
-            rows.append({
-                'Datum':                start_date + pd.Timedelta(minutes=i * TIMESTEP),
-                'Woche':                target_week,
-                'Tag':                  1 + (i // 288) % 7,
-                'Zeit':                 (i * TIMESTEP) % 1440,
+    row_index = {}  # Pre-initialize empty dict for clarity
+    
+    for strategie_idx, strategie in enumerate(CONFIG['STRATEGIES']):
+        for time_idx in range(N):
+            row_dict = {
+                'Datum':                start_date + pd.Timedelta(minutes=time_idx * TIMESTEP),
+                'Tag':                  1 + (time_idx // 288) % 7,
+                'Zeit':                 (time_idx * TIMESTEP) % 1440,
                 'Leistung_Total':       0.0,
                 'Leistung_Max_Total':   0.0,
                 'Leistung_NCS':         0.0,
@@ -226,16 +262,18 @@ def modellierung(szenario, target_week=1):
                 'Ladestrategie':        strategie,
                 'Netzanschluss':        netzanschluss,
                 'Ladequote':            0.0,
-            })
+            }
+            rows.append(row_dict)
+            
+            # Store index with proper key structure
+            row_index[(strategie, time_idx)] = len(rows) - 1
 
-    # Index-Map für schnellen Zugriff erstellen
-    row_index = {(strategie, i): idx for idx, (strategie, i) in enumerate([(r['Ladestrategie'], i) 
-                                             for i, r in enumerate(rows)])}
+    # Verify index mapping is correct
+    logging.info(f"Created rows: {len(rows)}, Index mapping entries: {len(row_index)}")
 
     dict_lkw_lastgang = {
         'LKW_ID': [],
         'Datum': [],
-        'Woche': [],
         'Tag': [],
         'Zeit': [],
         'Ladetyp': [],
@@ -249,43 +287,36 @@ def modellierung(szenario, target_week=1):
         'z': []
     }
 
-    # Filtern der LKWs nur für die gewählte Woche
-    df_lkw_filtered = df_lkw[
-        (df_lkw['KW'] == target_week) &
-        (df_lkw['LoadStatus'] == 1)
-    ].copy() 
-            
-    if df_lkw_filtered.empty:
-        print(f"Keine LKWs in Woche {target_week} gefunden!")
-        return None
-
     # Ankunfts- und Abfahrtszeiten in 5-Minuten-Index - OHNE Wochenoffset
-    df_lkw_filtered['t_a'] = (df_lkw_filtered['Ankunftszeit_total'] // TIMESTEP).astype(int) % T_7
-    df_lkw_filtered['t_d'] = ((df_lkw_filtered['Ankunftszeit_total'] 
-                               + df_lkw_filtered['Pausenlaenge'] 
+    df_lkw['t_a'] = (df_lkw['Ankunftszeit_total'] // TIMESTEP).astype(int) % T_7
+    df_lkw['t_d'] = ((df_lkw['Ankunftszeit_total'] 
+                               + df_lkw['Pausenlaenge'] 
                                - TIMESTEP) // TIMESTEP).astype(int) % T_7
     
-    if df_lkw_filtered.empty:
+    if df_lkw.empty:
+        logging.warning("Filtered truck data is empty after calculating arrival/departure times")
         return None
 
-    t_in     = df_lkw_filtered['t_a'].tolist()        
-    t_out    = df_lkw_filtered['t_d'].tolist()
-    l        = df_lkw_filtered['Ladesäule'].tolist()
-    SOC_A    = df_lkw_filtered['SOC'].tolist()
-    kapaz    = df_lkw_filtered['Kapazitaet'].tolist()
-    maxLKW   = df_lkw_filtered['Max_Leistung'].tolist()
-    SOC_req  = df_lkw_filtered['SOC_Target'].tolist()
+    t_in     = df_lkw['t_a'].tolist()        
+    t_out    = df_lkw['t_d'].tolist()
+    l        = df_lkw['Ladesäule'].tolist()
+    SOC_A    = df_lkw['SOC'].tolist()
+    kapaz    = df_lkw['Kapazitaet'].tolist()
+    maxLKW   = df_lkw['Max_Leistung'].tolist()
+    SOC_req  = df_lkw['SOC_Target'].tolist()
 
     # Leistungsskalierung
-    pow_split = szenario.split('_')[6].split('-')
-    if len(pow_split) > 1:
-        lkw_leistung_skalierung = float(pow_split[1]) / 100
+    power_values = CONFIG['power'].split('-')
+    if len(power_values) >= 1:
+        # Use first power value (NCS) as truck power scaling
+        lkw_leistung_skalierung = float(power_values[0]) / 100
     else:
         lkw_leistung_skalierung = 1.0
+        logging.warning("No power values found in CONFIG, using default scaling of 1.0")
 
     max_lkw_leistung = [m * lkw_leistung_skalierung for m in maxLKW]
-    E_req = [kapaz[i] * (SOC_req[i] - SOC_A[i]) for i in range(len(df_lkw_filtered))]
-    I = len(df_lkw_filtered)
+    E_req = [kapaz[i] * (SOC_req[i] - SOC_A[i]) for i in range(len(df_lkw))]
+    I = len(df_lkw)
 
     # -------------------------------------
     # Strategien p_max / p_min
@@ -366,7 +397,9 @@ def modellierung(szenario, target_week=1):
         # -------------------------------------
 
         if strategie == "T_min":
-            obj_expr = quicksum(((1/(t+1)) * (Pplus[(i, t)])) - (t * Pminus[(i, t)]) for i in range(I) for t in range(t_in[i], t_out[i] + 1))
+            obj_expr = quicksum(((1/(t+1)) * (Pplus[(i, t)])) - (t * Pminus[(i, t)]) 
+                                for i in range(I) 
+                                for t in range(t_in[i], t_out[i] + 1))
 
         elif strategie == "Konstant":
             # Hilfsvariablen für Leistungsänderungen zwischen Zeitschritten
@@ -382,15 +415,16 @@ def modellierung(szenario, target_week=1):
             # Extrem hohe Gewichtung für die Energiemaximierung, um absolute Priorität zu gewährleisten
             M_energy = 1000000  # Sehr hoher Gewichtungsfaktor
             
-            # Zielfunktion: Hierarchisches Modell
-            # 1. Primäres Ziel mit sehr hoher Gewichtung: Maximiere Energie
-            # 2. Sekundäres Ziel: Minimiere Leistungsschwankungen
-            obj_expr = quicksum(
-                M_energy * Pplus[(i, t)]  # Primärziel mit sehr hoher Gewichtung
-                - quicksum(delta[(i, t_step)] for t_step in range(t_in[i], min(t+1, t_out[i])) if t_step < t_out[i])  # Sekundärziel
-                for i in range(I) for t in range(t_in[i], t_out[i] + 1)
-            )
-
+            # Zielfunktion: Hierarchisches Modell mit verbessertem Range-Handling
+            obj_expr = 0
+            for i in range(I):
+                # Primary objective: maximize energy
+                for t in range(t_in[i], t_out[i] + 1):
+                    obj_expr += M_energy * Pplus[(i, t)]
+                
+                # Secondary objective: minimize power fluctuations
+                for t_step in range(t_in[i], t_out[i]):
+                    obj_expr -= delta[(i, t_step)]
 
         model.setObjective(obj_expr, GRB.MAXIMIZE)
         model.optimize()
@@ -410,13 +444,9 @@ def modellierung(szenario, target_week=1):
             
             # Gesamtkosten
             if strategie == 'T_min':
-                print(f"[Szenario={szenario}, Woche={target_week}, Strategie={strategie}] "
-                      f"Lösung OK. Ladequote: {ladequote_week:.3f}, "
-                      f"Anzahl LKW: {len(df_lkw_filtered)}")
+                print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkw)}")
             elif strategie == 'Konstant':
-                    print(f"[Szenario={szenario}, Woche={target_week}, Strategie={strategie}] "
-                      f"Lösung OK. Ladequote: {ladequote_week:.3f}, "
-                      f"Anzahl LKW: {len(df_lkw_filtered)}")
+                    print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkw)}")
             
             # Lastgang: direkt in rows eintragen
             for t_step in range(T_7):
@@ -438,24 +468,27 @@ def modellierung(szenario, target_week=1):
                             sum_p_mcs += val
                 
                 # Direktes Eintragen in rows mit dem entsprechenden Index
-                row_idx = row_index[(strategie, t_step)]
-                rows[row_idx]['Leistung_Total'] += sum_p_total
-                rows[row_idx]['Leistung_Max_Total'] += sum_p_total_max
-                rows[row_idx]['Leistung_NCS'] += sum_p_ncs
-                rows[row_idx]['Leistung_HPC'] += sum_p_hpc
-                rows[row_idx]['Leistung_MCS'] += sum_p_mcs
-                rows[row_idx]['Ladequote'] = ladequote_week  # Überschreiben, nicht addieren
+                # Verify key exists before accessing
+                if (strategie, t_step) in row_index:
+                    row_idx = row_index[(strategie, t_step)]
+                    rows[row_idx]['Leistung_Total'] += sum_p_total
+                    rows[row_idx]['Leistung_Max_Total'] += sum_p_total_max
+                    rows[row_idx]['Leistung_NCS'] += sum_p_ncs
+                    rows[row_idx]['Leistung_HPC'] += sum_p_hpc
+                    rows[row_idx]['Leistung_MCS'] += sum_p_mcs
+                    rows[row_idx]['Ladequote'] = ladequote_week  # Überschreiben, nicht addieren
+                else:
+                    logging.warning(f"Missing index for (strategie={strategie}, t_step={t_step})")
 
             for i in range(I):
                 t_charging = 0
                 for t in range(T_7):   
                     if t_in[i] <= t <= t_out[i]+1:
+                        dict_lkw_lastgang['LKW_ID'].append(df_lkw.iloc[i]['Nummer'])
                         dict_lkw_lastgang['Datum'].append(start_date + pd.Timedelta(minutes=t*5))
-                        dict_lkw_lastgang['Woche'].append(target_week)
-                        dict_lkw_lastgang['Tag'].append(df_lkw_filtered.iloc[i]['Tag'] % 7)
+                        dict_lkw_lastgang['Tag'].append(df_lkw.iloc[i]['Tag'] % 7)
                         dict_lkw_lastgang['Zeit'].append((t * 5) % 1440)
                         dict_lkw_lastgang['Ladestrategie'].append(strategie)
-                        dict_lkw_lastgang['LKW_ID'].append(df_lkw_filtered.iloc[i]['Nummer'])
                         dict_lkw_lastgang['Ladetyp'].append(l[i])
                         dict_lkw_lastgang['Ladezeit'].append(t_charging)
                         t_charging += 5
@@ -475,8 +508,8 @@ def modellierung(szenario, target_week=1):
                             dict_lkw_lastgang['Leistung'].append(P[(i, t)].X)
                             dict_lkw_lastgang['SOC'].append(SoC[(i, t)].X)
         else:
-            print(f"[Szenario={szenario}, Woche={target_week}, Strategie={strategie}] "
-                  f"Keine optimale Lösung gefunden.")
+            logging.error(f"No optimal solution found for strategy {strategie}")
+            print(f"Keine optimale Lösung gefunden für Strategie {strategie}.")
 
     # -------------------------------------
     # DataFrames bauen und speichern
@@ -488,37 +521,72 @@ def modellierung(szenario, target_week=1):
     df_lkw_lastgang_df = pd.DataFrame(dict_lkw_lastgang)
     df_lkw_lastgang_df.sort_values(['LKW_ID', 'Ladestrategie', 'Zeit'], inplace=True)
     
+    # Create a simplified JSON structure focused on the load profile
+    # Convert dataframe to list of records for the lastgang part
+    lastgang_records = []
+    for record in df_lastgang.to_dict(orient='records'):
+        # Process only the essential fields for the load profile
+        processed_record = {
+            'Datum': datetime_to_iso(record['Datum']),
+            'Tag': record['Tag'],
+            'Zeit': record['Zeit'],
+            'Leistung_Total': record['Leistung_Total'],
+            'Leistung_NCS': record['Leistung_NCS'],
+            'Leistung_HPC': record['Leistung_HPC'],
+            'Leistung_MCS': record['Leistung_MCS'],
+            'Ladestrategie': record['Ladestrategie'],
+            'Netzanschluss': record['Netzanschluss'],
+            'Ladequote': record['Ladequote']
+        }
+        lastgang_records.append(processed_record)
     
-    # Ordner anlegen und CSV speichern
-    path = script_dir  # Use the script directory path that was already defined
-    os.makedirs(os.path.join(path, 'data', 'epex', 'lastgang'), exist_ok=True)
-    os.makedirs(os.path.join(path, 'data', 'epex', 'lastgang_lkw'), exist_ok=True)
+    # Build the simplified output structure focusing on the load profile
+    output_data = {
+        "metadata": {
+            "config": CONFIG,
+            "charging_stations": {
+                "NCS": {"count": max_saeulen['NCS'], "power_kw": ladeleistung['NCS']},
+                "HPC": {"count": max_saeulen['HPC'], "power_kw": ladeleistung['HPC']},
+                "MCS": {"count": max_saeulen['MCS'], "power_kw": ladeleistung['MCS']}
+            },
+            "grid_connection_kw": netzanschluss,
+            "generated_at": datetime.now().isoformat(),
+            "data_source": "charging_config_base.json" if truck_data_from_config else "eingehende_lkws_ladesaeule.json"
+        },
+        "lastgang": lastgang_records
+    }
 
-    df_lastgang.to_csv(
-        os.path.join(path, 'data', 'epex', 'lastgang', f'lastgang_{szenario}_w{target_week}.csv'),
-        sep=';', decimal=',', index=False
-    )
-    df_lkw_lastgang_df.to_csv(
-        os.path.join(path, 'data', 'epex', 'lastgang_lkw', f'lastgang_lkw_{szenario}_w{target_week}.csv'),
-        sep=';', decimal=',', index=False
-    )
+    # Create directory structure if needed
+    json_dir = os.path.join(script_dir, 'data', 'epex', 'json_output')
+    os.makedirs(json_dir, exist_ok=True)
+
+    # Define the output JSON filename
+    json_filename = f'simplified_charging_data_{CONFIG["power"]}.json'
+    json_filepath = os.path.join(json_dir, json_filename)
+
+    # Save the simplified data to a pretty-printed JSON file
+    logging.info(f"Saving simplified load profile data to JSON file")
+    print(f"Saving simplified load profile data to JSON file...")
+    
+    try:
+        with open(json_filepath, 'w', encoding='utf-8') as json_file:
+            json.dump(output_data, json_file, indent=2)
+        logging.info(f"Successfully saved load profile data to: {json_filepath}")
+        print(f"Successfully saved load profile data to: {json_filepath}")
+    except Exception as e:
+        logging.error(f"Error saving JSON file: {e}")
+        print(f"ERROR: Failed to save JSON data: {e}")
+    
     return None
 
 
 def main():
-    # Parse command line arguments to allow week selection
-    parser = argparse.ArgumentParser(description='Charging Hub Optimization')
-    parser.add_argument('--week', type=int, default=1, help='Week to optimize (default: 1)')
-    parser.add_argument('--szenario', type=str, default='cl_2_quote_80-80-80_netz_100_pow_100-100-100_pause_45-540_M_1', 
-                        help='Scenario to optimize')
-    args = parser.parse_args()
-    
-    print(f"Starte Optimierung für Woche {args.week}: {args.szenario}")
-    logging.info(f"Optimierung p_max/p_min: {args.szenario} - Woche {args.week}")
-    modellierung(args.szenario, target_week=args.week)
+    print("Starting optimization")
+    logging.info(f"Optimization p_max/p_min with configuration: {CONFIG}")
+    modellierung()
 
 if __name__ == '__main__':
     start = time.time()
     main()
     end = time.time()
-    print(f"Gesamtlaufzeit: {end - start:.2f} Sekunden")
+    print(f"Total runtime: {end - start:.2f} seconds")

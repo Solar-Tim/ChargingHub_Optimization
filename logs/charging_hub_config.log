@@ -177,3 +177,550 @@
 2025-03-27 13:18:04,343; INFO; Results saved to JSON file: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\konfiguration_ladehub\charging_config_base.json
 2025-03-27 13:18:04,344; INFO; Legacy CSV files saved with filename prefix: quota_80-80-80_pause_45-540_Base
 2025-03-27 13:18:04,344; INFO; Charging hub configuration completed successfully
+2025-03-27 16:02:15,211; INFO; Starting charging hub configuration
+2025-03-27 16:02:15,216; INFO; Looking for truck data at C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\lkw_eingehend\eingehende_lkws_ladesaeule.json
+2025-03-27 16:02:15,216; INFO; Loading truck data from C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\lkw_eingehend\eingehende_lkws_ladesaeule.json
+2025-03-27 16:02:15,228; INFO; Successfully loaded 278 trucks from JSON
+2025-03-27 16:02:15,228; INFO; Starting charging hub configuration calculation
+2025-03-27 16:02:15,229; INFO; Configuration parameters: Target charging quotas={'NCS': 0.8, 'HPC': 0.8, 'MCS': 0.8}, Charging times={'Schnell': 45, 'Nacht': 540}
+2025-03-27 16:02:15,229; INFO; Processing 278 trucks
+2025-03-27 16:02:15,345; INFO; Processing charging type: NCS, target quota: 0.80
+2025-03-27 16:02:15,347; INFO; Found 86 trucks for charging type NCS
+2025-03-27 16:02:15,347; INFO; [NCS] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:02:15,347; INFO; [NCS] Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:02:15,347; DEBUG; Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:02:15,349; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:02:15,369; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:02:15,369; DEBUG; Calculating max flow min cost
+2025-03-27 16:02:18,085; DEBUG; Flow calculation completed successfully
+2025-03-27 16:02:18,093; INFO; [NCS] Results: Stations=1, Charged trucks=9/86, Quota=0.10, Trucks per station=1.29
+2025-03-27 16:02:18,094; INFO; [NCS] Iteration 2: Starting with 8 charging stations
+2025-03-27 16:02:18,094; INFO; [NCS] Building flow network with 8 charging stations for 86 trucks
+2025-03-27 16:02:18,094; DEBUG; Building flow network with 8 charging stations for 86 trucks
+2025-03-27 16:02:18,096; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:02:18,118; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:02:18,118; DEBUG; Calculating max flow min cost
+2025-03-27 16:02:21,612; DEBUG; Flow calculation completed successfully
+2025-03-27 16:02:21,621; INFO; [NCS] Results: Stations=8, Charged trucks=47/86, Quota=0.55, Trucks per station=0.84
+2025-03-27 16:02:21,622; INFO; [NCS] Iteration 3: Starting with 12 charging stations
+2025-03-27 16:02:21,622; INFO; [NCS] Building flow network with 12 charging stations for 86 trucks
+2025-03-27 16:02:21,622; DEBUG; Building flow network with 12 charging stations for 86 trucks
+2025-03-27 16:02:21,624; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:02:21,645; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:02:21,647; DEBUG; Calculating max flow min cost
+2025-03-27 16:02:26,031; DEBUG; Flow calculation completed successfully
+2025-03-27 16:02:26,040; INFO; [NCS] Results: Stations=12, Charged trucks=67/86, Quota=0.78, Trucks per station=0.80
+2025-03-27 16:02:26,041; INFO; [NCS] Iteration 4: Starting with 13 charging stations
+2025-03-27 16:02:26,041; INFO; [NCS] Building flow network with 13 charging stations for 86 trucks
+2025-03-27 16:02:26,041; DEBUG; Building flow network with 13 charging stations for 86 trucks
+2025-03-27 16:02:26,044; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:02:26,072; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:02:26,073; DEBUG; Calculating max flow min cost
+2025-03-27 16:02:30,579; DEBUG; Flow calculation completed successfully
+2025-03-27 16:02:30,587; INFO; [NCS] Results: Stations=13, Charged trucks=72/86, Quota=0.84, Trucks per station=0.79
+2025-03-27 16:02:30,587; INFO; [NCS] Target quota of 0.80 reached with 13 charging stations
+2025-03-27 16:02:30,596; INFO; Processing charging type: HPC, target quota: 0.80
+2025-03-27 16:02:30,597; INFO; Found 106 trucks for charging type HPC
+2025-03-27 16:02:30,597; INFO; [HPC] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:02:30,597; INFO; [HPC] Building flow network with 1 charging stations for 106 trucks
+2025-03-27 16:02:30,597; DEBUG; Building flow network with 1 charging stations for 106 trucks
+2025-03-27 16:02:30,600; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:02:30,626; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:02:30,626; DEBUG; Calculating max flow min cost
+2025-03-27 16:02:34,249; DEBUG; Flow calculation completed successfully
+2025-03-27 16:02:34,259; INFO; [HPC] Results: Stations=1, Charged trucks=44/106, Quota=0.42, Trucks per station=6.29
+2025-03-27 16:02:34,260; INFO; [HPC] Iteration 2: Starting with 2 charging stations
+2025-03-27 16:02:34,260; INFO; [HPC] Building flow network with 2 charging stations for 106 trucks
+2025-03-27 16:02:34,260; DEBUG; Building flow network with 2 charging stations for 106 trucks
+2025-03-27 16:02:34,262; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:02:34,284; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:02:34,284; DEBUG; Calculating max flow min cost
+2025-03-27 16:02:38,558; DEBUG; Flow calculation completed successfully
+2025-03-27 16:02:38,568; INFO; [HPC] Results: Stations=2, Charged trucks=69/106, Quota=0.65, Trucks per station=4.93
+2025-03-27 16:02:38,568; INFO; [HPC] Iteration 3: Starting with 3 charging stations
+2025-03-27 16:02:38,569; INFO; [HPC] Building flow network with 3 charging stations for 106 trucks
+2025-03-27 16:02:38,569; DEBUG; Building flow network with 3 charging stations for 106 trucks
+2025-03-27 16:02:38,571; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:02:38,597; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:02:38,597; DEBUG; Calculating max flow min cost
+2025-03-27 16:02:43,604; DEBUG; Flow calculation completed successfully
+2025-03-27 16:02:43,620; INFO; [HPC] Results: Stations=3, Charged trucks=84/106, Quota=0.79, Trucks per station=4.00
+2025-03-27 16:02:43,620; INFO; [HPC] Iteration 4: Starting with 4 charging stations
+2025-03-27 16:02:43,621; INFO; [HPC] Building flow network with 4 charging stations for 106 trucks
+2025-03-27 16:02:43,621; DEBUG; Building flow network with 4 charging stations for 106 trucks
+2025-03-27 16:02:43,624; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:02:43,657; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:02:43,657; DEBUG; Calculating max flow min cost
+2025-03-27 16:02:49,160; DEBUG; Flow calculation completed successfully
+2025-03-27 16:02:49,174; INFO; [HPC] Results: Stations=4, Charged trucks=90/106, Quota=0.85, Trucks per station=3.21
+2025-03-27 16:02:49,175; INFO; [HPC] Target quota of 0.80 reached with 4 charging stations
+2025-03-27 16:02:49,185; INFO; Processing charging type: MCS, target quota: 0.80
+2025-03-27 16:02:49,187; INFO; Found 86 trucks for charging type MCS
+2025-03-27 16:02:49,187; INFO; [MCS] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:02:49,187; INFO; [MCS] Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:02:49,187; DEBUG; Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:02:49,191; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:02:49,220; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:02:49,220; DEBUG; Calculating max flow min cost
+2025-03-27 16:02:52,106; DEBUG; Flow calculation completed successfully
+2025-03-27 16:02:52,115; INFO; [MCS] Results: Stations=1, Charged trucks=41/86, Quota=0.48, Trucks per station=5.86
+2025-03-27 16:02:52,115; INFO; [MCS] Iteration 2: Starting with 2 charging stations
+2025-03-27 16:02:52,115; INFO; [MCS] Building flow network with 2 charging stations for 86 trucks
+2025-03-27 16:02:52,116; DEBUG; Building flow network with 2 charging stations for 86 trucks
+2025-03-27 16:02:52,118; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:02:52,138; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:02:52,138; DEBUG; Calculating max flow min cost
+2025-03-27 16:02:55,220; DEBUG; Flow calculation completed successfully
+2025-03-27 16:02:55,228; INFO; [MCS] Results: Stations=2, Charged trucks=62/86, Quota=0.72, Trucks per station=4.43
+2025-03-27 16:02:55,229; INFO; [MCS] Iteration 3: Starting with 3 charging stations
+2025-03-27 16:02:55,229; INFO; [MCS] Building flow network with 3 charging stations for 86 trucks
+2025-03-27 16:02:55,229; DEBUG; Building flow network with 3 charging stations for 86 trucks
+2025-03-27 16:02:55,232; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:02:55,252; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:02:55,252; DEBUG; Calculating max flow min cost
+2025-03-27 16:02:58,584; DEBUG; Flow calculation completed successfully
+2025-03-27 16:02:58,592; INFO; [MCS] Results: Stations=3, Charged trucks=74/86, Quota=0.86, Trucks per station=3.52
+2025-03-27 16:02:58,593; INFO; [MCS] Target quota of 0.80 reached with 3 charging stations
+2025-03-27 16:02:58,653; INFO; Configuration results exported to JSON: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\konfiguration_ladehub\charging_config_base.json
+2025-03-27 16:02:58,679; INFO; Results saved to JSON file: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\konfiguration_ladehub\charging_config_base.json
+2025-03-27 16:02:58,680; INFO; Legacy CSV files saved with filename prefix: quota_80-80-80_pause_45-540_Base
+2025-03-27 16:02:58,680; INFO; Charging hub configuration completed successfully
+2025-03-27 16:08:19,653; INFO; Starting charging hub configuration
+2025-03-27 16:08:19,657; INFO; Looking for truck data at C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\lkw_eingehend\eingehende_lkws_ladesaeule.json
+2025-03-27 16:08:19,657; INFO; Loading truck data from C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\lkw_eingehend\eingehende_lkws_ladesaeule.json
+2025-03-27 16:08:19,669; INFO; Successfully loaded 278 trucks from JSON
+2025-03-27 16:08:19,669; INFO; Starting charging hub configuration calculation
+2025-03-27 16:08:19,670; INFO; Configuration parameters: Target charging quotas={'NCS': 0.8, 'HPC': 0.8, 'MCS': 0.8}, Charging times={'Schnell': 45, 'Nacht': 540}
+2025-03-27 16:08:19,670; INFO; Processing 278 trucks
+2025-03-27 16:08:19,777; INFO; Processing charging type: NCS, target quota: 0.80
+2025-03-27 16:08:19,778; INFO; Found 86 trucks for charging type NCS
+2025-03-27 16:08:19,778; INFO; [NCS] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:08:19,778; INFO; [NCS] Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:08:19,778; DEBUG; Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:08:19,781; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:08:19,801; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:08:19,801; DEBUG; Calculating max flow min cost
+2025-03-27 16:08:22,311; DEBUG; Flow calculation completed successfully
+2025-03-27 16:08:22,319; INFO; [NCS] Results: Stations=1, Charged trucks=9/86, Quota=0.10, Trucks per station=1.29
+2025-03-27 16:08:22,320; INFO; [NCS] Iteration 2: Starting with 8 charging stations
+2025-03-27 16:08:22,320; INFO; [NCS] Building flow network with 8 charging stations for 86 trucks
+2025-03-27 16:08:22,320; DEBUG; Building flow network with 8 charging stations for 86 trucks
+2025-03-27 16:08:22,323; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:08:22,349; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:08:22,350; DEBUG; Calculating max flow min cost
+2025-03-27 16:08:25,776; DEBUG; Flow calculation completed successfully
+2025-03-27 16:08:25,785; INFO; [NCS] Results: Stations=8, Charged trucks=47/86, Quota=0.55, Trucks per station=0.84
+2025-03-27 16:08:25,786; INFO; [NCS] Iteration 3: Starting with 12 charging stations
+2025-03-27 16:08:25,786; INFO; [NCS] Building flow network with 12 charging stations for 86 trucks
+2025-03-27 16:08:25,786; DEBUG; Building flow network with 12 charging stations for 86 trucks
+2025-03-27 16:08:25,789; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:08:25,809; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:08:25,809; DEBUG; Calculating max flow min cost
+2025-03-27 16:08:30,070; DEBUG; Flow calculation completed successfully
+2025-03-27 16:08:30,080; INFO; [NCS] Results: Stations=12, Charged trucks=67/86, Quota=0.78, Trucks per station=0.80
+2025-03-27 16:08:30,080; INFO; [NCS] Iteration 4: Starting with 13 charging stations
+2025-03-27 16:08:30,080; INFO; [NCS] Building flow network with 13 charging stations for 86 trucks
+2025-03-27 16:08:30,081; DEBUG; Building flow network with 13 charging stations for 86 trucks
+2025-03-27 16:08:30,083; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:08:30,109; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:08:30,109; DEBUG; Calculating max flow min cost
+2025-03-27 16:08:34,282; DEBUG; Flow calculation completed successfully
+2025-03-27 16:08:34,292; INFO; [NCS] Results: Stations=13, Charged trucks=72/86, Quota=0.84, Trucks per station=0.79
+2025-03-27 16:08:34,293; INFO; [NCS] Target quota of 0.80 reached with 13 charging stations
+2025-03-27 16:08:34,303; INFO; Processing charging type: HPC, target quota: 0.80
+2025-03-27 16:08:34,304; INFO; Found 106 trucks for charging type HPC
+2025-03-27 16:08:34,305; INFO; [HPC] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:08:34,305; INFO; [HPC] Building flow network with 1 charging stations for 106 trucks
+2025-03-27 16:08:34,305; DEBUG; Building flow network with 1 charging stations for 106 trucks
+2025-03-27 16:08:34,308; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:08:34,334; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:08:34,334; DEBUG; Calculating max flow min cost
+2025-03-27 16:08:37,829; DEBUG; Flow calculation completed successfully
+2025-03-27 16:08:37,839; INFO; [HPC] Results: Stations=1, Charged trucks=44/106, Quota=0.42, Trucks per station=6.29
+2025-03-27 16:08:37,839; INFO; [HPC] Iteration 2: Starting with 2 charging stations
+2025-03-27 16:08:37,839; INFO; [HPC] Building flow network with 2 charging stations for 106 trucks
+2025-03-27 16:08:37,839; DEBUG; Building flow network with 2 charging stations for 106 trucks
+2025-03-27 16:08:37,841; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:08:37,866; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:08:37,866; DEBUG; Calculating max flow min cost
+2025-03-27 16:08:42,097; DEBUG; Flow calculation completed successfully
+2025-03-27 16:08:42,107; INFO; [HPC] Results: Stations=2, Charged trucks=69/106, Quota=0.65, Trucks per station=4.93
+2025-03-27 16:08:42,107; INFO; [HPC] Iteration 3: Starting with 3 charging stations
+2025-03-27 16:08:42,107; INFO; [HPC] Building flow network with 3 charging stations for 106 trucks
+2025-03-27 16:08:42,108; DEBUG; Building flow network with 3 charging stations for 106 trucks
+2025-03-27 16:08:42,110; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:08:42,133; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:08:42,134; DEBUG; Calculating max flow min cost
+2025-03-27 16:08:46,976; DEBUG; Flow calculation completed successfully
+2025-03-27 16:08:46,986; INFO; [HPC] Results: Stations=3, Charged trucks=84/106, Quota=0.79, Trucks per station=4.00
+2025-03-27 16:08:46,987; INFO; [HPC] Iteration 4: Starting with 4 charging stations
+2025-03-27 16:08:46,987; INFO; [HPC] Building flow network with 4 charging stations for 106 trucks
+2025-03-27 16:08:46,987; DEBUG; Building flow network with 4 charging stations for 106 trucks
+2025-03-27 16:08:46,990; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:08:47,013; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:08:47,013; DEBUG; Calculating max flow min cost
+2025-03-27 16:08:51,904; DEBUG; Flow calculation completed successfully
+2025-03-27 16:08:51,915; INFO; [HPC] Results: Stations=4, Charged trucks=90/106, Quota=0.85, Trucks per station=3.21
+2025-03-27 16:08:51,916; INFO; [HPC] Target quota of 0.80 reached with 4 charging stations
+2025-03-27 16:08:51,927; INFO; Processing charging type: MCS, target quota: 0.80
+2025-03-27 16:08:51,928; INFO; Found 86 trucks for charging type MCS
+2025-03-27 16:08:51,929; INFO; [MCS] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:08:51,929; INFO; [MCS] Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:08:51,929; DEBUG; Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:08:51,931; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:08:51,957; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:08:51,957; DEBUG; Calculating max flow min cost
+2025-03-27 16:08:54,403; DEBUG; Flow calculation completed successfully
+2025-03-27 16:08:54,411; INFO; [MCS] Results: Stations=1, Charged trucks=41/86, Quota=0.48, Trucks per station=5.86
+2025-03-27 16:08:54,412; INFO; [MCS] Iteration 2: Starting with 2 charging stations
+2025-03-27 16:08:54,412; INFO; [MCS] Building flow network with 2 charging stations for 86 trucks
+2025-03-27 16:08:54,412; DEBUG; Building flow network with 2 charging stations for 86 trucks
+2025-03-27 16:08:54,414; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:08:54,432; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:08:54,432; DEBUG; Calculating max flow min cost
+2025-03-27 16:08:57,503; DEBUG; Flow calculation completed successfully
+2025-03-27 16:08:57,511; INFO; [MCS] Results: Stations=2, Charged trucks=62/86, Quota=0.72, Trucks per station=4.43
+2025-03-27 16:08:57,512; INFO; [MCS] Iteration 3: Starting with 3 charging stations
+2025-03-27 16:08:57,512; INFO; [MCS] Building flow network with 3 charging stations for 86 trucks
+2025-03-27 16:08:57,512; DEBUG; Building flow network with 3 charging stations for 86 trucks
+2025-03-27 16:08:57,514; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:08:57,530; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:08:57,530; DEBUG; Calculating max flow min cost
+2025-03-27 16:09:00,876; DEBUG; Flow calculation completed successfully
+2025-03-27 16:09:00,886; INFO; [MCS] Results: Stations=3, Charged trucks=74/86, Quota=0.86, Trucks per station=3.52
+2025-03-27 16:09:00,886; INFO; [MCS] Target quota of 0.80 reached with 3 charging stations
+2025-03-27 16:09:00,960; INFO; Configuration results exported to JSON: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\konfiguration_ladehub\charging_config_base.json
+2025-03-27 16:09:00,960; INFO; Preserved original battery information for 278 trucks
+2025-03-27 16:09:00,975; INFO; Results saved to JSON file: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\konfiguration_ladehub\charging_config_base.json
+2025-03-27 16:09:00,975; INFO; Legacy CSV files saved with filename prefix: quota_80-80-80_pause_45-540_Base
+2025-03-27 16:09:00,976; INFO; Charging hub configuration completed successfully
+2025-03-27 16:09:37,801; INFO; Starting charging hub configuration
+2025-03-27 16:09:37,806; INFO; Looking for truck data at C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\lkw_eingehend\eingehende_lkws_ladesaeule.json
+2025-03-27 16:09:37,806; INFO; Loading truck data from C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\lkw_eingehend\eingehende_lkws_ladesaeule.json
+2025-03-27 16:09:37,816; INFO; Successfully loaded 278 trucks from JSON
+2025-03-27 16:09:37,816; INFO; Starting charging hub configuration calculation
+2025-03-27 16:09:37,817; INFO; Configuration parameters: Target charging quotas={'NCS': 0.8, 'HPC': 0.8, 'MCS': 0.8}, Charging times={'Schnell': 45, 'Nacht': 540}
+2025-03-27 16:09:37,817; INFO; Processing 278 trucks
+2025-03-27 16:09:37,930; INFO; Processing charging type: NCS, target quota: 0.80
+2025-03-27 16:09:37,932; INFO; Found 86 trucks for charging type NCS
+2025-03-27 16:09:37,932; INFO; [NCS] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:09:37,932; INFO; [NCS] Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:09:37,932; DEBUG; Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:09:37,935; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:09:37,957; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:09:37,957; DEBUG; Calculating max flow min cost
+2025-03-27 16:09:40,538; DEBUG; Flow calculation completed successfully
+2025-03-27 16:09:40,546; INFO; [NCS] Results: Stations=1, Charged trucks=9/86, Quota=0.10, Trucks per station=1.29
+2025-03-27 16:09:40,547; INFO; [NCS] Iteration 2: Starting with 8 charging stations
+2025-03-27 16:09:40,547; INFO; [NCS] Building flow network with 8 charging stations for 86 trucks
+2025-03-27 16:09:40,547; DEBUG; Building flow network with 8 charging stations for 86 trucks
+2025-03-27 16:09:40,550; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:09:40,573; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:09:40,573; DEBUG; Calculating max flow min cost
+2025-03-27 16:09:44,298; DEBUG; Flow calculation completed successfully
+2025-03-27 16:09:44,307; INFO; [NCS] Results: Stations=8, Charged trucks=47/86, Quota=0.55, Trucks per station=0.84
+2025-03-27 16:09:44,308; INFO; [NCS] Iteration 3: Starting with 12 charging stations
+2025-03-27 16:09:44,308; INFO; [NCS] Building flow network with 12 charging stations for 86 trucks
+2025-03-27 16:09:44,308; DEBUG; Building flow network with 12 charging stations for 86 trucks
+2025-03-27 16:09:44,311; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:09:44,332; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:09:44,333; DEBUG; Calculating max flow min cost
+2025-03-27 16:09:48,615; DEBUG; Flow calculation completed successfully
+2025-03-27 16:09:48,625; INFO; [NCS] Results: Stations=12, Charged trucks=67/86, Quota=0.78, Trucks per station=0.80
+2025-03-27 16:09:48,625; INFO; [NCS] Iteration 4: Starting with 13 charging stations
+2025-03-27 16:09:48,625; INFO; [NCS] Building flow network with 13 charging stations for 86 trucks
+2025-03-27 16:09:48,626; DEBUG; Building flow network with 13 charging stations for 86 trucks
+2025-03-27 16:09:48,628; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:09:48,655; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:09:48,655; DEBUG; Calculating max flow min cost
+2025-03-27 16:09:52,910; DEBUG; Flow calculation completed successfully
+2025-03-27 16:09:52,919; INFO; [NCS] Results: Stations=13, Charged trucks=72/86, Quota=0.84, Trucks per station=0.79
+2025-03-27 16:09:52,919; INFO; [NCS] Target quota of 0.80 reached with 13 charging stations
+2025-03-27 16:09:52,929; INFO; Processing charging type: HPC, target quota: 0.80
+2025-03-27 16:09:52,930; INFO; Found 106 trucks for charging type HPC
+2025-03-27 16:09:52,930; INFO; [HPC] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:09:52,930; INFO; [HPC] Building flow network with 1 charging stations for 106 trucks
+2025-03-27 16:09:52,930; DEBUG; Building flow network with 1 charging stations for 106 trucks
+2025-03-27 16:09:52,933; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:09:52,959; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:09:52,960; DEBUG; Calculating max flow min cost
+2025-03-27 16:09:56,686; DEBUG; Flow calculation completed successfully
+2025-03-27 16:09:56,699; INFO; [HPC] Results: Stations=1, Charged trucks=44/106, Quota=0.42, Trucks per station=6.29
+2025-03-27 16:09:56,700; INFO; [HPC] Iteration 2: Starting with 2 charging stations
+2025-03-27 16:09:56,700; INFO; [HPC] Building flow network with 2 charging stations for 106 trucks
+2025-03-27 16:09:56,700; DEBUG; Building flow network with 2 charging stations for 106 trucks
+2025-03-27 16:09:56,703; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:09:56,729; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:09:56,729; DEBUG; Calculating max flow min cost
+2025-03-27 16:10:01,214; DEBUG; Flow calculation completed successfully
+2025-03-27 16:10:01,224; INFO; [HPC] Results: Stations=2, Charged trucks=69/106, Quota=0.65, Trucks per station=4.93
+2025-03-27 16:10:01,224; INFO; [HPC] Iteration 3: Starting with 3 charging stations
+2025-03-27 16:10:01,224; INFO; [HPC] Building flow network with 3 charging stations for 106 trucks
+2025-03-27 16:10:01,225; DEBUG; Building flow network with 3 charging stations for 106 trucks
+2025-03-27 16:10:01,227; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:10:01,249; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:10:01,249; DEBUG; Calculating max flow min cost
+2025-03-27 16:10:05,925; DEBUG; Flow calculation completed successfully
+2025-03-27 16:10:05,935; INFO; [HPC] Results: Stations=3, Charged trucks=84/106, Quota=0.79, Trucks per station=4.00
+2025-03-27 16:10:05,936; INFO; [HPC] Iteration 4: Starting with 4 charging stations
+2025-03-27 16:10:05,936; INFO; [HPC] Building flow network with 4 charging stations for 106 trucks
+2025-03-27 16:10:05,936; DEBUG; Building flow network with 4 charging stations for 106 trucks
+2025-03-27 16:10:05,939; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:10:05,965; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:10:05,965; DEBUG; Calculating max flow min cost
+2025-03-27 16:10:10,849; DEBUG; Flow calculation completed successfully
+2025-03-27 16:10:10,859; INFO; [HPC] Results: Stations=4, Charged trucks=90/106, Quota=0.85, Trucks per station=3.21
+2025-03-27 16:10:10,860; INFO; [HPC] Target quota of 0.80 reached with 4 charging stations
+2025-03-27 16:10:10,871; INFO; Processing charging type: MCS, target quota: 0.80
+2025-03-27 16:10:10,872; INFO; Found 86 trucks for charging type MCS
+2025-03-27 16:10:10,872; INFO; [MCS] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:10:10,872; INFO; [MCS] Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:10:10,872; DEBUG; Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:10:10,874; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:10:10,897; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:10:10,897; DEBUG; Calculating max flow min cost
+2025-03-27 16:10:13,436; DEBUG; Flow calculation completed successfully
+2025-03-27 16:10:13,445; INFO; [MCS] Results: Stations=1, Charged trucks=41/86, Quota=0.48, Trucks per station=5.86
+2025-03-27 16:10:13,445; INFO; [MCS] Iteration 2: Starting with 2 charging stations
+2025-03-27 16:10:13,446; INFO; [MCS] Building flow network with 2 charging stations for 86 trucks
+2025-03-27 16:10:13,446; DEBUG; Building flow network with 2 charging stations for 86 trucks
+2025-03-27 16:10:13,449; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:10:13,465; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:10:13,466; DEBUG; Calculating max flow min cost
+2025-03-27 16:10:16,608; DEBUG; Flow calculation completed successfully
+2025-03-27 16:10:16,616; INFO; [MCS] Results: Stations=2, Charged trucks=62/86, Quota=0.72, Trucks per station=4.43
+2025-03-27 16:10:16,617; INFO; [MCS] Iteration 3: Starting with 3 charging stations
+2025-03-27 16:10:16,617; INFO; [MCS] Building flow network with 3 charging stations for 86 trucks
+2025-03-27 16:10:16,617; DEBUG; Building flow network with 3 charging stations for 86 trucks
+2025-03-27 16:10:16,619; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:10:16,635; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:10:16,635; DEBUG; Calculating max flow min cost
+2025-03-27 16:10:20,016; DEBUG; Flow calculation completed successfully
+2025-03-27 16:10:20,024; INFO; [MCS] Results: Stations=3, Charged trucks=74/86, Quota=0.86, Trucks per station=3.52
+2025-03-27 16:10:20,025; INFO; [MCS] Target quota of 0.80 reached with 3 charging stations
+2025-03-27 16:10:20,096; INFO; Configuration results exported to JSON: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\konfiguration_ladehub\charging_config_base.json
+2025-03-27 16:10:20,097; INFO; Preserved original battery information for 278 trucks
+2025-03-27 16:10:20,114; INFO; Results saved to JSON file: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\konfiguration_ladehub\charging_config_base.json
+2025-03-27 16:10:20,114; INFO; Legacy CSV files saved with filename prefix: quota_80-80-80_pause_45-540_Base
+2025-03-27 16:10:20,115; INFO; Charging hub configuration completed successfully
+2025-03-27 16:23:36,015; INFO; Starting charging hub configuration
+2025-03-27 16:23:36,023; INFO; Looking for truck data at C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\lkw_eingehend\eingehende_lkws_ladesaeule.json
+2025-03-27 16:23:36,023; INFO; Loading truck data from C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\results\lkw_eingehend\eingehende_lkws_ladesaeule.json
+2025-03-27 16:23:36,023; ERROR; Error in data import: [Errno 2] No such file or directory: 'C:\\Users\\sande\\OneDrive\\Dokumente\\GitHub\\ChargingHub_Optimization\\results\\lkw_eingehend\\eingehende_lkws_ladesaeule.json'
+2025-03-27 16:23:36,023; ERROR; Error in charging hub configuration: [Errno 2] No such file or directory: 'C:\\Users\\sande\\OneDrive\\Dokumente\\GitHub\\ChargingHub_Optimization\\results\\lkw_eingehend\\eingehende_lkws_ladesaeule.json'
+2025-03-27 16:29:35,465; INFO; Starting charging hub configuration
+2025-03-27 16:29:35,469; INFO; Looking for truck data at C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\eingehende_lkws_ladesaeule.json
+2025-03-27 16:29:35,469; INFO; Loading truck data from C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\eingehende_lkws_ladesaeule.json
+2025-03-27 16:29:35,480; INFO; Successfully loaded 278 trucks from JSON
+2025-03-27 16:29:35,480; INFO; Starting charging hub configuration calculation
+2025-03-27 16:29:35,481; INFO; Configuration parameters: Target charging quotas={'NCS': 0.8, 'HPC': 0.8, 'MCS': 0.8}, Charging times={'Schnell': 45, 'Nacht': 540}
+2025-03-27 16:29:35,481; INFO; Processing 278 trucks
+2025-03-27 16:29:35,587; INFO; Processing charging type: NCS, target quota: 0.80
+2025-03-27 16:29:35,588; INFO; Found 86 trucks for charging type NCS
+2025-03-27 16:29:35,588; INFO; [NCS] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:29:35,588; INFO; [NCS] Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:29:35,588; DEBUG; Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:29:35,591; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:29:35,613; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:29:35,625; DEBUG; Calculating max flow min cost
+2025-03-27 16:29:38,232; DEBUG; Flow calculation completed successfully
+2025-03-27 16:29:38,240; INFO; [NCS] Results: Stations=1, Charged trucks=9/86, Quota=0.10, Trucks per station=1.29
+2025-03-27 16:29:38,241; INFO; [NCS] Iteration 2: Starting with 8 charging stations
+2025-03-27 16:29:38,241; INFO; [NCS] Building flow network with 8 charging stations for 86 trucks
+2025-03-27 16:29:38,241; DEBUG; Building flow network with 8 charging stations for 86 trucks
+2025-03-27 16:29:38,244; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:29:38,265; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:29:38,266; DEBUG; Calculating max flow min cost
+2025-03-27 16:29:41,848; DEBUG; Flow calculation completed successfully
+2025-03-27 16:29:41,857; INFO; [NCS] Results: Stations=8, Charged trucks=47/86, Quota=0.55, Trucks per station=0.84
+2025-03-27 16:29:41,858; INFO; [NCS] Iteration 3: Starting with 12 charging stations
+2025-03-27 16:29:41,858; INFO; [NCS] Building flow network with 12 charging stations for 86 trucks
+2025-03-27 16:29:41,858; DEBUG; Building flow network with 12 charging stations for 86 trucks
+2025-03-27 16:29:41,861; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:29:41,884; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:29:41,884; DEBUG; Calculating max flow min cost
+2025-03-27 16:29:46,566; DEBUG; Flow calculation completed successfully
+2025-03-27 16:29:46,574; INFO; [NCS] Results: Stations=12, Charged trucks=67/86, Quota=0.78, Trucks per station=0.80
+2025-03-27 16:29:46,575; INFO; [NCS] Iteration 4: Starting with 13 charging stations
+2025-03-27 16:29:46,575; INFO; [NCS] Building flow network with 13 charging stations for 86 trucks
+2025-03-27 16:29:46,575; DEBUG; Building flow network with 13 charging stations for 86 trucks
+2025-03-27 16:29:46,578; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:29:46,601; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:29:46,602; DEBUG; Calculating max flow min cost
+2025-03-27 16:29:50,919; DEBUG; Flow calculation completed successfully
+2025-03-27 16:29:50,928; INFO; [NCS] Results: Stations=13, Charged trucks=72/86, Quota=0.84, Trucks per station=0.79
+2025-03-27 16:29:50,929; INFO; [NCS] Target quota of 0.80 reached with 13 charging stations
+2025-03-27 16:29:50,939; INFO; Processing charging type: HPC, target quota: 0.80
+2025-03-27 16:29:50,940; INFO; Found 106 trucks for charging type HPC
+2025-03-27 16:29:50,941; INFO; [HPC] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:29:50,941; INFO; [HPC] Building flow network with 1 charging stations for 106 trucks
+2025-03-27 16:29:50,941; DEBUG; Building flow network with 1 charging stations for 106 trucks
+2025-03-27 16:29:50,943; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:29:50,964; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:29:50,964; DEBUG; Calculating max flow min cost
+2025-03-27 16:29:54,522; DEBUG; Flow calculation completed successfully
+2025-03-27 16:29:54,532; INFO; [HPC] Results: Stations=1, Charged trucks=44/106, Quota=0.42, Trucks per station=6.29
+2025-03-27 16:29:54,533; INFO; [HPC] Iteration 2: Starting with 2 charging stations
+2025-03-27 16:29:54,533; INFO; [HPC] Building flow network with 2 charging stations for 106 trucks
+2025-03-27 16:29:54,533; DEBUG; Building flow network with 2 charging stations for 106 trucks
+2025-03-27 16:29:54,536; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:29:54,562; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:29:54,563; DEBUG; Calculating max flow min cost
+2025-03-27 16:29:58,875; DEBUG; Flow calculation completed successfully
+2025-03-27 16:29:58,887; INFO; [HPC] Results: Stations=2, Charged trucks=69/106, Quota=0.65, Trucks per station=4.93
+2025-03-27 16:29:58,888; INFO; [HPC] Iteration 3: Starting with 3 charging stations
+2025-03-27 16:29:58,888; INFO; [HPC] Building flow network with 3 charging stations for 106 trucks
+2025-03-27 16:29:58,888; DEBUG; Building flow network with 3 charging stations for 106 trucks
+2025-03-27 16:29:58,890; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:29:58,914; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:29:58,914; DEBUG; Calculating max flow min cost
+2025-03-27 16:30:03,949; DEBUG; Flow calculation completed successfully
+2025-03-27 16:30:03,959; INFO; [HPC] Results: Stations=3, Charged trucks=84/106, Quota=0.79, Trucks per station=4.00
+2025-03-27 16:30:03,960; INFO; [HPC] Iteration 4: Starting with 4 charging stations
+2025-03-27 16:30:03,960; INFO; [HPC] Building flow network with 4 charging stations for 106 trucks
+2025-03-27 16:30:03,960; DEBUG; Building flow network with 4 charging stations for 106 trucks
+2025-03-27 16:30:03,963; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:30:03,985; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:30:03,985; DEBUG; Calculating max flow min cost
+2025-03-27 16:30:08,950; DEBUG; Flow calculation completed successfully
+2025-03-27 16:30:08,959; INFO; [HPC] Results: Stations=4, Charged trucks=90/106, Quota=0.85, Trucks per station=3.21
+2025-03-27 16:30:08,960; INFO; [HPC] Target quota of 0.80 reached with 4 charging stations
+2025-03-27 16:30:08,972; INFO; Processing charging type: MCS, target quota: 0.80
+2025-03-27 16:30:08,973; INFO; Found 86 trucks for charging type MCS
+2025-03-27 16:30:08,973; INFO; [MCS] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:30:08,973; INFO; [MCS] Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:30:08,973; DEBUG; Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:30:08,976; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:30:09,001; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:30:09,001; DEBUG; Calculating max flow min cost
+2025-03-27 16:30:11,620; DEBUG; Flow calculation completed successfully
+2025-03-27 16:30:11,628; INFO; [MCS] Results: Stations=1, Charged trucks=41/86, Quota=0.48, Trucks per station=5.86
+2025-03-27 16:30:11,629; INFO; [MCS] Iteration 2: Starting with 2 charging stations
+2025-03-27 16:30:11,629; INFO; [MCS] Building flow network with 2 charging stations for 86 trucks
+2025-03-27 16:30:11,629; DEBUG; Building flow network with 2 charging stations for 86 trucks
+2025-03-27 16:30:11,631; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:30:11,648; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:30:11,648; DEBUG; Calculating max flow min cost
+2025-03-27 16:30:14,799; DEBUG; Flow calculation completed successfully
+2025-03-27 16:30:14,808; INFO; [MCS] Results: Stations=2, Charged trucks=62/86, Quota=0.72, Trucks per station=4.43
+2025-03-27 16:30:14,809; INFO; [MCS] Iteration 3: Starting with 3 charging stations
+2025-03-27 16:30:14,809; INFO; [MCS] Building flow network with 3 charging stations for 86 trucks
+2025-03-27 16:30:14,809; DEBUG; Building flow network with 3 charging stations for 86 trucks
+2025-03-27 16:30:14,812; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:30:14,831; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:30:14,831; DEBUG; Calculating max flow min cost
+2025-03-27 16:30:18,278; DEBUG; Flow calculation completed successfully
+2025-03-27 16:30:18,286; INFO; [MCS] Results: Stations=3, Charged trucks=74/86, Quota=0.86, Trucks per station=3.52
+2025-03-27 16:30:18,287; INFO; [MCS] Target quota of 0.80 reached with 3 charging stations
+2025-03-27 16:30:18,362; INFO; Configuration results exported to JSON: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\charging_config_base.json
+2025-03-27 16:30:18,363; INFO; Preserved original battery information for 278 trucks
+2025-03-27 16:30:18,363; INFO; Results saved to JSON file: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\charging_config_base.json
+2025-03-27 16:30:18,363; INFO; Charging hub configuration completed successfully
+2025-03-27 16:34:09,704; INFO; Starting charging hub configuration
+2025-03-27 16:34:09,706; INFO; Looking for truck data at C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\eingehende_lkws_ladesaeule.json
+2025-03-27 16:34:09,706; INFO; Loading truck data from C:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\eingehende_lkws_ladesaeule.json
+2025-03-27 16:34:09,719; INFO; Successfully loaded 278 trucks from JSON
+2025-03-27 16:34:09,719; INFO; Starting charging hub configuration calculation
+2025-03-27 16:34:09,720; INFO; Configuration parameters: Target charging quotas={'NCS': 0.8, 'HPC': 0.8, 'MCS': 0.8}, Charging times={'Schnell': 45, 'Nacht': 540}
+2025-03-27 16:34:09,720; INFO; Processing 278 trucks
+2025-03-27 16:34:09,839; INFO; Processing charging type: NCS, target quota: 0.80
+2025-03-27 16:34:09,840; INFO; Found 86 trucks for charging type NCS
+2025-03-27 16:34:09,840; INFO; [NCS] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:34:09,840; INFO; [NCS] Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:34:09,840; DEBUG; Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:34:09,843; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:34:09,868; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:34:09,868; DEBUG; Calculating max flow min cost
+2025-03-27 16:34:12,465; DEBUG; Flow calculation completed successfully
+2025-03-27 16:34:12,473; INFO; [NCS] Results: Stations=1, Charged trucks=9/86, Quota=0.10, Trucks per station=1.29
+2025-03-27 16:34:12,474; INFO; [NCS] Iteration 2: Starting with 8 charging stations
+2025-03-27 16:34:12,474; INFO; [NCS] Building flow network with 8 charging stations for 86 trucks
+2025-03-27 16:34:12,474; DEBUG; Building flow network with 8 charging stations for 86 trucks
+2025-03-27 16:34:12,476; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:34:12,498; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:34:12,499; DEBUG; Calculating max flow min cost
+2025-03-27 16:34:16,035; DEBUG; Flow calculation completed successfully
+2025-03-27 16:34:16,044; INFO; [NCS] Results: Stations=8, Charged trucks=47/86, Quota=0.55, Trucks per station=0.84
+2025-03-27 16:34:16,045; INFO; [NCS] Iteration 3: Starting with 12 charging stations
+2025-03-27 16:34:16,045; INFO; [NCS] Building flow network with 12 charging stations for 86 trucks
+2025-03-27 16:34:16,045; DEBUG; Building flow network with 12 charging stations for 86 trucks
+2025-03-27 16:34:16,048; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:34:16,069; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:34:16,069; DEBUG; Calculating max flow min cost
+2025-03-27 16:34:20,440; DEBUG; Flow calculation completed successfully
+2025-03-27 16:34:20,448; INFO; [NCS] Results: Stations=12, Charged trucks=67/86, Quota=0.78, Trucks per station=0.80
+2025-03-27 16:34:20,449; INFO; [NCS] Iteration 4: Starting with 13 charging stations
+2025-03-27 16:34:20,449; INFO; [NCS] Building flow network with 13 charging stations for 86 trucks
+2025-03-27 16:34:20,449; DEBUG; Building flow network with 13 charging stations for 86 trucks
+2025-03-27 16:34:20,452; DEBUG; Time range for network: 70-10205 minutes
+2025-03-27 16:34:20,475; DEBUG; Flow network built with 2202 nodes and 2287 edges
+2025-03-27 16:34:20,475; DEBUG; Calculating max flow min cost
+2025-03-27 16:34:24,853; DEBUG; Flow calculation completed successfully
+2025-03-27 16:34:24,861; INFO; [NCS] Results: Stations=13, Charged trucks=72/86, Quota=0.84, Trucks per station=0.79
+2025-03-27 16:34:24,862; INFO; [NCS] Target quota of 0.80 reached with 13 charging stations
+2025-03-27 16:34:24,870; INFO; Processing charging type: HPC, target quota: 0.80
+2025-03-27 16:34:24,871; INFO; Found 106 trucks for charging type HPC
+2025-03-27 16:34:24,871; INFO; [HPC] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:34:24,871; INFO; [HPC] Building flow network with 1 charging stations for 106 trucks
+2025-03-27 16:34:24,871; DEBUG; Building flow network with 1 charging stations for 106 trucks
+2025-03-27 16:34:24,873; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:34:24,900; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:34:24,900; DEBUG; Calculating max flow min cost
+2025-03-27 16:34:28,576; DEBUG; Flow calculation completed successfully
+2025-03-27 16:34:28,586; INFO; [HPC] Results: Stations=1, Charged trucks=44/106, Quota=0.42, Trucks per station=6.29
+2025-03-27 16:34:28,586; INFO; [HPC] Iteration 2: Starting with 2 charging stations
+2025-03-27 16:34:28,587; INFO; [HPC] Building flow network with 2 charging stations for 106 trucks
+2025-03-27 16:34:28,587; DEBUG; Building flow network with 2 charging stations for 106 trucks
+2025-03-27 16:34:28,589; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:34:28,611; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:34:28,611; DEBUG; Calculating max flow min cost
+2025-03-27 16:34:32,941; DEBUG; Flow calculation completed successfully
+2025-03-27 16:34:32,951; INFO; [HPC] Results: Stations=2, Charged trucks=69/106, Quota=0.65, Trucks per station=4.93
+2025-03-27 16:34:32,952; INFO; [HPC] Iteration 3: Starting with 3 charging stations
+2025-03-27 16:34:32,952; INFO; [HPC] Building flow network with 3 charging stations for 106 trucks
+2025-03-27 16:34:32,952; DEBUG; Building flow network with 3 charging stations for 106 trucks
+2025-03-27 16:34:32,955; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:34:32,976; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:34:32,976; DEBUG; Calculating max flow min cost
+2025-03-27 16:34:37,630; DEBUG; Flow calculation completed successfully
+2025-03-27 16:34:37,640; INFO; [HPC] Results: Stations=3, Charged trucks=84/106, Quota=0.79, Trucks per station=4.00
+2025-03-27 16:34:37,640; INFO; [HPC] Iteration 4: Starting with 4 charging stations
+2025-03-27 16:34:37,641; INFO; [HPC] Building flow network with 4 charging stations for 106 trucks
+2025-03-27 16:34:37,641; DEBUG; Building flow network with 4 charging stations for 106 trucks
+2025-03-27 16:34:37,643; DEBUG; Time range for network: 540-9525 minutes
+2025-03-27 16:34:37,668; DEBUG; Flow network built with 2012 nodes and 2117 edges
+2025-03-27 16:34:37,668; DEBUG; Calculating max flow min cost
+2025-03-27 16:34:42,695; DEBUG; Flow calculation completed successfully
+2025-03-27 16:34:42,707; INFO; [HPC] Results: Stations=4, Charged trucks=90/106, Quota=0.85, Trucks per station=3.21
+2025-03-27 16:34:42,717; INFO; [HPC] Target quota of 0.80 reached with 4 charging stations
+2025-03-27 16:34:42,728; INFO; Processing charging type: MCS, target quota: 0.80
+2025-03-27 16:34:42,729; INFO; Found 86 trucks for charging type MCS
+2025-03-27 16:34:42,729; INFO; [MCS] Iteration 1: Starting with 1 charging stations
+2025-03-27 16:34:42,729; INFO; [MCS] Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:34:42,729; DEBUG; Building flow network with 1 charging stations for 86 trucks
+2025-03-27 16:34:42,731; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:34:42,758; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:34:42,758; DEBUG; Calculating max flow min cost
+2025-03-27 16:34:45,623; DEBUG; Flow calculation completed successfully
+2025-03-27 16:34:45,631; INFO; [MCS] Results: Stations=1, Charged trucks=41/86, Quota=0.48, Trucks per station=5.86
+2025-03-27 16:34:45,632; INFO; [MCS] Iteration 2: Starting with 2 charging stations
+2025-03-27 16:34:45,632; INFO; [MCS] Building flow network with 2 charging stations for 86 trucks
+2025-03-27 16:34:45,632; DEBUG; Building flow network with 2 charging stations for 86 trucks
+2025-03-27 16:34:45,634; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:34:45,654; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:34:45,655; DEBUG; Calculating max flow min cost
+2025-03-27 16:34:48,865; DEBUG; Flow calculation completed successfully
+2025-03-27 16:34:48,873; INFO; [MCS] Results: Stations=2, Charged trucks=62/86, Quota=0.72, Trucks per station=4.43
+2025-03-27 16:34:48,874; INFO; [MCS] Iteration 3: Starting with 3 charging stations
+2025-03-27 16:34:48,874; INFO; [MCS] Building flow network with 3 charging stations for 86 trucks
+2025-03-27 16:34:48,874; DEBUG; Building flow network with 3 charging stations for 86 trucks
+2025-03-27 16:34:48,877; DEBUG; Time range for network: 815-8510 minutes
+2025-03-27 16:34:48,894; DEBUG; Flow network built with 1714 nodes and 1799 edges
+2025-03-27 16:34:48,894; DEBUG; Calculating max flow min cost
+2025-03-27 16:34:52,274; DEBUG; Flow calculation completed successfully
+2025-03-27 16:34:52,284; INFO; [MCS] Results: Stations=3, Charged trucks=74/86, Quota=0.86, Trucks per station=3.52
+2025-03-27 16:34:52,284; INFO; [MCS] Target quota of 0.80 reached with 3 charging stations
+2025-03-27 16:34:52,360; INFO; Configuration results exported to JSON: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\charging_config_base.json
+2025-03-27 16:34:52,361; INFO; Preserved original battery information for 278 trucks
+2025-03-27 16:34:52,361; INFO; Results saved to JSON file: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\charging_config_base.json
+2025-03-27 16:34:52,361; INFO; Charging hub configuration completed successfully

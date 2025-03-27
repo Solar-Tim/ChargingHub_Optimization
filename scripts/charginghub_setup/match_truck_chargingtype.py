@@ -403,12 +403,8 @@ def finalize_and_export_data(df_lkws, config):
     ]]
     
     # Ensure the directories exist
-    output_dir = os.path.join(config['path'], 'results', 'lkw_eingehend')
+    output_dir = os.path.join(config['path'], 'data', 'load', 'truckdata')
     os.makedirs(output_dir, exist_ok=True)
-
-    # Export the DataFrame to a CSV file (keep original export)
-    csv_path = os.path.join(output_dir, 'eingehende_lkws_ladesaeule.csv')
-    df_lkws.to_csv(csv_path, sep=';', decimal=',')
     
     # Create a structured JSON output
     # First, prepare the metadata
@@ -448,8 +444,7 @@ def finalize_and_export_data(df_lkws, config):
     with open(json_path, 'w', encoding='utf-8') as f:
         import json
         json.dump(json_output, f, ensure_ascii=False, indent=2)
-    
-    print(f"Data exported to CSV: {csv_path}")
+        
     print(f"Data exported to JSON: {json_path}")
 
 # ======================================================

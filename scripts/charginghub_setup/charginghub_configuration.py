@@ -28,43 +28,28 @@ CHARGING_TIMES = {
 }
 SCENARIO_NAME = 'Base'  # For output file naming
 
-def ensure_directories():
-    """Create all required directories for the project."""
-    project_root = Path(__file__).parent.parent.parent.resolve()
-    
-    # Define all required directories
-    directories = [
-        project_root / "data",
-        project_root / "results",
-        project_root / "results" / "lkw_eingehend",
-        project_root / "results" / "konfiguration_ladehub",
-        project_root / "results" / "lkws",
-        project_root / "results" / "konf_optionen",
-        project_root / "data" / "epex" / "lastgang",
-        project_root / "data" / "epex" / "lastgang_lkw",
-        project_root / "data" / "traffic" / "final_traffic"
-    ]
-    
-    # Create all directories
-    for directory in directories:
-        directory.mkdir(exist_ok=True, parents=True)
-    
-    return project_root
-
 def datenimport():
     """
-    Import truck data from JSON file.
+    Import truck data from JSON file using the new directory structure.
     Returns a DataFrame with truck data.
     """
     # Get the project root path
     project_root = Path(__file__).parent.parent.parent.resolve()
     
-    # Path to truck data file - updated to use JSON
-    truck_data_path = project_root / "results" / "lkw_eingehend" / "eingehende_lkws_ladesaeule.json"
+    # Path to truck data file in the new location
+    truck_data_path = project_root / "data" / "load" / "truckdata" / "eingehende_lkws_ladesaeule.json"
     
     logging.info(f"Looking for truck data at {truck_data_path}")
     
     try:
+        # Check if file exists
+        if not truck_data_path.exists():
+            logging.warning(f"File not found at new location: {truck_data_path}")
+            # Provide helpful error message
+            raise FileNotFoundError(f"Truck data file not found at {truck_data_path}. "
+                                   f"Please ensure 'eingehende_lkws_ladesaeule.json' exists in the "
+                                   f"data/load/truckdata directory.")
+            
         # Load existing truck data from JSON
         logging.info(f"Loading truck data from {truck_data_path}")
             
@@ -80,18 +65,24 @@ def datenimport():
             # Map JSON fields to expected column names
             column_mapping = {
                 'id': 'Nummer',
-                'arrival_day': 'Wochentag',  # Direct mapping - Wochentag means weekday
+                'arrival_day': 'Wochentag',
                 'arrival_time_minutes': 'Ankunftszeit',
                 'pause_type': 'Pausentyp',
                 'pause_duration_minutes': 'Pausenlaenge',
-                'assigned_charger': 'Ladesäule'
+                'assigned_charger': 'Ladesäule',
+                # Add battery-related fields
+                'capacity_kwh': 'capacity_kwh',
+                'max_power_kw': 'max_power_kw',
+                'initial_soc': 'initial_soc',
+                'target_soc': 'target_soc',
+                'truck_type_id': 'truck_type_id'
             }
             
-            # Rename columns that exist (some might be missing in incomplete entries)
+            # Rename columns that exist
             existing_columns = [col for col in column_mapping.keys() if col in df_trucks.columns]
             df_trucks = df_trucks.rename(columns={col: column_mapping[col] for col in existing_columns})
             
-            # Ensure all required columns exist, create empty ones if missing
+            # Ensure all required columns exist
             for target_col in column_mapping.values():
                 if target_col not in df_trucks.columns:
                     df_trucks[target_col] = None
@@ -295,51 +286,20 @@ def konfiguration_ladehub(df_eingehende_lkws):
     
     # Path for files - use project structure
     project_root = Path(__file__).parent.parent.parent
-    results_dir = project_root / "results"
     
-    # Create output directories
-    output_paths = {
-        'konfiguration_ladehub': results_dir / "konfiguration_ladehub",
-        'lkws': results_dir / "lkws",
-        'konf_optionen': results_dir / "konf_optionen"
-    }
-    
-    # Create directories if they don't exist
-    for path in output_paths.values():
-        path.mkdir(exist_ok=True)
+    # Output directory for truck data
+    truckdata_dir = project_root / "data" / "load" / "truckdata"
+    truckdata_dir.mkdir(exist_ok=True, parents=True)
     
     # Simplified output filenames
     base_filename = f'charging_config_{SCENARIO_NAME.lower()}'
     json_filename = f'{base_filename}.json'
     
     try:
-        # Export as JSON (new format)
-        json_output_path = output_paths['konfiguration_ladehub'] / json_filename
+        # Export to the new location only
+        json_output_path = truckdata_dir / json_filename
         export_results_as_json(df_anzahl_ladesaeulen, df_eingehende_lkws_loadstatus, df_konf_optionen, json_output_path)
-        
-        # Keep legacy CSV outputs for backward compatibility
-        legacy_filename = f'quota_{int(CHARGING_QUOTAS["NCS"]*100)}-{int(CHARGING_QUOTAS["HPC"]*100)}-{int(CHARGING_QUOTAS["MCS"]*100)}_pause_{CHARGING_TIMES["Schnell"]}-{CHARGING_TIMES["Nacht"]}_{SCENARIO_NAME}'
-        
-        # CSV: Number of charging stations
-        df_anzahl_ladesaeulen.to_csv(
-            output_paths['konfiguration_ladehub'] / f'anzahl_ladesaeulen_{legacy_filename}.csv',
-            sep=';', decimal=','
-        )
-
-        # CSV: Trucks with LoadStatus
-        df_eingehende_lkws_loadstatus.to_csv(
-            output_paths['lkws'] / f'eingehende_lkws_loadstatus_{legacy_filename}.csv',
-            sep=';', decimal=','
-        )
-        
-        # CSV: Configuration options
-        df_konf_optionen.to_csv(
-            output_paths['konf_optionen'] / f'konf_optionen_{legacy_filename}.csv',
-            sep=';', decimal=',', index=False
-        )
-        
         logging.info(f"Results saved to JSON file: {json_output_path}")
-        logging.info(f"Legacy CSV files saved with filename prefix: {legacy_filename}")
     except Exception as e:
         logging.error(f"Error saving results: {e}")
     
@@ -348,6 +308,7 @@ def konfiguration_ladehub(df_eingehende_lkws):
 def export_results_as_json(df_anzahl_ladesaeulen, df_eingehende_lkws_loadstatus, df_konf_optionen, output_path):
     """
     Export configuration results as a structured JSON file.
+    Includes battery information and standardized field names for compatibility with demand_optimization.py.
     """
     import json
     from datetime import datetime
@@ -383,17 +344,47 @@ def export_results_as_json(df_anzahl_ladesaeulen, df_eingehende_lkws_loadstatus,
             "trucks_per_station": float(row['LKW_pro_Ladesaeule'])
         })
     
-    # Add truck load status data
+    # Default battery info as fallback
+    battery_defaults = {
+        "NCS": {"capacity_kwh": 600, "max_power_kw": 300, "initial_soc": 0.2, "target_soc": 0.8},
+        "HPC": {"capacity_kwh": 400, "max_power_kw": 350, "initial_soc": 0.3, "target_soc": 0.8},
+        "MCS": {"capacity_kwh": 500, "max_power_kw": 400, "initial_soc": 0.2, "target_soc": 0.8}
+    }
+    
+    # Add truck load status data with battery information and standardized field names
     for _, row in df_eingehende_lkws_loadstatus.iterrows():
+        # Get charging type for default fallback
+        charging_type = row['Ladesäule']
+        default_battery_info = battery_defaults.get(charging_type, {
+            "capacity_kwh": 500, "max_power_kw": 350, "initial_soc": 0.2, "target_soc": 0.8
+        })
+        
+        # Use original battery info if available, fallback to defaults if not
+        capacity_kwh = row['capacity_kwh'] if pd.notna(row.get('capacity_kwh')) else default_battery_info["capacity_kwh"]
+        max_power_kw = row['max_power_kw'] if pd.notna(row.get('max_power_kw')) else default_battery_info["max_power_kw"]
+        initial_soc = row['initial_soc'] if pd.notna(row.get('initial_soc')) else default_battery_info["initial_soc"]
+        target_soc = row['target_soc'] if pd.notna(row.get('target_soc')) else default_battery_info["target_soc"]
+        
         truck_data = {
             "id": row['Nummer'],
-            "day": int(row['Wochentag']),
-            "arrival_time": int(row['Ankunftszeit']),
+            "arrival_day": int(row['Wochentag']),
+            "arrival_time_minutes": int(row['Ankunftszeit']),
             "pause_type": row['Pausentyp'],
-            "pause_duration": int(row['Pausenlaenge']),
-            "charging_type": row['Ladesäule'],
-            "load_status": int(row['LoadStatus'])
+            "pause_duration_minutes": int(row['Pausenlaenge']),
+            "assigned_charger": row['Ladesäule'],
+            "load_status": int(row['LoadStatus']),
+            
+            # Use original battery information when available
+            "capacity_kwh": float(capacity_kwh),
+            "max_power_kw": float(max_power_kw),
+            "initial_soc": float(initial_soc),
+            "target_soc": float(target_soc)
         }
+        
+        # Add truck type ID if available
+        if pd.notna(row.get('truck_type_id')):
+            truck_data["truck_type_id"] = int(row['truck_type_id'])
+            
         result["trucks"].append(truck_data)
     
     # Write to JSON file
@@ -401,6 +392,7 @@ def export_results_as_json(df_anzahl_ladesaeulen, df_eingehende_lkws_loadstatus,
         json.dump(result, f, ensure_ascii=False, indent=2)
     
     logging.info(f"Configuration results exported to JSON: {output_path}")
+    logging.info(f"Preserved original battery information for {len(result['trucks'])} trucks")
 
 def main():
     """Main execution function."""
@@ -408,9 +400,6 @@ def main():
     print('Starting charging hub configuration')
     
     try:
-        # Ensure all directories exist
-        project_root = ensure_directories()
-        
         # Import truck data
         df_eingehende_lkws = datenimport()
         
