@@ -6,20 +6,9 @@ import json
 import config
 import logging
 from datetime import datetime
+from config_setup import CONFIG
 
 logging.basicConfig(filename='logs.log', level=logging.DEBUG, format='%(asctime)s; %(levelname)s; %(message)s')
-
-CONFIG = {
-    # Update to include new Hub strategy
-    'STRATEGIES': ["Hub"],  # ["T_min", "Konstant", "Hub"]
-    # 'STRATEGIES': ["T_min", "Konstant", "Hub"]
-    # T_min: Minimierung der Ladezeit - Kein Lademanagement
-    # Konstant: Möglichst konstante Ladeleistung - Minimierung der Netzanschlusslast - Lademanagement
-    # Hub: Minimierung der Hub-Lastspitzen - Globale Lastoptimierung - Hub-Level Lademanagement
-    'ladequote': 0.8,  # Ladequote in Prozent
-    'power': '100-100-100',  # Ladeleistung in Prozent (NCS-HPC-MCS)
-    'pause': '45-540',  # Pausenzeiten in Minuten (min-max)
-}
 
 def datetime_to_iso(dt_obj):
     """Convert datetime objects to ISO 8601 format strings"""
@@ -86,10 +75,30 @@ def modellierung():
     logging.info(f"Checking charging config path: {ladehub_filepath}")
     print(f"Checking path: {ladehub_filepath}")
     
-    if not os.path.exists(ladehub_filepath):
-        logging.warning("Could not find charging hub configuration file. Using default values.")
-        print("WARNING: Could not find charging hub configuration file. Using default values.")
-        # Create a default configuration
+
+
+    try:
+        logging.info(f"Loading charging hub config from: {ladehub_filepath}")
+        print(f"Loading charging hub config from: {ladehub_filepath}")
+        with open(ladehub_filepath, 'r') as f:
+            charging_config = json.load(f)
+        logging.info(f"Successfully loaded charging hub config")
+        print(f"Successfully loaded charging hub config")
+            
+        # Try to extract truck data from charging_config_base.json
+        if "trucks" in charging_config and charging_config["trucks"]:
+            truck_data_from_config = {"trucks": charging_config["trucks"]}
+            logging.info(f"Using truck data from charging_config_base.json - {len(charging_config['trucks'])} trucks found")
+            print(f"Using truck data from charging_config_base.json - {len(charging_config['trucks'])} trucks found")
+        else:
+            truck_data_from_config = None
+            logging.warning("No truck data found in charging_config_base.json")
+            print("WARNING: No truck data found in charging_config_base.json")
+                
+    except Exception as e:
+        logging.error(f"Error loading charging hub config: {e}")
+        print(f"ERROR loading charging hub data: {e}")
+        # Create default configuration on error
         charging_config = {
             "charging_stations": {
                 "NCS": {"count": 4},
@@ -97,39 +106,7 @@ def modellierung():
                 "MCS": {"count": 1}
             }
         }
-        # No truck data available from this source
         truck_data_from_config = None
-    else:
-        try:
-            logging.info(f"Loading charging hub config from: {ladehub_filepath}")
-            print(f"Loading charging hub config from: {ladehub_filepath}")
-            with open(ladehub_filepath, 'r') as f:
-                charging_config = json.load(f)
-            logging.info(f"Successfully loaded charging hub config")
-            print(f"Successfully loaded charging hub config")
-            
-            # Try to extract truck data from charging_config_base.json
-            if "trucks" in charging_config and charging_config["trucks"]:
-                truck_data_from_config = {"trucks": charging_config["trucks"]}
-                logging.info(f"Using truck data from charging_config_base.json - {len(charging_config['trucks'])} trucks found")
-                print(f"Using truck data from charging_config_base.json - {len(charging_config['trucks'])} trucks found")
-            else:
-                truck_data_from_config = None
-                logging.warning("No truck data found in charging_config_base.json")
-                print("WARNING: No truck data found in charging_config_base.json")
-                
-        except Exception as e:
-            logging.error(f"Error loading charging hub config: {e}")
-            print(f"ERROR loading charging hub data: {e}")
-            # Create default configuration on error
-            charging_config = {
-                "charging_stations": {
-                    "NCS": {"count": 4},
-                    "HPC": {"count": 2},
-                    "MCS": {"count": 1}
-                }
-            }
-            truck_data_from_config = None
     
     # ------------------------------
     # Only load truck data from separate file if not found in charging_config_base.json
@@ -201,9 +178,6 @@ def modellierung():
     T_7 = 288 * 7  # Timesteps in a week (288 per day * 7 days)
     
     Delta_t = TIMESTEP / 60.0
-
-    # Start date for this specific week
-    start_date = pd.Timestamp('2024-01-01 00:00:00') + pd.Timedelta(days=7)
 
     # Vorbefüllen der Liste mit allen Zeitpunkten und Strategien - nur für eine Woche
     rows = []
