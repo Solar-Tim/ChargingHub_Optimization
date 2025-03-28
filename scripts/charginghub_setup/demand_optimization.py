@@ -11,7 +11,7 @@ logging.basicConfig(filename='logs.log', level=logging.DEBUG, format='%(asctime)
 
 CONFIG = {
     # Update to include new Hub strategy
-    'STRATEGIES': ["Hub"],
+    'STRATEGIES': ["T_min"],
     # 'STRATEGIES': ["T_min", "Konstant", "Hub"]
     # T_min: Minimierung der Ladezeit - Kein Lademanagement
     # Konstant: Möglichst konstante Ladeleistung - Minimierung der Netzanschlusslast - Lademanagement
@@ -212,7 +212,6 @@ def modellierung():
     for strategie_idx, strategie in enumerate(CONFIG['STRATEGIES']):
         for time_idx in range(N):
             row_dict = {
-                'Datum':                start_date + pd.Timedelta(minutes=time_idx * TIMESTEP),
                 'Tag':                  1 + (time_idx // 288) % 7,
                 'Zeit':                 (time_idx * TIMESTEP) % 1440,
                 'Leistung_Total':       0.0,
@@ -233,7 +232,6 @@ def modellierung():
 
     dict_lkw_lastgang = {
         'LKW_ID': [],
-        'Datum': [],
         'Tag': [],
         'Zeit': [],
         'Ladetyp': [],
@@ -485,7 +483,6 @@ def modellierung():
                 for t in range(T_7):   
                     if t_in[i] <= t <= t_out[i]+1:
                         dict_lkw_lastgang['LKW_ID'].append(df_lkw.iloc[i]['Nummer'])
-                        dict_lkw_lastgang['Datum'].append(start_date + pd.Timedelta(minutes=t*5))
                         dict_lkw_lastgang['Tag'].append(df_lkw.iloc[i]['Tag'] % 7)
                         dict_lkw_lastgang['Zeit'].append((t * 5) % 1440)
                         dict_lkw_lastgang['Ladestrategie'].append(strategie)
@@ -527,14 +524,12 @@ def modellierung():
     for record in df_lastgang.to_dict(orient='records'):
         # Process only the essential fields for the load profile
         processed_record = {
-            'Datum': datetime_to_iso(record['Datum']),
             'Tag': record['Tag'],
             'Zeit': record['Zeit'],
             'Leistung_Total': record['Leistung_Total'],
             'Leistung_NCS': record['Leistung_NCS'],
             'Leistung_HPC': record['Leistung_HPC'],
             'Leistung_MCS': record['Leistung_MCS'],
-            'Ladestrategie': record['Ladestrategie'],
             'Ladequote': record['Ladequote']
         }
         lastgang_records.append(processed_record)
@@ -558,17 +553,17 @@ def modellierung():
     if "Hub" in CONFIG['STRATEGIES'] and 'hub_peak_load' in locals():
         output_data["metadata"]["peak_load_kw"] = hub_peak_load
 
-    # Create directory structure if needed
-    json_dir = os.path.join(script_dir, 'data', 'epex', 'json_output')
+    # Create directory structure if needed (changed to use load folder)
+    json_dir = os.path.join(root_dir, 'data', 'load')
     os.makedirs(json_dir, exist_ok=True)
 
     # Define the output JSON filename
-    json_filename = f'simplified_charging_data_{CONFIG["power"]}.json'
+    json_filename = f'simplified_charging_data.json'
     json_filepath = os.path.join(json_dir, json_filename)
 
     # Save the simplified data to a pretty-printed JSON file
-    logging.info(f"Saving simplified load profile data to JSON file")
-    print(f"Saving simplified load profile data to JSON file...")
+    logging.info(f"Saving simplified load profile data to load folder")
+    print(f"Saving simplified load profile data to load folder...")
     
     try:
         with open(json_filepath, 'w', encoding='utf-8') as json_file:
