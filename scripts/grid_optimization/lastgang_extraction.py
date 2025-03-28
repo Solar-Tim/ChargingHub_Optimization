@@ -1,106 +1,83 @@
 import json
-import pandas as pd
 import os
-from pathlib import Path
+import pandas as pd
 
-def extract_lastgang(file_path):
+
+def extract_charging_data(strategy):
     """
-    Extract lastgang data from JSON file and convert to pandas DataFrame.
+    Extract charging data for a specified strategy.
     
-    Args:
-        file_path (str): Path to the JSON file
+    Parameters:
+    -----------
+    strategy : str
+        The charging strategy name (e.g., "T_min", "Hub", or "Konstant")
     
     Returns:
-        dict: Dictionary containing:
-            - lastgang_df: DataFrame with load profile data
-            - metadata: Dictionary of metadata from the JSON
-            - grid_connection_kw: Grid connection capacity in kW
+    --------
+    tuple
+        - lastgang_df: DataFrame with Leistung_Total, Tag, Zeit columns
+        - stations_count: Dictionary with counts of each charging station type
     """
-    # Load JSON file
-    print(f"Attempting to open file: {file_path}")
-    with open(file_path, 'r') as file:
-        data = json.load(file)
+    # Construct file path
+    file_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "data", "load", f"simplified_charging_data_{strategy}.json"
+    )
     
-    # Extract lastgang data
-    lastgang_data = data.get("lastgang", [])
+    try:
+        # Load the JSON file
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+        
+        # Extract charging station counts
+        stations_count = {}
+        if "metadata" in data and "charging_stations" in data["metadata"]:
+            for station_type, info in data["metadata"]["charging_stations"].items():
+                if "count" in info:
+                    stations_count[station_type] = info["count"]
+        
+        # Extract Lastgang data with the required fields
+        lastgang_data = []
+        for entry in data.get("lastgang", []):
+            # Only include entries that have all required fields
+            if all(field in entry for field in ["Leistung_Total", "Tag", "Zeit"]):
+                lastgang_data.append({
+                    "Leistung_Total": entry["Leistung_Total"],
+                    "Tag": entry["Tag"],
+                    "Zeit": entry["Zeit"]
+                })
+        
+        # Convert to DataFrame
+        lastgang_df = pd.DataFrame(lastgang_data)
+        
+        if lastgang_df.empty:
+            print(f"Warning: No valid Lastgang data found for strategy '{strategy}'.")
+            
+        return lastgang_df, stations_count
     
-    # Convert to DataFrame
-    df = pd.DataFrame(lastgang_data)
-    
-    # Get metadata if available
-    metadata = data.get("metadata", {})
-    
-    return {
-        "lastgang_df": df,
-        "metadata": metadata,
-        "grid_connection_kw": metadata.get("grid_connection_kw")
-    }
+    except FileNotFoundError:
+        print(f"Error: File not found for strategy '{strategy}'.")
+        return pd.DataFrame(), {}
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON format in file for strategy '{strategy}'.")
+        return pd.DataFrame(), {}
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return pd.DataFrame(), {}
 
-def save_lastgang_as_csv(data, output_path):
-    """
-    Save lastgang data to CSV.
-    
-    Args:
-        data (dict): Dictionary returned by extract_lastgang
-        output_path (str): Path to save the CSV file
-    """
-    # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    # Save the DataFrame to CSV
-    data["lastgang_df"].to_csv(output_path, index=False)
-    print(f"Saved lastgang data to {output_path}")
 
 if __name__ == "__main__":
-    import sys
+    # Example usage
+    strategy = "Hub"  # Change this to test other strategies: "T_min", "Konstant"
+    lastgang, stations = extract_charging_data(strategy)
     
-    # Define possible file paths
-    default_paths = [
-        # Relative path from current script
-        "../charginghub_setup/data/epex/json_output/simplified_charging_data_100-100-100.json",
-        # Alternative with absolute path
-        str(Path(__file__).parent.parent / "charginghub_setup/data/epex/json_output/simplified_charging_data_100-100-100.json"),
-        # Demo data
-        str(Path(__file__).parent.parent.parent / "data/load/lastgang_demo.csv")
-    ]
+    if not lastgang.empty:
+        print(f"\nLastgang data for {strategy} strategy:")
+        print(lastgang.head())
     
-    # Get file path from command line or try default paths
-    if len(sys.argv) > 1:
-        file_path = sys.argv[1]
+    if stations:
+        print(f"\nCharging station counts for {strategy} strategy:")
+        for station_type, count in stations.items():
+            print(f"{station_type}: {count}")
     else:
-        # Try each default path until one exists
-        file_path = None
-        for path in default_paths:
-            print(f"Checking if file exists: {path}")
-            if os.path.isfile(path):
-                file_path = path
-                print(f"Using file: {file_path}")
-                break
-        
-        if file_path is None:
-            print("Error: Could not find a valid input file.")
-            print(f"Current directory: {os.getcwd()}")
-            print("Please provide a valid file path as a command line argument.")
-            sys.exit(1)
-    
-    # Extract the data
-    try:
-        result = extract_lastgang(file_path)
-        
-        # Print basic information about the data
-        print(f"Extracted {len(result['lastgang_df'])} lastgang data points")
-        print(f"Grid connection: {result['grid_connection_kw']} kW")
-        
-        # Show a sample of the data
-        if not result['lastgang_df'].empty:
-            print("\nSample of lastgang data:")
-            print(result['lastgang_df'].head())
-        
-        # Optionally save to CSV
-        output_dir = os.path.join(os.path.dirname(__file__), "output")
-        file_name = Path(file_path).stem + "_extracted.csv"
-        save_lastgang_as_csv(result, os.path.join(output_dir, file_name))
-        
-    except Exception as e:
-        print(f"Error processing file: {e}")
-        sys.exit(1)
+        print(f"\nNo charging station data found for {strategy} strategy.")

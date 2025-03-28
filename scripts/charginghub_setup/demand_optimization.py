@@ -11,7 +11,7 @@ logging.basicConfig(filename='logs.log', level=logging.DEBUG, format='%(asctime)
 
 CONFIG = {
     # Update to include new Hub strategy
-    'STRATEGIES': ["T_min"],
+    'STRATEGIES': ["Hub"],  # ["T_min", "Konstant", "Hub"]
     # 'STRATEGIES': ["T_min", "Konstant", "Hub"]
     # T_min: Minimierung der Ladezeit - Kein Lademanagement
     # Konstant: Möglichst konstante Ladeleistung - Minimierung der Netzanschlusslast - Lademanagement
@@ -558,7 +558,9 @@ def modellierung():
     os.makedirs(json_dir, exist_ok=True)
 
     # Define the output JSON filename
-    json_filename = f'simplified_charging_data.json'
+    # Create a filename that includes the strategy
+    strategies_string = "_".join(CONFIG['STRATEGIES'])
+    json_filename = f'simplified_charging_data_{strategies_string}.json'
     json_filepath = os.path.join(json_dir, json_filename)
 
     # Save the simplified data to a pretty-printed JSON file
