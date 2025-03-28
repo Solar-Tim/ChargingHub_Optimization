@@ -92,7 +92,7 @@ def load_input_data(path):
     path = Path(path)
     
     # Define file paths
-    verteilungsfunktion_path = path / 'data' / 'traffic' / 'final_traffic' / 'verteilungsfunktion_mcs-ncs.csv'
+    verteilungsfunktion_path = path / 'data' / 'traffic' / 'raw_data' / 'verteilungsfunktion_mcs-ncs.csv'
     laden_mauttabelle_path = path / 'data' / 'traffic' / 'final_traffic' / 'laden_mauttabelle.json'
     
     # Create directories if they don't exist

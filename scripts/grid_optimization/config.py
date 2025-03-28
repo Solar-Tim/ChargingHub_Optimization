@@ -46,8 +46,8 @@ battery_max_soc = 1         # Maximum state of charge
 
 
 # Define capacity fee parameters (€/kW) - Baukostenzuschuss https://www.regionetz.de/fileadmin/regionetz/content/Dokumente/Preisbl%C3%A4tter/2025_Preisblatt_Baukostenzuschuss_oberhalb_der_Niederspannung.pdf
-hv_capacity_fee = 111,14   # Based of BKZ from Regionetz OHNE Reduzierung durch Regionetz *0.5 
-mv_capacity_fee = 183,56   # Based of BKZ from Regionetz OHNE Reduzierung durch Regionetz *0.5 
+hv_capacity_fee = 111.14   # Based of BKZ from Regionetz OHNE Reduzierung durch Regionetz *0.5 
+mv_capacity_fee = 183.56   # Based of BKZ from Regionetz OHNE Reduzierung durch Regionetz *0.5 
 
 
 # Line capacities (in kW) - in Anlehnung an https://www.regionetz.de/fileadmin/regionetz/content/Dokumente/TAB/TAB_MS_2023_Regionetz.pdf
