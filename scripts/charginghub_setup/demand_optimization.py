@@ -10,12 +10,13 @@ from datetime import datetime
 logging.basicConfig(filename='logs.log', level=logging.DEBUG, format='%(asctime)s; %(levelname)s; %(message)s')
 
 CONFIG = {
-    'STRATEGIES': ["Konstant"],
-    # 'STRATEGIES': ["T_min", "Konstant"]
+    # Update to include new Hub strategy
+    'STRATEGIES': ["Hub"],
+    # 'STRATEGIES': ["T_min", "Konstant", "Hub"]
     # T_min: Minimierung der Ladezeit - Kein Lademanagement
     # Konstant: Möglichst konstante Ladeleistung - Minimierung der Netzanschlusslast - Lademanagement
+    # Hub: Minimierung der Hub-Lastspitzen - Globale Lastoptimierung - Hub-Level Lademanagement
     'ladequote': 0.8,  # Ladequote in Prozent
-    'netz': 100,  # Netzanschluss in Prozent
     'power': '100-100-100',  # Ladeleistung in Prozent (NCS-HPC-MCS)
     'pause': '45-540',  # Pausenzeiten in Minuten (min-max)
 }
@@ -38,45 +39,14 @@ def validate_truck_data(df):
         'initial_soc': 'SOC',
         'capacity_kwh': 'Kapazitaet',
         'max_power_kw': 'Max_Leistung',
-        'target_soc': 'SOC_Target'
+        'target_soc': 'SOC_Target',
+        'load_status': 'load_status'
     }
     
     # Rename columns that exist in the DataFrame
     for json_col, req_col in column_mapping.items():
         if json_col in df.columns:
             df.rename(columns={json_col: req_col}, inplace=True)
-    
-    # Add load status column if it doesn't exist
-    if 'LoadStatus' not in df.columns and 'load_status' in df.columns:
-        df.rename(columns={'load_status': 'LoadStatus'}, inplace=True)
-    elif 'LoadStatus' not in df.columns:
-        logging.warning("LoadStatus column not found. Adding default value of 1")
-        print("WARNING: LoadStatus column not found. Assuming all entries are valid (LoadStatus=1)")
-        df['LoadStatus'] = 1
-
-    # Ensure essential columns exist with default values
-    required_cols = {
-        'Nummer': lambda: range(len(df)),
-        'LoadStatus': lambda: 1,
-        'Ankunftszeit_total': lambda: 0,
-        'Pausenlaenge': lambda: 45, 
-        'Ladesäule': lambda: 'NCS',
-        'SOC': lambda: 0.2,
-        'Kapazitaet': lambda: 400, 
-        'Max_Leistung': lambda: 350,
-        'SOC_Target': lambda: 0.8
-    }
-    
-    missing_columns = []
-    for col, default_func in required_cols.items():
-        if col not in df.columns:
-            missing_columns.append(col)
-            logging.warning(f"Required column '{col}' not found in truck data. Adding default values.")
-            df[col] = [default_func() for _ in range(len(df))]
-    
-    if missing_columns:
-        logging.warning(f"Added default values for missing columns: {', '.join(missing_columns)}")
-        print(f"WARNING: Added default values for missing columns: {', '.join(missing_columns)}")
     
     return df
 
@@ -94,7 +64,6 @@ def modellierung():
     # Extract parameters from configuration
     dict_config = {
         'ladequote': CONFIG['ladequote'],
-        'netz': CONFIG['netz'],
         'power': CONFIG['power'],
         'pause': CONFIG['pause']
     }
@@ -219,14 +188,6 @@ def modellierung():
         'MCS': int(int(power_values[2]) / 100 * config.leistung_ladetyp['MCS'])
     }
     
-    # Calculate grid connection capacity
-    netzanschlussfaktor = float(CONFIG['netz'] / 100)
-    netzanschluss = (
-        max_saeulen['NCS'] * ladeleistung['NCS'] +
-        max_saeulen['HPC'] * ladeleistung['HPC'] +
-        max_saeulen['MCS'] * ladeleistung['MCS']
-    ) * netzanschlussfaktor
-    
     # -------------------------------------
     # Vorbereitung: Lastgang-Arrays
     # -------------------------------------
@@ -260,7 +221,6 @@ def modellierung():
                 'Leistung_HPC':         0.0,
                 'Leistung_MCS':         0.0,
                 'Ladestrategie':        strategie,
-                'Netzanschluss':        netzanschluss,
                 'Ladequote':            0.0,
             }
             rows.append(row_dict)
@@ -378,13 +338,6 @@ def modellierung():
                 model.addConstr(Pplus[(i,t_step)]  <= z[(i,t_step)] * P_max_l)
                 model.addConstr(Pminus[(i,t_step)] <= (1 - z[(i,t_step)]) * P_max_l)
 
-        # 5) Netzanschluss
-        for t_step in range(T_7):
-            idx = [i for i in range(I) if t_in[i] <= t_step <= t_out[i]]
-            if idx:
-                model.addConstr(quicksum(Pplus[(i,t_step)] + Pminus[(i,t_step)] 
-                                         for i in idx) <= netzanschluss)
-
         # 6) Kopplungsbedingungen (P = Pplus - Pminus, z monoton steigend)
         for i in range(I):
             for t_step in range(t_in[i], t_out[i]+1):
@@ -426,6 +379,47 @@ def modellierung():
                 for t_step in range(t_in[i], t_out[i]):
                     obj_expr -= delta[(i, t_step)]
 
+        elif strategie == "Hub":
+            # Hub-Optimierungsstrategie: Minimiert Lastspitzen über den gesamten Hub
+            # 1. Definiere Variable für die Spitzenlast (peak load) im Hub
+            peak_load = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name="peak_load")
+            
+            # 2. Berechne die Gesamtlast zu jedem Zeitschritt
+            hub_load = {}
+            for t_step in range(T_7):
+                # Alle aktiven LKWs zu dieser Zeit
+                active_trucks = [i for i in range(I) if t_in[i] <= t_step <= t_out[i]]
+                if active_trucks:
+                    # Füge temporäre Variable für die Gesamtlast zu diesem Zeitpunkt hinzu
+                    hub_load[t_step] = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name=f"hub_load_{t_step}")
+                    
+                    # Die Gesamtlast ist die Summe der Leistungen aller aktiven LKWs
+                    model.addConstr(hub_load[t_step] == 
+                                   quicksum(Pplus[(i, t_step)] + Pminus[(i, t_step)] 
+                                           for i in active_trucks))
+                    
+                    # Die Spitzenlast muss größer oder gleich jeder Gesamtlast sein
+                    model.addConstr(peak_load >= hub_load[t_step])
+            
+            # 3. Parametrierung der Zielfunktion
+            M_energy = 1000000  # Hoher Gewichtungsfaktor für Energiemaximierung
+            gamma = 10000     # Gewichtungsfaktor für Minimierung der Spitzenlast
+            
+            # 4. Zielfunktion: Maximiere Energie und minimiere Spitzenlast
+            obj_expr = 0
+            
+            # Primäres Ziel: Maximierung der Energielieferung
+            for i in range(I):
+                for t in range(t_in[i], t_out[i] + 1):
+                    obj_expr += M_energy * Pplus[(i, t)]
+            
+            # Sekundäres Ziel: Minimierung der Spitzenlast
+            obj_expr -= gamma * peak_load
+            
+            # 5. Logging und Debugging
+            logging.info(f"Optimizing with Hub strategy - minimizing peak load")
+            print(f"Optimizing with Hub strategy - minimizing peak load")
+
         model.setObjective(obj_expr, GRB.MAXIMIZE)
         model.optimize()
         
@@ -446,7 +440,13 @@ def modellierung():
             if strategie == 'T_min':
                 print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkw)}")
             elif strategie == 'Konstant':
-                    print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkw)}")
+                print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkw)}")
+            elif strategie == 'Hub':
+                # Get the peak load value from the model
+                peak_load_value = peak_load.X if model.Status == GRB.OPTIMAL else "N/A"
+                print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkw)}, Peak Load: {peak_load_value:.2f} kW")
+                # Store peak load value for later use in output_data
+                hub_peak_load = peak_load_value
             
             # Lastgang: direkt in rows eintragen
             for t_step in range(T_7):
@@ -535,7 +535,6 @@ def modellierung():
             'Leistung_HPC': record['Leistung_HPC'],
             'Leistung_MCS': record['Leistung_MCS'],
             'Ladestrategie': record['Ladestrategie'],
-            'Netzanschluss': record['Netzanschluss'],
             'Ladequote': record['Ladequote']
         }
         lastgang_records.append(processed_record)
@@ -549,12 +548,15 @@ def modellierung():
                 "HPC": {"count": max_saeulen['HPC'], "power_kw": ladeleistung['HPC']},
                 "MCS": {"count": max_saeulen['MCS'], "power_kw": ladeleistung['MCS']}
             },
-            "grid_connection_kw": netzanschluss,
             "generated_at": datetime.now().isoformat(),
             "data_source": "charging_config_base.json" if truck_data_from_config else "eingehende_lkws_ladesaeule.json"
         },
         "lastgang": lastgang_records
     }
+
+    # Add the peak load if Hub strategy was used
+    if "Hub" in CONFIG['STRATEGIES'] and 'hub_peak_load' in locals():
+        output_data["metadata"]["peak_load_kw"] = hub_peak_load
 
     # Create directory structure if needed
     json_dir = os.path.join(script_dir, 'data', 'epex', 'json_output')

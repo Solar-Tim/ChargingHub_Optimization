@@ -1,0 +1,48 @@
+2025-03-28 12:20:36,208; INFO; Optimization p_max/p_min with configuration: {'STRATEGIES': ['Hub'], 'ladequote': 0.8, 'netz': 100, 'power': '100-100-100', 'pause': '45-540'}
+2025-03-28 12:20:36,209; INFO; Optimizing for scenario ['Hub']
+2025-03-28 12:20:36,209; INFO; Using configuration parameters: {'ladequote': 0.8, 'netz': 100, 'power': '100-100-100', 'pause': '45-540'}
+2025-03-28 12:20:36,209; INFO; Script directory: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\scripts\charginghub_setup
+2025-03-28 12:20:36,210; INFO; Root directory: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization
+2025-03-28 12:20:36,210; INFO; Checking charging config path: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\charging_config_base.json
+2025-03-28 12:20:36,244; INFO; Loading charging hub config from: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\charging_config_base.json
+2025-03-28 12:20:36,250; INFO; Successfully loaded charging hub config
+2025-03-28 12:20:36,251; INFO; Using truck data from charging_config_base.json - 278 trucks found
+2025-03-28 12:20:36,296; INFO; Created rows: 2016, Index mapping entries: 2016
+2025-03-28 12:20:36,333; INFO; Set parameter Username
+2025-03-28 12:20:36,333; INFO; Set parameter LicenseID to value 2597860
+2025-03-28 12:20:36,337; INFO; Academic license - for non-commercial use only - expires 2025-12-10
+2025-03-28 12:20:45,032; INFO; Optimizing with Hub strategy - minimizing peak load
+2025-03-28 13:00:36,178; INFO; Optimization p_max/p_min with configuration: {'STRATEGIES': ['Hub'], 'ladequote': 0.8, 'netz': 100, 'power': '100-100-100', 'pause': '45-540'}
+2025-03-28 13:00:36,179; INFO; Optimizing for scenario ['Hub']
+2025-03-28 13:00:36,179; INFO; Using configuration parameters: {'ladequote': 0.8, 'netz': 100, 'power': '100-100-100', 'pause': '45-540'}
+2025-03-28 13:00:36,180; INFO; Script directory: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\scripts\charginghub_setup
+2025-03-28 13:00:36,180; INFO; Root directory: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization
+2025-03-28 13:00:36,180; INFO; Checking charging config path: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\charging_config_base.json
+2025-03-28 13:00:36,181; INFO; Loading charging hub config from: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\charging_config_base.json
+2025-03-28 13:00:36,185; INFO; Successfully loaded charging hub config
+2025-03-28 13:00:36,185; INFO; Using truck data from charging_config_base.json - 278 trucks found
+2025-03-28 13:00:36,237; INFO; Created rows: 2016, Index mapping entries: 2016
+2025-03-28 13:00:36,245; INFO; Set parameter Username
+2025-03-28 13:00:36,245; INFO; Set parameter LicenseID to value 2597860
+2025-03-28 13:00:36,249; INFO; Academic license - for non-commercial use only - expires 2025-12-10
+2025-03-28 13:00:45,744; INFO; Optimizing with Hub strategy - minimizing peak load
+2025-03-28 13:00:53,840; INFO; Saving simplified load profile data to JSON file
+2025-03-28 13:00:53,938; INFO; Successfully saved load profile data to: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\scripts\charginghub_setup\data\epex\json_output\simplified_charging_data_100-100-100.json
+2025-03-28 13:11:31,370; INFO; Optimization p_max/p_min with configuration: {'STRATEGIES': ['Hub'], 'ladequote': 0.8, 'power': '100-100-100', 'pause': '45-540'}
+2025-03-28 13:11:31,370; INFO; Optimizing for scenario ['Hub']
+2025-03-28 13:11:56,943; INFO; Optimization p_max/p_min with configuration: {'STRATEGIES': ['Hub'], 'ladequote': 0.8, 'power': '100-100-100', 'pause': '45-540'}
+2025-03-28 13:11:56,943; INFO; Optimizing for scenario ['Hub']
+2025-03-28 13:11:56,943; INFO; Using configuration parameters: {'ladequote': 0.8, 'power': '100-100-100', 'pause': '45-540'}
+2025-03-28 13:11:56,944; INFO; Script directory: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\scripts\charginghub_setup
+2025-03-28 13:11:56,944; INFO; Root directory: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization
+2025-03-28 13:11:56,944; INFO; Checking charging config path: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\charging_config_base.json
+2025-03-28 13:11:56,944; INFO; Loading charging hub config from: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\data\load\truckdata\charging_config_base.json
+2025-03-28 13:11:56,947; INFO; Successfully loaded charging hub config
+2025-03-28 13:11:56,947; INFO; Using truck data from charging_config_base.json - 278 trucks found
+2025-03-28 13:11:56,961; INFO; Created rows: 2016, Index mapping entries: 2016
+2025-03-28 13:11:56,964; INFO; Set parameter Username
+2025-03-28 13:11:56,964; INFO; Set parameter LicenseID to value 2597860
+2025-03-28 13:11:56,966; INFO; Academic license - for non-commercial use only - expires 2025-12-10
+2025-03-28 13:11:59,747; INFO; Optimizing with Hub strategy - minimizing peak load
+2025-03-28 13:12:02,642; INFO; Saving simplified load profile data to JSON file
+2025-03-28 13:12:02,670; INFO; Successfully saved load profile data to: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\scripts\charginghub_setup\data\epex\json_output\simplified_charging_data_100-100-100.json
