@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 import os
 from scipy.interpolate import interp1d
-import config
+import config_setup 
 from pathlib import Path
 import logging
 

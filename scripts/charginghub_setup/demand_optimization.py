@@ -3,10 +3,9 @@ import pandas as pd
 import time
 import os
 import json
-import config
 import logging
 from datetime import datetime
-from config_setup import CONFIG
+from config_setup import CONFIG, leistung_ladetyp
 
 logging.basicConfig(filename='logs.log', level=logging.DEBUG, format='%(asctime)s; %(levelname)s; %(message)s')
 
@@ -160,9 +159,9 @@ def modellierung():
     # Calculate charging power based on scenario
     power_values = CONFIG['power'].split('-')
     ladeleistung = {
-        'NCS': int(int(power_values[0]) / 100 * config.leistung_ladetyp['NCS']),
-        'HPC': int(int(power_values[1]) / 100 * config.leistung_ladetyp['HPC']),
-        'MCS': int(int(power_values[2]) / 100 * config.leistung_ladetyp['MCS'])
+        'NCS': int(int(power_values[0]) / 100 * leistung_ladetyp['NCS']),
+        'HPC': int(int(power_values[1]) / 100 * leistung_ladetyp['HPC']),
+        'MCS': int(int(power_values[2]) / 100 * leistung_ladetyp['MCS'])
     }
     
     # -------------------------------------

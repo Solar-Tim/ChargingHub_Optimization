@@ -17,7 +17,7 @@ from breaks_assignement import assign_breaks_to_locations
 from toll_matching import toll_section_matching_and_daily_demand, find_nearest_traffic_point, scale_charging_sessions
 from new_breaks import calculate_new_breaks
 from new_toll_midpoints import get_toll_midpoints
-from json_utils import dataframe_to_json, json_to_dataframe, load_json_data, clear_terminal
+from json_utils import dataframe_to_json, json_to_dataframe, load_json_data
 from config_demand import (FILES, OUTPUT_DIR, FINAL_OUTPUT_DIR, DEFAULT_LOCATION, CSV, 
                            neue_pausen, neue_toll_midpoints, SPATIAL, year, TIME, 
                            validate_year, get_charging_column, GERMAN_DAYS, SCENARIOS)
@@ -29,11 +29,7 @@ logger = logging.getLogger(__name__)
 # Create output directory structure
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(FINAL_OUTPUT_DIR, exist_ok=True)
-
-
-# Clear the terminal at startup
-clear_terminal()
-logger.info("Terminal cleared. Starting charging hub demand calculation...")
+logger.info("Starting charging hub demand calculation...")
 
 # Validate the configured year
 try:
