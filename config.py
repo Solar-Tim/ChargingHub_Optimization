@@ -15,7 +15,7 @@ class Config:
     CONTINUE_ON_ERROR = False  # Whether to continue pipeline if a step fails
     
     # Year settings
-    FORECAST_YEAR = '2035'  # Default forecast year
+    FORECAST_YEAR = '2030'  # Default forecast year
     
     # Traffic calculation settings
     RECALCULATE_BREAKS = False  # Whether to recalculate breaks or use cached data
@@ -87,7 +87,7 @@ class Config:
     
     # Charging hub configuration
     CHARGING_CONFIG = {
-        'STRATEGIES': ["Hub"],  # ["T_min", "Konstant", "Hub"]
+        'STRATEGIES': ["Konstant"],  # ["T_min", "Konstant", "Hub"]
         'ladequote': 0.8,  # Charging quota as percentage
         'power': '100-100-100',  # Power scaling for NCS-HPC-MCS
         'pause': '45-540'  # Kurze Pause - Lange Pause in minutes

@@ -427,8 +427,7 @@ def modellierung():
                 # Get the peak load value from the model
                 peak_load_value = peak_load.X if model.Status == GRB.OPTIMAL else "N/A"
                 print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkw)}, Peak Load: {peak_load_value:.2f} kW")
-                # Store peak load value for later use in output_data
-                hub_peak_load = peak_load_value
+
             
             # Lastgang: direkt in rows eintragen
             for t_step in range(T_7):
@@ -548,9 +547,6 @@ def modellierung():
             "data_source": "charging_config_base.json" if truck_data_from_config else "eingehende_lkws_ladesaeule.json"
         }
     }
-
-    # Add the peak load if Hub strategy was used
-    output_data["metadata"]["peak_load_kw"] = hub_peak_load
 
     # Create directory structure if needed (changed to use load folder)
     json_dir = os.path.join(root_dir, 'data', 'load')
