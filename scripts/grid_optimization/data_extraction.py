@@ -18,7 +18,7 @@ def extract_charging_data(strategy):
         - lastgang_df: DataFrame with Leistung_Total, Tag, Zeit columns
         - stations_count: Dictionary with counts of each charging station type
     """
-    # Construct file path
+    # Construct file path for simplified charging data
     file_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
         "data", "load", f"simplified_charging_data_{strategy}.json"
@@ -66,18 +66,44 @@ def extract_charging_data(strategy):
         return pd.DataFrame(), {}
 
 
-if __name__ == "__main__":
-    # Example usage
-    strategy = "Hub"  # Change this to test other strategies: "T_min", "Konstant"
-    lastgang, stations = extract_charging_data(strategy)
+def extract_charger_counts(strategy):
+    """
+    Extract charger counts from the metadata file corresponding to the charging strategy.
     
-    if not lastgang.empty:
-        print(f"\nLastgang data for {strategy} strategy:")
-        print(lastgang.head())
+    Parameters:
+    -----------
+    strategy : str
+        The charging strategy name (e.g., "T_min", "Hub", or "Konstant")
     
-    if stations:
-        print(f"\nCharging station counts for {strategy} strategy:")
-        for station_type, count in stations.items():
-            print(f"{station_type}: {count}")
-    else:
-        print(f"\nNo charging station data found for {strategy} strategy.")
+    Returns:
+    --------
+    dict
+        Dictionary with keys "MCS", "HPC", "NCS" and their corresponding counts.
+    """
+    # Construct file path for metadata file based on strategy
+    file_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "data", "load", f"metadata_charginghub_{strategy}.json"
+    )
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+        charger_counts = {}
+        if "metadata" in data and "charging_stations" in data["metadata"]:
+            for station_type, info in data["metadata"]["charging_stations"].items():
+                if "count" in info:
+                    charger_counts[station_type] = info["count"]
+        else:
+            print(f"Warning: No charger information found in metadata for strategy '{strategy}'.")
+        return charger_counts
+    except FileNotFoundError:
+        print(f"Error: Metadata file not found for strategy '{strategy}'.")
+        return {}
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON format in metadata file for strategy '{strategy}'.")
+        return {}
+    except Exception as e:
+        print(f"Error extracting charger counts: {str(e)}")
+        return {}
+
+

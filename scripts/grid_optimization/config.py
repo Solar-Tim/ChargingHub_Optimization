@@ -2,6 +2,9 @@
 from math import inf
 import numpy as np
 
+# Define charging strategy
+current_strategy = "Hub"  # Options: "Hub", "Konstant", "T_min"
+
 
 debug_mode = False                  # Set to True to enable debug mode for detailed output
 
@@ -12,6 +15,8 @@ create_plot = True                  # Set to False to disable plot generation of
 create_distance_maps = False        # Set to True to generate maps of distance calculations
 
 include_battery = True              # Toggle for including battery in optimization
+
+use_manual_charger_count = False    # Set to True to use manual charger count instead of optimization
 
 M_value = 1000000  # Big M value for the optimization
 
@@ -24,10 +29,14 @@ manual_distances = {
     'powerline_distance': 9999999,      # Distance to nearest HV power line (m)
 }
 
+
+
 # Placeholder for the number of chargers - Wird bei der Optimierung automatisch ermittelt
-MCS_count = 5  # Number of MCS chargers
-HPC_count = 10  # Number of HPC chargers
-NCS_count = 25  # Number of NCS chargers
+MCS_count = 5  # Default manual count
+HPC_count = 10
+NCS_count = 25
+
+
 
 # Charger fixed costs (EUR) - Akutell Werte aus Felix MA - Problematisch weil die Charger oft die Gleichrichter mit beinhalten und sie aktuell doppelt bezahlt werden
 MCS_cost = 375000  # Cost per MCS charger

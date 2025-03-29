@@ -24,6 +24,7 @@ from functions import *
 from grid_optimization.config import *
 from cables import *
 from grid_optimization.data_loading import load_data
+from grid_optimization.data_extraction import extract_charger_counts, load_profile, manual_distances
 
 # Fix the import path for distance module
 # This line is already correctly handling the path for distance_scripts
@@ -47,8 +48,6 @@ else:
     distances = manual_distances # type: ignore
     print("Using manual distances from config file")
 
-# Define charging strategy
-current_strategy = "Hub"  # Options: "Hub", "Konstant", "T_min"
 
 # Load data
 load_profile, timestamps = load_data(current_strategy)
@@ -63,6 +62,17 @@ time_periods = len(load_profile) if load_profile is not None else 0
 distribution_substation_distance = distances['distribution_distance'] or float('inf')
 transmission_substation_distance = distances['transmission_distance'] or float('inf')
 hvline_distance = distances['powerline_distance'] or float('inf')
+
+# Extract charging data and charger counts
+if not use_manual_charger_count:
+    charger_counts = extract_charger_counts(current_strategy)
+    MCS_count = charger_counts.get("MCS", 0)
+    HPC_count = charger_counts.get("HPC", 0)
+    NCS_count = charger_counts.get("NCS", 0)
+    print(f"Charger counts updated: MCS: {MCS_count}, HPC: {HPC_count}, NCS: {NCS_count}")
+else:
+    print("Using manual charger counts from config")
+    # Keep using the manual values imported previosly from config
 
 #------------------------------------------------------------------------------
 # SECTION 3: CABLE OPTIONS CALCULATION
@@ -269,15 +279,15 @@ model.addConstr(battery_power_cost == battery_peak_power * battery_cost_per_kw, 
 # 5. Calculate total battery cost
 model.addConstr(battery_cost_value == battery_capacity_cost + battery_power_cost, "BatteryCostCapture")
 
-# Calculate charger costs
+# 6. Calculate charger costs
 total_charger_cost = MCS_count * MCS_cost + HPC_count * HPC_cost + NCS_count * NCS_cost
 model.addConstr(charger_cost_value == total_charger_cost, "ChargerCostCapture")
 
-# Calculate internal cable costs and include in charging hub cost
+# 7. Calculate internal cable costs and include in charging hub cost
 internal_cable_cost = get_internal_cable_cost()
 model.addConstr(internal_cable_cost_value == internal_cable_cost, "InternalCableCostCapture")
 
-# Update charging hub cost to include both internal cabling and charger costs
+# Charging hub cost to include both internal cabling and charger costs
 model.addConstr(charginghub_cost_value == internal_cable_cost + charger_cost_value, "ChargingHubCostCapture")
 
 # === 6.7: Substation Expansion Constraints ===
