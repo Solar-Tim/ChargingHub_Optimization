@@ -35,8 +35,8 @@ HPC_cost = 110000  # Cost per HPC charger
 NCS_cost = 35000  # Cost per NCS charger
 
 # Battery parameters
-battery_cost_per_kwh = 200    # Battery storage cost per kWh
-battery_cost_per_kw = 150     # New parameter: Battery power cost per kW 
+battery_cost_per_kwh = 20    # Battery storage cost per kWh
+battery_cost_per_kw = 15     # New parameter: Battery power cost per kW 
 battery_capacity_max = 999999    # Maximum battery capacity in kWh
 battery_charge_rate_max = 999999 # Maximum charge/discharge rate in kW
 battery_efficiency = 0.95      # Round-trip battery efficiency
@@ -51,7 +51,7 @@ mv_capacity_fee = 183.56   # Based of BKZ from Regionetz OHNE Reduzierung durch 
 
 
 # Line capacities (in kW) - in Anlehnung an https://www.regionetz.de/fileadmin/regionetz/content/Dokumente/TAB/TAB_MS_2023_Regionetz.pdf
-existing_mv_capacity       = 5500  # 5,5 MW capacity for existing MV line
+existing_mv_capacity       = 1500  # 5,5 MW capacity for existing MV line
 distribution_substation_capacity = 15000  # 15 MW for distribution substation
 transmission_substation_capacity = 15000  # 15 MW for transmission substation
 hv_line_capacity           = 100000  # 100 MW for HV line and a new substation

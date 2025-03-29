@@ -149,6 +149,15 @@ def modellierung():
         print("ERROR: Truck data is empty after validation")
         return None
     
+        # *** UPDATED: Account for day offset ***
+    # Update arrival times: add day offset (in minutes) to the arrival_time_minutes field.
+    df_lkw['Ankunftszeit_total'] = (df_lkw['Tag'] - 1) * 1440 + df_lkw['Ankunftszeit_total']
+    
+    
+    # Add after loading truck data
+    day_counts = df_lkw['Tag'].value_counts().sort_index()
+    print(f"Truck distribution by day: {day_counts.to_dict()}")
+    
     # Extract charging station counts from JSON
     max_saeulen = {
         'NCS': charging_config["charging_stations"]["NCS"]["count"],
@@ -218,11 +227,13 @@ def modellierung():
         'z': []
     }
 
-    # Ankunfts- und Abfahrtszeiten in 5-Minuten-Index - OHNE Wochenoffset
-    df_lkw['t_a'] = (df_lkw['Ankunftszeit_total'] // TIMESTEP).astype(int) % T_7
-    df_lkw['t_d'] = ((df_lkw['Ankunftszeit_total'] 
-                               + df_lkw['Pausenlaenge'] 
-                               - TIMESTEP) // TIMESTEP).astype(int) % T_7
+    # Calculate arrival and departure indices with the updated arrival times
+    df_lkw['t_a'] = (df_lkw['Ankunftszeit_total'] // TIMESTEP).astype(int)
+    df_lkw['t_d'] = ((df_lkw['Ankunftszeit_total'] + df_lkw['Pausenlaenge'] - TIMESTEP) // TIMESTEP).astype(int)
+
+    # Bound checking to ensure we stay within T_7
+    df_lkw['t_a'] = df_lkw['t_a'].clip(0, T_7-1)
+    df_lkw['t_d'] = df_lkw['t_d'].clip(0, T_7-1)
     
     if df_lkw.empty:
         logging.warning("Filtered truck data is empty after calculating arrival/departure times")
@@ -548,6 +559,53 @@ def modellierung():
     except Exception as e:
         logging.error(f"Error saving JSON file: {e}")
         print(f"ERROR: Failed to save JSON data: {e}")
+    
+    # Create a CSV file with the same structure as lastgang_demo.csv
+    try:
+        # Create a CSV filename that includes the strategy
+        csv_filename = f'lastgang_{strategies_string}.csv'
+        csv_filepath = os.path.join(json_dir, csv_filename)
+        
+        logging.info(f"Creating load profile CSV file")
+        print(f"Creating load profile CSV file...")
+        
+        # Create a DataFrame with exactly 2016 entries (full week in 5-min steps)
+        # Initialize with zeros
+        csv_df = pd.DataFrame({
+            'time (5min steps)': range(0, 10080, 5),  # 0, 5, 10, ..., 10075
+            'Last': [0.0] * 2016  # Initialize all values with 0
+        })
+        
+        # Create a dictionary to store load values by timestep
+        load_by_time = {}
+        
+        # Process the load records to populate the dictionary
+        for record in lastgang_records:
+            # Calculate absolute time in minutes
+            time_minutes = (record['Tag'] - 1) * 1440 + record['Zeit']
+            # Store the load value for this timestep - handle multiple entries for same time
+            # For accumulating demand across strategies
+            if time_minutes in load_by_time:
+                load_by_time[time_minutes] += record['Leistung_Total']
+            else:
+                load_by_time[time_minutes] = record['Leistung_Total']
+        
+        # Update the load values in our DataFrame
+        for time_step, load_value in load_by_time.items():
+            if 0 <= time_step < 10080:  # Ensure time step is within range
+                # Find the row index in our DataFrame that corresponds to this time step
+                idx = time_step // 5
+                if idx < len(csv_df):
+                    csv_df.loc[idx, 'Last'] = load_value
+        
+        # Write to CSV with semicolon separator
+        csv_df.to_csv(csv_filepath, sep=';', index=False)
+        
+        logging.info(f"Successfully saved load profile CSV to: {csv_filepath}")
+        print(f"Successfully saved load profile CSV to: {csv_filepath}")
+    except Exception as e:
+        logging.error(f"Error saving CSV file: {e}")
+        print(f"ERROR: Failed to save CSV data: {e}")
     
     return None
 

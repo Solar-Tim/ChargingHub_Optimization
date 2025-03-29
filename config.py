@@ -78,12 +78,19 @@ class Config:
         'DEFAULT_DECIMAL': ','
     }
     
+    # Charging power by type (kW)
+    LEISTUNG_LADETYP = {
+        'NCS': 100,
+        'HPC': 400,
+        'MCS': 1000
+    }
+    
     # Charging hub configuration
     CHARGING_CONFIG = {
         'STRATEGIES': ["Hub"],  # ["T_min", "Konstant", "Hub"]
         'ladequote': 0.8,  # Charging quota as percentage
-        'power': '25-95-100',  # Power scaling for NCS-HPC-MCS
-        'pause': '100-50'  # Pause time scaling for night-short
+        'power': '100-100-100',  # Power scaling for NCS-HPC-MCS
+        'pause': '45-540'  # Kurze Pause - Lange Pause in minutes
     }
     
     # Charging station types

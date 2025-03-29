@@ -17,12 +17,16 @@ import os
 import subprocess
 from shapely.geometry import Point
 
+# Add the parent directory (scripts) to the path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from functions import * 
-from config import *  
-from cables import * 
+from grid_optimization.config import *
+from cables import *
+from grid_optimization.data_loading import load_data
 
 # Fix the import path for distance module
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# This line is already correctly handling the path for distance_scripts
 from distance_scripts.distance_functions import *
 from distance_scripts.distance_lines import *
 
@@ -36,38 +40,24 @@ subprocess.run('cls', shell=True) # Clear the console
 ref_point = Point(6.214699333123033, 50.81648528837548)  # Example coordinates
 
 # Toggle between calculated distances and manual distances
-if use_distance_calculation:
-    distances = calculate_all_distances(ref_point, create_distance_maps)
+if use_distance_calculation: # type: ignore
+    distances = calculate_all_distances(ref_point, create_distance_maps) # type: ignore
     print("Using calculated distances")
 else:
-    distances = manual_distances
+    distances = manual_distances # type: ignore
     print("Using manual distances from config file")
 
-# Load data
-load_profiles, timestamps = loadData()
-results = {}
-print("Data loaded successfully")
+# Define charging strategy
+current_strategy = "Hub"  # Options: "Hub", "Konstant", "T_min"
 
-# Process single load profile
+# Load data
+load_profile, timestamps = load_data(current_strategy)
+results = {}
+print(f"Data loaded successfully using {current_strategy} strategy")
 print("Running optimization")
 
-# Fix load_profile handling - convert to properly indexed structure
-if isinstance(load_profiles, dict):
-    # If load_profiles is a dictionary, get the first profile
-    load_profile = next(iter(load_profiles.values()))
-else:
-    # Otherwise just use it directly
-    load_profile = load_profiles
-
-# Ensure it's a list or array for proper indexing
-if hasattr(load_profile, 'tolist'):
-    load_profile = load_profile.tolist()
-elif not isinstance(load_profile, (list, tuple, np.ndarray)) and load_profile is not None:
-    # Convert to list if it's not already a sequence type but exists
-    load_profile = [load_profile]
-    
 # Safely get the length
-time_periods = len(load_profile) if load_profile is not None else 0 # type: ignore
+time_periods = len(load_profile) if load_profile is not None else 0
 
 # Add distance parameters to model
 distribution_substation_distance = distances['distribution_distance'] or float('inf')
