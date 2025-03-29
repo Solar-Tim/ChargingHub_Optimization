@@ -505,6 +505,7 @@ def modellierung():
     # Create a simplified JSON structure focused on the load profile
     # Convert dataframe to list of records for the lastgang part
     lastgang_records = []
+    load_detailed_by_time = {}  # Initialize dictionary for detailed load tracking
     for record in df_lastgang.to_dict(orient='records'):
         # Process only the essential fields for the load profile
         processed_record = {
@@ -517,6 +518,22 @@ def modellierung():
             'Ladequote': record['Ladequote']
         }
         lastgang_records.append(processed_record)
+        
+        # Track individual power types for detailed CSV
+        time_minutes = (record['Tag'] - 1) * 1440 + record['Zeit']
+        if time_minutes not in load_detailed_by_time:
+            load_detailed_by_time[time_minutes] = {
+                'Leistung_Total': record['Leistung_Total'],
+                'Leistung_NCS': record['Leistung_NCS'],
+                'Leistung_HPC': record['Leistung_HPC'],
+                'Leistung_MCS': record['Leistung_MCS']
+            }
+        else:
+            # Accumulate values for same time step (across strategies)
+            load_detailed_by_time[time_minutes]['Leistung_Total'] += record['Leistung_Total']
+            load_detailed_by_time[time_minutes]['Leistung_NCS'] += record['Leistung_NCS']
+            load_detailed_by_time[time_minutes]['Leistung_HPC'] += record['Leistung_HPC'] 
+            load_detailed_by_time[time_minutes]['Leistung_MCS'] += record['Leistung_MCS']
     
     # Build the simplified output structure focusing on the load profile
     output_data = {
@@ -529,13 +546,11 @@ def modellierung():
             },
             "generated_at": datetime.now().isoformat(),
             "data_source": "charging_config_base.json" if truck_data_from_config else "eingehende_lkws_ladesaeule.json"
-        },
-        "lastgang": lastgang_records
+        }
     }
 
     # Add the peak load if Hub strategy was used
-    if "Hub" in CONFIG['STRATEGIES'] and 'hub_peak_load' in locals():
-        output_data["metadata"]["peak_load_kw"] = hub_peak_load
+    output_data["metadata"]["peak_load_kw"] = hub_peak_load
 
     # Create directory structure if needed (changed to use load folder)
     json_dir = os.path.join(root_dir, 'data', 'load')
@@ -544,7 +559,7 @@ def modellierung():
     # Define the output JSON filename
     # Create a filename that includes the strategy
     strategies_string = "_".join(CONFIG['STRATEGIES'])
-    json_filename = f'simplified_charging_data_{strategies_string}.json'
+    json_filename = f'metadata_charginghub_{strategies_string}.json'
     json_filepath = os.path.join(json_dir, json_filename)
 
     # Save the simplified data to a pretty-printed JSON file
@@ -606,6 +621,45 @@ def modellierung():
     except Exception as e:
         logging.error(f"Error saving CSV file: {e}")
         print(f"ERROR: Failed to save CSV data: {e}")
+    
+    # Create a detailed CSV file with power breakdown by charging type
+    try:
+        # Create a detailed CSV filename that includes the strategy
+        detailed_csv_filename = f'lastgang_detailed_{strategies_string}.csv'
+        detailed_csv_filepath = os.path.join(json_dir, detailed_csv_filename)
+        
+        logging.info(f"Creating detailed load profile CSV file")
+        print(f"Creating detailed load profile CSV file...")
+        
+        # Create a DataFrame with exactly 2016 entries (full week in 5-min steps)
+        # Initialize with zeros
+        detailed_csv_df = pd.DataFrame({
+            'time (5min steps)': range(0, 10080, 5),  # 0, 5, 10, ..., 10075
+            'Last': [0.0] * 2016,               # Total load
+            'Last_NCS': [0.0] * 2016,           # NCS charger load
+            'Last_HPC': [0.0] * 2016,           # HPC charger load
+            'Last_MCS': [0.0] * 2016            # MCS charger load
+        })
+        
+        # Update the load values in our detailed DataFrame
+        for time_step, load_details in load_detailed_by_time.items():
+            if 0 <= time_step < 10080:  # Ensure time step is within range
+                # Find the row index in our DataFrame that corresponds to this time step
+                idx = time_step // 5
+                if idx < len(detailed_csv_df):
+                    detailed_csv_df.loc[idx, 'Last'] = load_details['Leistung_Total']
+                    detailed_csv_df.loc[idx, 'Last_NCS'] = load_details['Leistung_NCS']
+                    detailed_csv_df.loc[idx, 'Last_HPC'] = load_details['Leistung_HPC']
+                    detailed_csv_df.loc[idx, 'Last_MCS'] = load_details['Leistung_MCS']
+        
+        # Write to CSV with semicolon separator
+        detailed_csv_df.to_csv(detailed_csv_filepath, sep=';', index=False)
+        
+        logging.info(f"Successfully saved detailed load profile CSV to: {detailed_csv_filepath}")
+        print(f"Successfully saved detailed load profile CSV to: {detailed_csv_filepath}")
+    except Exception as e:
+        logging.error(f"Error saving detailed CSV file: {e}")
+        print(f"ERROR: Failed to save detailed CSV data: {e}")
     
     return None
 
