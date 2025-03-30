@@ -1,7 +1,6 @@
 """
 Matching Truck Charging Types to Charging Stations
 This script simulates the assignment of trucks to charging stations based on their arrival times, charging types, and other parameters. It generates a DataFrame containing truck data for a representative week at a single location, assigns charging stations, and exports the results to a CSV file.
-
 """
 
 # ======================================================
@@ -11,12 +10,17 @@ import pandas as pd
 import numpy as np
 import os
 from scipy.interpolate import interp1d
-import config_setup 
+import config_setup
 from pathlib import Path
 import logging
+import sys
 
+# Add project root to path to import Config
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from config import Config
 
-np.random.seed(42)
+# Set random seed from config
+np.random.seed(Config.TruckSimulation.RANDOM_SEED)
 
 # ======================================================
 # Main Function
@@ -50,36 +54,18 @@ def load_configurations():
     Load and return the configurations for the simulation.
     """
     path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # Go up to project root
-    freq = 5  # Frequency of updates (in minutes)
+    
     return {
         'path': path,
-        'freq': freq,
-        'lkw_id':{
-            '1': 0.093,
-            '2': 0.187,
-            '3': 0.289,
-            '4': 0.431
-        },
-        'kapazitaeten_lkws': {
-            '1': 600,
-            '2': 720,
-            '3': 840,
-            '4': 960
-        },
-        'leistungen_lkws': {
-            '1': 750,
-            '2': 750,
-            '3': 1200,
-            '4': 1200
-        },
-        'pausentypen': ['Schnelllader', 'Nachtlader'],
-        'pausenzeiten_lkws': {
-            'Schnelllader': 45,
-            'Nachtlader': 540
-        },
-        'leistung': {'HPC': 350, 'NCS': 100, 'MCS': 1000},
-        'energie_pro_abschnitt': 80 * 4.5 * 1.26,
-        'sicherheitspuffer': 0.1
+        'freq': Config.TruckSimulation.UPDATE_FREQUENCY_MIN,
+        'lkw_id': Config.TruckSimulation.TRUCK_FLEET['TYPE_PROBABILITIES'],
+        'kapazitaeten_lkws': Config.TruckSimulation.TRUCK_FLEET['BATTERY_CAPACITIES'],
+        'leistungen_lkws': Config.TruckSimulation.TRUCK_FLEET['MAX_POWER_RATINGS'],
+        'pausentypen': Config.TruckSimulation.PAUSE_TYPES,
+        'pausenzeiten_lkws': Config.TruckSimulation.PAUSE_DURATIONS,
+        'leistung': Config.ChargingInfrastructure.POWER_RATINGS,
+        'energie_pro_abschnitt': Config.TruckSimulation.ENERGY_PER_SECTION,
+        'sicherheitspuffer': Config.TruckSimulation.SAFETY_BUFFER
     }
 
 def load_input_data(path):
@@ -210,22 +196,25 @@ def get_soc(ankunftszeit):
     """
     Calculate the State of Charge (SOC) based on arrival time.
     """
-    if ankunftszeit < 360:  # Early morning
-        soc = 0.2 + np.random.uniform(-0.1, 0.1)
-    else:
-        soc = -(0.00028) * ankunftszeit + 0.6
-        soc += np.random.uniform(-0.1, 0.1)
+    soc_params = Config.TruckSimulation.SOC_CALCULATION
     
-    # soc = 0.2 + np.random.uniform(-0.1, 0.1)
-      
+    if ankunftszeit < soc_params['EARLY_MORNING_THRESHOLD']:  # Early morning
+        soc = soc_params['EARLY_MORNING_BASE_SOC'] + np.random.uniform(-soc_params['RANDOM_VARIATION'], soc_params['RANDOM_VARIATION'])
+    else:
+        soc = soc_params['DAYTIME_SLOPE'] * ankunftszeit + soc_params['DAYTIME_BASE_SOC']
+        soc += np.random.uniform(-soc_params['RANDOM_VARIATION'], soc_params['RANDOM_VARIATION'])
+    
     return soc
 
 def get_leistungsfaktor(soc):
     """
     Adjust power factor based on SOC using the minimum of two linear functions.
     """
-    return min(-0.177038 * soc + 0.970903, -1.51705 * soc + 1.6336)
-
+    coefs = Config.TruckSimulation.POWER_FACTOR_COEFFICIENTS
+    return min(
+        coefs['LINE1_SLOPE'] * soc + coefs['LINE1_INTERCEPT'], 
+        coefs['LINE2_SLOPE'] * soc + coefs['LINE2_INTERCEPT']
+    )
 
 # ======================================================
 # Truck Data Generation
@@ -235,10 +224,7 @@ def generate_truck_data(config, df_verteilungsfunktion, df_ladevorgaenge_daily):
     Generate truck data for a single representative week at one location.
     """
     # Create mapping from pausentyp to column name in CSV
-    pausentyp_to_column = {
-        'Schnelllader': 'HPC',  # Schnelllader maps to HPC column
-        'Nachtlader': 'NCS'     # Nachtlader maps to NCS column
-    }
+    pausentyp_to_column = Config.TruckSimulation.PAUSENTYP_TO_COLUMN
     
     dict_lkws = {
         'Tag': [],
@@ -253,8 +239,8 @@ def generate_truck_data(config, df_verteilungsfunktion, df_ladevorgaenge_daily):
         'Lkw_ID': []
     }
     
-    # Always use a 7-day horizon (one week)
-    horizon = 7
+    # Use horizon from config
+    horizon = Config.TruckSimulation.SIMULATION_HORIZON_DAYS
     
     for day in range(horizon):  # Loop through 7 days
         wochentag = day + 1  # Monday is 1, Sunday is 7
@@ -382,15 +368,15 @@ def finalize_and_export_data(df_lkws, config):
     """
     Finalize the DataFrame, add datetime, and export to CSV and JSON files.
     """
-    # Use a generic week starting from Monday
+    # Use a generic week starting from Monday with date from config
     df_lkws['Zeit_DateTime'] = pd.to_datetime(
         df_lkws['Ankunftszeit'] + ((df_lkws['Tag'] - 1) * 1440),
         unit='m',
-        origin='2024-01-01'  # This could be any Monday, date doesn't matter much
+        origin=Config.TruckSimulation.SIMULATION_START_DATE
     )
     df_lkws['Ankunftszeit_total'] = df_lkws['Ankunftszeit'] + ((df_lkws['Tag'] - 1) * 1440)
     df_lkws['Wochentag'] = df_lkws['Tag']  # Since day 1-7 already represents the weekday
-    df_lkws['KW'] = 1  # Just use week 1 since we're only modeling one representative week
+    df_lkws['KW'] = Config.TruckSimulation.CALENDAR_WEEK
     
     # Sort by datetime
     df_lkws.sort_values(by=['Zeit_DateTime'], inplace=True)

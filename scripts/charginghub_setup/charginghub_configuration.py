@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 import warnings
 import json
+from config import Config  # Import the central configuration
 warnings.filterwarnings('ignore', category=pd.errors.SettingWithCopyWarning)
 
 # Configure logging
@@ -15,18 +16,10 @@ logging.basicConfig(filename=log_dir/'charging_hub_config.log',
                    level=logging.DEBUG, 
                    format='%(asctime)s; %(levelname)s; %(message)s')
 
-# HARDCODED CONFIGURATION VALUES
-# Instead of parsing them from scenario strings, define them directly
-CHARGING_QUOTAS = {
-    'NCS': 0.8,  # 80%
-    'HPC': 0.8,  # 80% 
-    'MCS': 0.8   # 80%
-}
-CHARGING_TIMES = {
-    'Schnell': 45,   # Short charging pause (minutes)
-    'Nacht': 540     # Night charging pause (minutes)
-}
-SCENARIO_NAME = 'Base'  # For output file naming
+# Import configuration values from central config
+CHARGING_QUOTAS = Config.ChargingInfrastructure.CHARGING_QUOTAS
+CHARGING_TIMES = Config.ChargingInfrastructure.CHARGING_TIMES
+SCENARIO_NAME = Config.ChargingInfrastructure.SCENARIO_NAME
 
 def datenimport():
     """
@@ -70,7 +63,6 @@ def datenimport():
                 'pause_type': 'Pausentyp',
                 'pause_duration_minutes': 'Pausenlaenge',
                 'assigned_charger': 'Ladesäule',
-                # Add battery-related fields
                 'capacity_kwh': 'capacity_kwh',
                 'max_power_kw': 'max_power_kw',
                 'initial_soc': 'initial_soc',
@@ -344,26 +336,16 @@ def export_results_as_json(df_anzahl_ladesaeulen, df_eingehende_lkws_loadstatus,
             "trucks_per_station": float(row['LKW_pro_Ladesaeule'])
         })
     
-    # Default battery info as fallback
-    battery_defaults = {
-        "NCS": {"capacity_kwh": 600, "max_power_kw": 300, "initial_soc": 0.2, "target_soc": 0.8},
-        "HPC": {"capacity_kwh": 400, "max_power_kw": 350, "initial_soc": 0.3, "target_soc": 0.8},
-        "MCS": {"capacity_kwh": 500, "max_power_kw": 400, "initial_soc": 0.2, "target_soc": 0.8}
-    }
     
     # Add truck load status data with battery information and standardized field names
     for _, row in df_eingehende_lkws_loadstatus.iterrows():
         # Get charging type for default fallback
         charging_type = row['Ladesäule']
-        default_battery_info = battery_defaults.get(charging_type, {
-            "capacity_kwh": 500, "max_power_kw": 350, "initial_soc": 0.2, "target_soc": 0.8
-        })
-        
-        # Use original battery info if available, fallback to defaults if not
-        capacity_kwh = row['capacity_kwh'] if pd.notna(row.get('capacity_kwh')) else default_battery_info["capacity_kwh"]
-        max_power_kw = row['max_power_kw'] if pd.notna(row.get('max_power_kw')) else default_battery_info["max_power_kw"]
-        initial_soc = row['initial_soc'] if pd.notna(row.get('initial_soc')) else default_battery_info["initial_soc"]
-        target_soc = row['target_soc'] if pd.notna(row.get('target_soc')) else default_battery_info["target_soc"]
+        # Extract battery info from the row
+        capacity_kwh = row.get('capacity_kwh', 0)
+        max_power_kw = row.get('max_power_kw', 0)
+        initial_soc = row.get('initial_soc', 0)
+        target_soc = row.get('target_soc', 0)
         
         truck_data = {
             "id": row['Nummer'],

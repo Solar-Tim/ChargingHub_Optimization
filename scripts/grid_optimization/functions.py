@@ -1,12 +1,21 @@
-import pandas as pd
+import sys
+import os
+import numpy as np
 import matplotlib.pyplot as plt
-# Import all the needed variables from config
-from config import (
+import pandas as pd
+
+# Add the project root to the path for absolute imports
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append(project_root)
+
+# Import from the correct location
+from scripts.grid_optimization.config_grid import (
     aluminium_kabel, 
     mv_capacity_fee, 
     hv_capacity_fee, 
     existing_mv_capacity,
-    existing_mv_connection_cost
+    existing_mv_connection_cost,
+    manual_distances
 )
 
 

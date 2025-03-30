@@ -12,24 +12,28 @@ from config import Config
 
 # Backwards compatibility variables
 year = Config.FORECAST_YEAR
-neue_pausen = Config.RECALCULATE_BREAKS
-neue_toll_midpoints = Config.RECALCULATE_TOLL_MIDPOINTS
-DEFAULT_LOCATION = Config.DEFAULT_LOCATION
-SCENARIOS = Config.SCENARIOS
-SPATIAL = Config.SPATIAL
-BREAKS = Config.BREAKS
-DAY_MAPPING = Config.DAY_MAPPING
-GERMAN_DAYS = Config.GERMAN_DAYS
-TIME = Config.TIME
-CSV = Config.CSV
+neue_pausen = Config.Traffic.Settings.RECALCULATE_BREAKS
+neue_toll_midpoints = Config.Traffic.Settings.RECALCULATE_TOLL_MIDPOINTS
+DEFAULT_LOCATION = Config.Traffic.Settings.DEFAULT_LOCATION
+SCENARIOS = Config.Traffic.Settings.ForecastScenarios
+SPATIAL = Config.Traffic.Settings.SpatialSettings
+BREAKS = Config.Traffic.Settings.BREAKS
+DAY_MAPPING = Config.Traffic.Settings.DAY_MAPPING
+GERMAN_DAYS = Config.Traffic.Settings.GERMAN_DAYS
+TIME = Config.Traffic.Settings.TIME
+CSV = Config.Traffic.Settings.FileFormats.CSV
 
 # Set up file paths for backward compatibility
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
-INPUT_DIR = Config.TRAFFIC_PATHS['INPUT_DIR']
-OUTPUT_DIR = Config.TRAFFIC_PATHS['OUTPUT_DIR']
-FINAL_OUTPUT_DIR = Config.TRAFFIC_PATHS['FINAL_OUTPUT_DIR']
-FILES = Config.TRAFFIC_FILES
+INPUT_DIR = Config.Traffic.INPUT_DIR
+OUTPUT_DIR = Config.Traffic.OUTPUT_DIR
+FINAL_OUTPUT_DIR = Config.Traffic.FINAL_OUTPUT_DIR
+FILES = {
+    'MAUT_TABLE': Config.Traffic.MAUT_TABLE,
+    'BEFAHRUNGEN': Config.Traffic.BEFAHRUNGEN,
+    # Add the rest of the file paths
+}
 
 # Import utility functions for backward compatibility
 validate_year = Config.validate_year

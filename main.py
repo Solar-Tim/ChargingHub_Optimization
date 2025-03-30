@@ -31,11 +31,13 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 scripts_dir = os.path.join(base_dir, 'scripts')
 traffic_dir = os.path.join(scripts_dir, 'traffic_calculation')
 charginghub_dir = os.path.join(scripts_dir, 'charginghub_setup')
+grid_optimization_dir = os.path.join(scripts_dir, 'grid_optimization')  # Add this line
 
 # Add all necessary directories to path
 sys.path.append(scripts_dir)
 sys.path.append(traffic_dir)
 sys.path.append(charginghub_dir)
+sys.path.append(grid_optimization_dir)
 
 
 def run_traffic_calculation():
@@ -106,6 +108,41 @@ def run_charging_hub_setup():
         return False
 
 
+def run_grid_optimization():
+    """
+    Run the grid optimization module.
+    """
+    print("\n" + "="*80)
+    print("PHASE 3: GRID OPTIMIZATION")
+    print("="*80)
+    
+    logging.info("Starting Phase 3: Grid Optimization")
+    
+    try:
+        # Change working directory to grid_optimization folder
+        original_dir = os.getcwd()
+        grid_optimization_dir = os.path.join(scripts_dir, 'grid_optimization')
+        os.chdir(grid_optimization_dir)
+        
+        # Import here to avoid issues with module paths
+        from grid_optimization.optimization import run_optimization
+        
+        start_time = time.time()
+        run_optimization()
+        elapsed_time = time.time() - start_time
+        
+        # Change back to original directory
+        os.chdir(original_dir)
+        
+        logging.info(f"Phase 3 completed successfully in {elapsed_time:.2f} seconds")
+        print(f"\nPhase 3 completed successfully in {elapsed_time:.2f} seconds")
+        return True
+    except Exception as e:
+        logging.error(f"Error in Phase 3: {str(e)}")
+        print(f"\nError in Phase 3: {str(e)}")
+        return False
+
+
 def main():
     """
     Main function to orchestrate the entire charging hub optimization process.
@@ -131,6 +168,14 @@ def main():
     
     phase2_success = run_charging_hub_setup()
     all_phases_successful = all_phases_successful and phase2_success
+    
+    # Continue with phase 3 even if previous phases failed
+    if not phase1_success or not phase2_success:
+        print("\nWarning: Previous phases had failures. Continuing with Phase 3 anyway...")
+        logging.warning("Previous phases had failures. Continuing with Phase 3 anyway.")
+    
+    phase3_success = run_grid_optimization()
+    all_phases_successful = all_phases_successful and phase3_success
     
     # Report overall results
     overall_elapsed_time = time.time() - overall_start_time

@@ -9,15 +9,12 @@ sys.path.append(str(project_root))
 # Now import from the root directory
 from config import Config
 
-# Reference values from the global Config class
-leistung_ladetyp = Config.LEISTUNG_LADETYP
+# Reference values from the global Config class - update to new structure
+leistung_ladetyp = Config.ChargingInfrastructure.POWER_RATINGS
 
 CONFIG = {
-    'STRATEGIES': Config.CHARGING_CONFIG['STRATEGIES'],
-    # T_min: Minimierung der Ladezeit - Kein Lademanagement
-    # Konstant: Möglichst konstante Ladeleistung - Minimierung der Netzanschlusslast - Lademanagement
-    # Hub: Minimierung der Hub-Lastspitzen - Globale Lastoptimierung - Hub-Level Lademanagement
-    'ladequote': Config.CHARGING_CONFIG['ladequote'],  # Ladequote in Prozent
-    'power': Config.CHARGING_CONFIG['power'],  # Ladeleistung in Prozent (NCS-HPC-MCS)
-    'pause': Config.CHARGING_CONFIG['pause'],  # Pausenzeiten in Minuten (min-max)
+    'STRATEGIES': Config.ChargingInfrastructure.HUB_CONFIG['STRATEGIES'],
+    'ladequote': Config.ChargingInfrastructure.HUB_CONFIG['ladequote'],
+    'power': Config.ChargingInfrastructure.HUB_CONFIG['power'],
+    'pause': Config.ChargingInfrastructure.HUB_CONFIG['pause'],
 }

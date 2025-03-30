@@ -149,7 +149,7 @@ def modellierung():
         print("ERROR: Truck data is empty after validation")
         return None
     
-        # *** UPDATED: Account for day offset ***
+
     # Update arrival times: add day offset (in minutes) to the arrival_time_minutes field.
     df_lkw['Ankunftszeit_total'] = (df_lkw['Tag'] - 1) * 1440 + df_lkw['Ankunftszeit_total']
     

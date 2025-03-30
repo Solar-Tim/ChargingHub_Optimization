@@ -7,17 +7,13 @@ import folium
 from folium.features import DivIcon
 from datetime import datetime
 from .distance_lines import calc_power_lines
+from config import Config
 
 # Add function to get the map directory
 def get_map_directory():
     """Get the path to the map directory, ensuring it exists."""
-    # Navigate from current file to project root, then to results/maps
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    map_dir = os.path.join(project_root, "results", "maps")
-    
-    # Create directory if it doesn't exist
+    map_dir = os.path.join(Config.Paths.RESULTS, "maps")
     os.makedirs(map_dir, exist_ok=True)
-    
     return map_dir
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -294,6 +290,7 @@ def calculate_all_distances(ref_point: Point, create_map: bool) -> Dict[str, Any
     }
 
 # Example usage:
+'''
 if __name__ == "__main__":
     # Reference point: Berlin, Germany (longitude, latitude)
     reference_point = Point(6.214699333123033, 50.81648528837548)
@@ -307,3 +304,5 @@ if __name__ == "__main__":
         print(f"Distribution substation distance: {results['distribution_distance']:.0f}m")
         print(f"Transmission substation distance: {results['transmission_distance']:.0f}m")
         print(f"Powerline distance: {results['powerline_distance']:.0f}m")
+'
+'''
