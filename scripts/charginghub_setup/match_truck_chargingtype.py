@@ -17,10 +17,9 @@ import sys
 
 # Add project root to path to import Config
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from config import Config
+# from config import Config # No longer directly importing Config
 
-# Set random seed from config
-np.random.seed(Config.TruckSimulation.RANDOM_SEED)
+
 
 # ======================================================
 # Main Function
@@ -57,15 +56,15 @@ def load_configurations():
     
     return {
         'path': path,
-        'freq': Config.TruckSimulation.UPDATE_FREQUENCY_MIN,
-        'lkw_id': Config.TruckSimulation.TRUCK_FLEET['TYPE_PROBABILITIES'],
-        'kapazitaeten_lkws': Config.TruckSimulation.TRUCK_FLEET['BATTERY_CAPACITIES'],
-        'leistungen_lkws': Config.TruckSimulation.TRUCK_FLEET['MAX_POWER_RATINGS'],
-        'pausentypen': Config.TruckSimulation.PAUSE_TYPES,
-        'pausenzeiten_lkws': Config.TruckSimulation.PAUSE_DURATIONS,
-        'leistung': Config.ChargingInfrastructure.POWER_RATINGS,
-        'energie_pro_abschnitt': Config.TruckSimulation.ENERGY_PER_SECTION,
-        'sicherheitspuffer': Config.TruckSimulation.SAFETY_BUFFER
+        'freq': config_setup.Config.Traffic.Settings.TruckSimulation.UPDATE_FREQUENCY_MIN,
+        'lkw_id': config_setup.Config.Traffic.Settings.TruckSimulation.TRUCK_FLEET['TYPE_PROBABILITIES'],
+        'kapazitaeten_lkws': config_setup.Config.Traffic.Settings.TruckSimulation.TRUCK_FLEET['BATTERY_CAPACITIES'],
+        'leistungen_lkws': config_setup.Config.Traffic.Settings.TruckSimulation.TRUCK_FLEET['MAX_POWER_RATINGS'],
+        'pausentypen': config_setup.Config.Traffic.Settings.TruckSimulation.PAUSE_TYPES,
+        'pausenzeiten_lkws': config_setup.Config.Traffic.Settings.TruckSimulation.PAUSE_DURATIONS,
+        'leistung': config_setup.Config.ChargingInfrastructure.POWER_RATINGS,
+        'energie_pro_abschnitt': config_setup.Config.Traffic.Settings.TruckSimulation.ENERGY_PER_SECTION,
+        'sicherheitspuffer': config_setup.Config.Traffic.Settings.TruckSimulation.SAFETY_BUFFER
     }
 
 def load_input_data(path):
@@ -196,7 +195,7 @@ def get_soc(ankunftszeit):
     """
     Calculate the State of Charge (SOC) based on arrival time.
     """
-    soc_params = Config.TruckSimulation.SOC_CALCULATION
+    soc_params = config_setup.Config.Traffic.Settings.TruckSimulation.SOC_CALCULATION
     
     if ankunftszeit < soc_params['EARLY_MORNING_THRESHOLD']:  # Early morning
         soc = soc_params['EARLY_MORNING_BASE_SOC'] + np.random.uniform(-soc_params['RANDOM_VARIATION'], soc_params['RANDOM_VARIATION'])
@@ -210,7 +209,7 @@ def get_leistungsfaktor(soc):
     """
     Adjust power factor based on SOC using the minimum of two linear functions.
     """
-    coefs = Config.TruckSimulation.POWER_FACTOR_COEFFICIENTS
+    coefs = config_setup.Config.Traffic.Settings.TruckSimulation.POWER_FACTOR_COEFFICIENTS
     return min(
         coefs['LINE1_SLOPE'] * soc + coefs['LINE1_INTERCEPT'], 
         coefs['LINE2_SLOPE'] * soc + coefs['LINE2_INTERCEPT']
@@ -224,7 +223,7 @@ def generate_truck_data(config, df_verteilungsfunktion, df_ladevorgaenge_daily):
     Generate truck data for a single representative week at one location.
     """
     # Create mapping from pausentyp to column name in CSV
-    pausentyp_to_column = Config.TruckSimulation.PAUSENTYP_TO_COLUMN
+    pausentyp_to_column = config_setup.Config.Traffic.Settings.TruckSimulation.PAUSENTYP_TO_COLUMN
     
     dict_lkws = {
         'Tag': [],
@@ -240,7 +239,7 @@ def generate_truck_data(config, df_verteilungsfunktion, df_ladevorgaenge_daily):
     }
     
     # Use horizon from config
-    horizon = Config.TruckSimulation.SIMULATION_HORIZON_DAYS
+    horizon = config_setup.Config.Traffic.Settings.TruckSimulation.SIMULATION_HORIZON_DAYS
     
     for day in range(horizon):  # Loop through 7 days
         wochentag = day + 1  # Monday is 1, Sunday is 7
@@ -372,11 +371,11 @@ def finalize_and_export_data(df_lkws, config):
     df_lkws['Zeit_DateTime'] = pd.to_datetime(
         df_lkws['Ankunftszeit'] + ((df_lkws['Tag'] - 1) * 1440),
         unit='m',
-        origin=Config.TruckSimulation.SIMULATION_START_DATE
+        origin=config_setup.Config.Traffic.Settings.TruckSimulation.SIMULATION_START_DATE
     )
     df_lkws['Ankunftszeit_total'] = df_lkws['Ankunftszeit'] + ((df_lkws['Tag'] - 1) * 1440)
     df_lkws['Wochentag'] = df_lkws['Tag']  # Since day 1-7 already represents the weekday
-    df_lkws['KW'] = Config.TruckSimulation.CALENDAR_WEEK
+    df_lkws['KW'] = config_setup.Config.Traffic.Settings.TruckSimulation.CALENDAR_WEEK
     
     # Sort by datetime
     df_lkws.sort_values(by=['Zeit_DateTime'], inplace=True)

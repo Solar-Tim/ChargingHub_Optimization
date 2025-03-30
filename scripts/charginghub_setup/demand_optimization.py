@@ -6,6 +6,7 @@ import json
 import logging
 from datetime import datetime
 from config_setup import CONFIG, leistung_ladetyp
+from config_setup import power_string
 
 logging.basicConfig(filename='logs.log', level=logging.DEBUG, format='%(asctime)s; %(levelname)s; %(message)s')
 
@@ -46,6 +47,7 @@ def modellierung():
     Returns:
         None: Results are saved to a JSON file
     """
+    # Use CONFIG from the global scope (from the import at the top of the file)
     logging.info(f"Optimizing for scenario {CONFIG['STRATEGIES']}")
     print(f"Optimizing for scenario {CONFIG['STRATEGIES']}")
  
@@ -165,12 +167,11 @@ def modellierung():
         'MCS': charging_config["charging_stations"]["MCS"]["count"]
     }
     
-    # Calculate charging power based on scenario
-    power_values = CONFIG['power'].split('-')
+    # Access station power values directly from leistung_ladetyp
     ladeleistung = {
-        'NCS': int(int(power_values[0]) / 100 * leistung_ladetyp['NCS']),
-        'HPC': int(int(power_values[1]) / 100 * leistung_ladetyp['HPC']),
-        'MCS': int(int(power_values[2]) / 100 * leistung_ladetyp['MCS'])
+        'NCS': int(CONFIG['ChargingInfrastructure']['POWER_RATINGS']['NCS'] / 100 * leistung_ladetyp['NCS']),
+        'HPC': int(CONFIG['ChargingInfrastructure']['POWER_RATINGS']['HPC'] / 100 * leistung_ladetyp['HPC']),
+        'MCS': int(CONFIG['ChargingInfrastructure']['POWER_RATINGS']['MCS'] / 100 * leistung_ladetyp['MCS']),
     }
     
     # -------------------------------------
@@ -247,8 +248,9 @@ def modellierung():
     maxLKW   = df_lkw['Max_Leistung'].tolist()
     SOC_req  = df_lkw['SOC_Target'].tolist()
 
-    # Leistungsskalierung
-    power_values = CONFIG['power'].split('-')
+
+    # Power scaling from power string
+    power_values = power_string.split('-')
     if len(power_values) >= 1:
         # Use first power value (NCS) as truck power scaling
         lkw_leistung_skalierung = float(power_values[0]) / 100

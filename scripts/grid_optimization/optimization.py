@@ -14,7 +14,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import sys
 import os
-import subprocess
 from shapely.geometry import Point
 
 # Add the project root to the path
@@ -31,9 +30,6 @@ from scripts.grid_optimization.data_extraction import extract_charger_counts
 from scripts.distance_scripts.distance_functions import *
 from scripts.distance_scripts.distance_lines import *
 from config import Config
-
-# Clear the console for better readability
-subprocess.run('cls', shell=True) # Clear the console
 
 
 

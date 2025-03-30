@@ -34,6 +34,7 @@ charginghub_dir = os.path.join(scripts_dir, 'charginghub_setup')
 grid_optimization_dir = os.path.join(scripts_dir, 'grid_optimization')  # Add this line
 
 # Add all necessary directories to path
+sys.path.insert(0, base_dir)  # Add project root as first path
 sys.path.append(scripts_dir)
 sys.path.append(traffic_dir)
 sys.path.append(charginghub_dir)
