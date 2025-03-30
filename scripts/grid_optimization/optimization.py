@@ -24,7 +24,7 @@ from functions import *
 from grid_optimization.config import *
 from cables import *
 from grid_optimization.data_loading import load_data
-from grid_optimization.data_extraction import extract_charger_counts, load_profile, manual_distances
+from grid_optimization.data_extraction import extract_charger_counts
 
 # Fix the import path for distance module
 # This line is already correctly handling the path for distance_scripts
@@ -38,7 +38,7 @@ subprocess.run('cls', shell=True) # Clear the console
 # SECTION 2: DATA LOADING AND PREPROCESSING
 #------------------------------------------------------------------------------
 # Define charging hub location
-ref_point = Point(6.214699333123033, 50.81648528837548)  # Example coordinates
+ref_point = Point(8.683978444516883, 51.83920575571095)  # Example coordinates
 
 # Toggle between calculated distances and manual distances
 if use_distance_calculation: # type: ignore
