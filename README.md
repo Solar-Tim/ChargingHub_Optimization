@@ -11,7 +11,6 @@
 - [Usage](#usage)
 - [Project Structure](#project-structure)
 - [Contributing](#contributing)
-- [License](#license)
 - [Contact](#contact)
 
 ## Introduction
@@ -50,7 +49,6 @@ ChargingHub_Optimization/
 ├── requirements.txt        # List of dependencies
 ├── main.py                 # Main script to run the pipeline
 ├── README.md               # Readme file
-└── LICENSE                 # License file
 ```
 
 ## Contributing
@@ -63,8 +61,6 @@ I welcome contributions to this project. Please follow these steps to contribute
 5. Create a new Pull Request.
 
 ## Contact
-For any inquiries or questions, please contact me at [tim.sanders@rwth-aachen.de].
+If you have any questions or would like to get in touch, feel free to contact me at [tim.sanders@rwth-aachen.de].
 
----
-
-Feel free to adjust the contact email and any other specific details as needed.
+If you're interested in using this work for commercial purposes, I'm open to discussions.
