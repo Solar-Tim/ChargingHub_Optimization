@@ -1,5 +1,5 @@
 import math
-from config import (
+from config_grid import (
     aluminium_kabel, mv_voltage, mv_voltage_drop_percent, mv_power_factor,
     mv_conductivity, number_cables, digging_cost, cable_hardware_connection_cost, lv_voltage, lv_voltage_drop_percent, lv_power_factor, lv_conductivity,
     kupfer_kabel, MCS_count, HPC_count, NCS_count

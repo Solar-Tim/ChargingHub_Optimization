@@ -17,12 +17,22 @@ class Config:
     # Year settings
     FORECAST_YEAR = '2030'  # Default forecast year
     
+        # Grid optimization settings
+    GRID_CONFIG = {
+        'USE_DISTANCE_CALCULATION': True,
+        'CREATE_PLOT': True,
+        'CREATE_DISTANCE_MAPS': False,
+        'INCLUDE_BATTERY': True
+    }
+
+
+
     # Traffic calculation settings
     RECALCULATE_BREAKS = False  # Whether to recalculate breaks or use cached data
     RECALCULATE_TOLL_MIDPOINTS = False  # Whether to recalculate toll midpoints or use cached
     DEFAULT_LOCATION = {
-        'LONGITUDE': 8.683978444516883,
-        'LATITUDE': 51.83920575571095
+        'LONGITUDE': 6.77483395730945,
+        'LATITUDE': 50.92859531760215
     }
     
     # Spatial analysis settings
@@ -78,16 +88,10 @@ class Config:
         'DEFAULT_DECIMAL': ','
     }
     
-    # Charging power by type (kW)
-    LEISTUNG_LADETYP = {
-        'NCS': 100,
-        'HPC': 400,
-        'MCS': 1000
-    }
-    
+
     # Charging hub configuration
     CHARGING_CONFIG = {
-        'STRATEGIES': ["Konstant"],  # ["T_min", "Konstant", "Hub"]
+        'STRATEGY': ["T_min"],  # ["T_min", "Konstant", "Hub"]
         'ladequote': 0.8,  # Charging quota as percentage
         'power': '100-100-100',  # Power scaling for NCS-HPC-MCS
         'pause': '45-540'  # Kurze Pause - Lange Pause in minutes
@@ -95,18 +99,12 @@ class Config:
     
     # Charging station types
     CHARGING_TYPES = {
-        'NCS': {'power_kw': 22, 'cost': 35000},
-        'HPC': {'power_kw': 150, 'cost': 110000},
-        'MCS': {'power_kw': 350, 'cost': 375000}
+        'NCS': {'power_kw': 75, 'cost': 35000},
+        'HPC': {'power_kw': 400, 'cost': 110000},
+        'MCS': {'power_kw': 1000, 'cost': 375000}
     }
     
-    # Grid optimization settings
-    GRID_CONFIG = {
-        'USE_DISTANCE_CALCULATION': True,
-        'CREATE_PLOT': True,
-        'CREATE_DISTANCE_MAPS': False,
-        'INCLUDE_BATTERY': True
-    }
+
     
     # Battery parameters
     BATTERY_CONFIG = {

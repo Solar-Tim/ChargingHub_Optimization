@@ -40,16 +40,30 @@ def load_data(strategy):
     Load load profile data based on the specified strategy.
     
     Args:
-        strategy (str): The charging strategy to use. Currently supports "Hub".
+        strategy (str): The charging strategy to use. Supports "T_min", "Konstant", and "Hub".
     
     Returns:
         tuple: (load_profile, timestamps) for the selected strategy
     """
-    if strategy.lower() == "hub":
-        return load_charging_hub_profile()
+    # Define valid strategies
+    valid_strategies = ["T_min", "Konstant", "Hub"]
+    
+    if strategy in valid_strategies:
+        # Generate file path for the requested strategy
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        file_path = os.path.join(base_dir, 'data', 'load', f'lastgang_{strategy}.csv')
+        
+        # Try to load the data for the specified strategy
+        try:
+            return load_charging_hub_profile(file_path)
+        except Exception as e:
+            print(f"Error loading data for strategy '{strategy}': {e}")
+            print("Falling back to Hub strategy.")
     else:
         print(f"Strategy '{strategy}' not implemented. Falling back to Hub strategy.")
-        return load_charging_hub_profile()
+    
+    # Fallback to Hub strategy
+    return load_charging_hub_profile()
 
 if __name__ == "__main__":
     # Test the data loading functions

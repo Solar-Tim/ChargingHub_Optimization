@@ -10,10 +10,14 @@ sys.path.append(str(project_root))
 from config import Config
 
 # Reference values from the global Config class
-leistung_ladetyp = Config.LEISTUNG_LADETYP
+charging_types = Config.CHARGING_TYPES
+leistung_ladetyp = {
+    charger_type: values['power_kw'] 
+    for charger_type, values in charging_types.items()
+}
 
 CONFIG = {
-    'STRATEGIES': Config.CHARGING_CONFIG['STRATEGIES'],
+    'STRATEGIES': Config.CHARGING_CONFIG['STRATEGY'],
     # T_min: Minimierung der Ladezeit - Kein Lademanagement
     # Konstant: Möglichst konstante Ladeleistung - Minimierung der Netzanschlusslast - Lademanagement
     # Hub: Minimierung der Hub-Lastspitzen - Globale Lastoptimierung - Hub-Level Lademanagement

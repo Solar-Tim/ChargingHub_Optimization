@@ -21,7 +21,7 @@ from shapely.geometry import Point
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from functions import * 
-from grid_optimization.config import *
+from grid_optimization.config_grid import *
 from cables import *
 from grid_optimization.data_loading import load_data
 from grid_optimization.data_extraction import extract_charger_counts
@@ -38,7 +38,7 @@ subprocess.run('cls', shell=True) # Clear the console
 # SECTION 2: DATA LOADING AND PREPROCESSING
 #------------------------------------------------------------------------------
 # Define charging hub location
-ref_point = Point(8.683978444516883, 51.83920575571095)  # Example coordinates
+ref_point = Point(DEFAULT_LOCATION['LONGITUDE'], DEFAULT_LOCATION['LATITUDE'])  # Use default location from config
 
 # Toggle between calculated distances and manual distances
 if use_distance_calculation: # type: ignore

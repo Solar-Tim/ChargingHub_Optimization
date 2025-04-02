@@ -103,7 +103,7 @@ def display_config():
     print(f"  Charging Strategies: {CONFIG['STRATEGIES']}")
     print(f"  Target Charge Quota: {CONFIG['ladequote']}")
     print(f"  Power Setting: {CONFIG['power']} (NCS-HPC-MCS)")
-    print(f"  Pause Times: {CONFIG['pause']} (min-max minutes)\n")
+    print(f"  Pause Times: {CONFIG['pause']} (short-long break minutes)\n")
 
 def main():
     """Main function to orchestrate the charging hub setup process."""

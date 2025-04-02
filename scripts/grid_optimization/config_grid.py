@@ -1,9 +1,24 @@
 ############## Input Parameters for the Optimization ##############
 from math import inf
 import numpy as np
+import sys
+import os
+from data_loading import load_data
+# Add the project root to path to import from parent directory
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+from config import Config
+
+DEFAULT_LOCATION = Config.DEFAULT_LOCATION
 
 # Define charging strategy
-current_strategy = "Konstant"  # Options: "Hub", "Konstant", "T_min"
+# STRATEGY = 'T_min'  # T_min: Minimierung der Ladezeit - Kein Lademanagement
+# STRATEGY = 'Konstant'  # Konstant: Möglichst konstante Ladeleistung - Minimierung der Netzanschlusslast - Lademanagement
+# STRATEGY = 'Hub'  # Hub: Minimierung der Hub-Lastspitzen - Globale Lastoptimierung - Hub-Level Lademanagement
+current_strategy = Config.CHARGING_CONFIG['STRATEGY'][0]
+
+# Load data
+load_profile, timestamps = load_data(current_strategy)
 
 
 debug_mode = True                  # Set to True to enable debug mode for detailed output
@@ -114,7 +129,7 @@ transformer_costs = np.array(transformers["Kosten"])
 
 
 # Time parameters
-time_resolution = 15          # Time resolution in minutes
+time_resolution = 5          # Time resolution in minutes
 simulation_period = 8760      # Hours in a year
 
 
