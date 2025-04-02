@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import datetime
 import hashlib
+import os
 # Import all the needed variables from config
 from config_grid import (
     aluminium_kabel, 
@@ -250,12 +251,14 @@ def plot_optimization_results(results, timestamps, load_profile, create_plot=Tru
     
     # Determine filename
     if filename_base:
-        filename = f"{filename_base}.png"
+        filename = f"results/{filename_base}.png"
     else:
-        filename = "optimization_results.png"
+        filename = "results/optimization_results.png"
     
     # Save figure and display
     try:
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
         plt.savefig(filename, dpi=300, bbox_inches='tight')
         print(f"Plot saved as '{filename}'")
         plt.show()
