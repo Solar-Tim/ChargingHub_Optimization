@@ -40,6 +40,7 @@ def save_optimization_results(results, scenario_name, timestamps, load_profile):
     import numpy as np
     import os
     from datetime import datetime
+    from collections import OrderedDict
     
     # Create directory if it doesn't exist
     os.makedirs("results", exist_ok=True)
@@ -47,6 +48,32 @@ def save_optimization_results(results, scenario_name, timestamps, load_profile):
     # Convert numpy arrays to lists for JSON serialization
     serializable_results = {k: v if not isinstance(v, np.ndarray) else v.tolist() 
                            for k, v in results.items()}
+    
+    # Reorganize results with cost-related entries first
+    cost_keys = [
+        'total_cost',
+        'connection_cost', 
+        'capacity_cost',
+        'battery_cost',
+        'transformer_cost',
+        'expansion_cost',
+        'internal_cable_cost',
+        'charger_cost',
+        'total_charginghub_cost'
+    ]
+    
+    # Create an ordered dictionary with costs first
+    ordered_results = OrderedDict()
+    
+    # Add cost items first
+    for key in cost_keys:
+        if key in serializable_results:
+            ordered_results[key] = serializable_results[key]
+    
+    # Add all remaining items
+    for key, value in serializable_results.items():
+        if key not in cost_keys:
+            ordered_results[key] = value
     
     # Convert timestamps to strings if they are datetime objects
     time_strings = [str(t) for t in timestamps]
@@ -62,7 +89,7 @@ def save_optimization_results(results, scenario_name, timestamps, load_profile):
     data = {
         "scenario": scenario_name,
         "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
-        "results": serializable_results,
+        "results": ordered_results,
         "time_periods": time_strings,
         "load_profile": load_profile_list,
     }
@@ -357,27 +384,32 @@ def print_cable_selection_details(model, distances, cable_options=None, power_co
         print(f"  Connection cost: {existing_mv_connection_cost:.2f} EUR")
         print(f"  Capacity fee: {mv_capacity_fee * max_grid_load.X:.2f} EUR")
 
-def generate_result_filename(results, strategy=None):
+def generate_result_filename(results, strategy=None, battery_allowed=None):
     """
     Generate a standardized filename for optimization results.
     
     Args:
         results: Dictionary containing optimization results
         strategy: Override strategy name (optional)
+        battery_allowed: Boolean indicating if battery was allowed in optimization (optional)
     
     Returns:
-        String: Filename in format result_{strategy}_{battery_used}_{unique_id}
+        String: Filename in format result_{strategy}_{battery_allowed}_{unique_id}
     """
     # Get strategy name
     strategy_name = strategy if strategy else results.get('charging_strategy', 'unknown')
     
-    # Check if battery was used (battery capacity > 0)
-    battery_used = "withBat" if results.get('battery_capacity', 0) > 0 else "noBat"
+    # Check if battery was allowed in the optimization
+    # If battery_allowed parameter is not provided, fall back to checking the results
+    if battery_allowed is None:
+        battery_status = "withBat" if results.get('battery_capacity', 0) > 0 else "noBat"
+    else:
+        battery_status = "withBat" if battery_allowed else "noBat"
     
     # Create a short unique ID based on timestamp and key parameters
     now = datetime.datetime.now()
     unique_str = f"{now.strftime('%Y%m%d%H%M%S')}{results.get('max_grid_load', 0)}"
     short_hash = hashlib.md5(unique_str.encode()).hexdigest()[:6]
     
-    return f"result_{strategy_name}_{battery_used}_{short_hash}"
+    return f"result_{strategy_name}_{battery_status}_{short_hash}"
 

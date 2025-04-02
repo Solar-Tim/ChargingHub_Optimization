@@ -475,7 +475,7 @@ if model.status == GRB.OPTIMAL:
     }
     
     # Generate standardized filename base
-    result_filename_base = generate_result_filename(results, current_strategy)
+    result_filename_base = generate_result_filename(results, current_strategy, include_battery)
     
     # Save results using the new naming convention
     save_optimization_results(results, result_filename_base, timestamps, load_profile)
@@ -522,5 +522,5 @@ if model.status == GRB.OPTIMAL:
 # Plotting results - keep this outside the if statement if you want it to run even if optimization failed
 # At the end of the file where plotting happens
 # Generate filename again to ensure consistency 
-result_filename_base = generate_result_filename(results, current_strategy)
+result_filename_base = generate_result_filename(results, current_strategy, include_battery)
 plot_optimization_results(results, timestamps, load_profile, create_plot, result_filename_base)

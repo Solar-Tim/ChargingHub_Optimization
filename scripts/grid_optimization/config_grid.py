@@ -27,7 +27,7 @@ use_distance_calculation = True    # Set to False to use manual distances instea
 
 create_plot = True                  # Set to False to disable plot generation of optimization results
 
-create_distance_maps = False        # Set to True to generate maps of distance calculations
+create_distance_maps = True        # Set to True to generate maps of distance calculations
 
 include_battery = False              # Toggle for including battery in optimization
 
@@ -59,11 +59,11 @@ HPC_cost = 110000  # Cost per HPC charger
 NCS_cost = 35000  # Cost per NCS charger
 
 # Battery parameters
-battery_cost_per_kwh = 20    # Battery storage cost per kWh
-battery_cost_per_kw = 15     # New parameter: Battery power cost per kW 
+battery_cost_per_kwh = 175    # Battery storage cost per kWh - Burges & Kippelt Cost für 2030
+battery_cost_per_kw = 100     # New parameter: Battery power cost per kW - Burges & Kippelt Cost für 2030
 battery_capacity_max = 999999    # Maximum battery capacity in kWh
 battery_charge_rate_max = 999999 # Maximum charge/discharge rate in kW
-battery_efficiency = 0.95      # Round-trip battery efficiency
+battery_efficiency = 0.90      # Round-trip battery efficiency - Burges & Kippelt
 battery_min_soc = 0        # Minimum state of charge
 battery_max_soc = 1         # Maximum state of charge
 
