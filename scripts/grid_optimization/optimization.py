@@ -16,6 +16,8 @@ import sys
 import os
 import subprocess
 from shapely.geometry import Point
+import datetime
+import hashlib
 
 # Add the parent directory (scripts) to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -441,14 +443,12 @@ if model.status == GRB.OPTIMAL:
         'use_transmission': float(use_transmission_substation.X),
         'use_distribution': float(use_distribution_substation.X),
         'use_existing_mv': float(use_existing_mv_line.X),
-        
-        # Add new result fields
+        'charging_strategy': current_strategy,
         'distribution_expansion': float(distribution_expansion.X),
         'transmission_expansion': float(transmission_expansion.X),
         'expand_distribution': float(expand_distribution.X),
         'expand_transmission': float(expand_transmission.X),
         'expansion_cost': float(expansion_cost_value.X),
-        
         'grid_energy': [float(grid_energy[t].X) for t in range(time_periods)],
         'battery_soc': [float(battery_soc[t].X) for t in range(time_periods)],
         'battery_charge': [float(battery_charge[t].X) for t in range(time_periods)],
@@ -474,7 +474,11 @@ if model.status == GRB.OPTIMAL:
         'total_charginghub_cost': float(charginghub_cost_value.X),  # Total charging hub cost
     }
     
-    save_optimization_results(results, "single_sequence", timestamps, load_profile)
+    # Generate standardized filename base
+    result_filename_base = generate_result_filename(results, current_strategy)
+    
+    # Save results using the new naming convention
+    save_optimization_results(results, result_filename_base, timestamps, load_profile)
     
     # Print organized summary - only call this once
     print_optimization_summary(results, distances)
@@ -516,4 +520,7 @@ if model.status == GRB.OPTIMAL:
     print(f"Total Charger Cost: €{MCS_count * MCS_cost + HPC_count * HPC_cost + NCS_count * NCS_cost:,.2f}")
         
 # Plotting results - keep this outside the if statement if you want it to run even if optimization failed
-plot_optimization_results(results, timestamps, load_profile, create_plot)
+# At the end of the file where plotting happens
+# Generate filename again to ensure consistency 
+result_filename_base = generate_result_filename(results, current_strategy)
+plot_optimization_results(results, timestamps, load_profile, create_plot, result_filename_base)

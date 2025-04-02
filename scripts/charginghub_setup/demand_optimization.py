@@ -5,7 +5,10 @@ import os
 import json
 import logging
 from datetime import datetime
-from config_setup import CONFIG, leistung_ladetyp
+from config_setup import CONFIG as ORIGINAL_CONFIG, leistung_ladetyp
+
+# Create a working copy of the config that can be modified
+CONFIG = ORIGINAL_CONFIG.copy()
 
 logging.basicConfig(filename='logs.log', level=logging.DEBUG, format='%(asctime)s; %(levelname)s; %(message)s')
 
@@ -661,9 +664,37 @@ def modellierung():
 
 
 def main():
+    global CONFIG  # Declare at the beginning of the function
     print("Starting optimization")
     logging.info(f"Optimization p_max/p_min with configuration: {CONFIG}")
-    modellierung()
+    
+    # Get all available strategies
+    all_strategies = CONFIG['ALL_STRATEGIES']
+    
+    # Process each strategy individually
+    for strategy in all_strategies:
+        print(f"Processing strategy: {strategy}")
+        logging.info(f"Processing strategy: {strategy}")
+        
+        # Create a temporary config with just this strategy
+        temp_config = CONFIG.copy()
+        temp_config['STRATEGIES'] = [strategy]
+        
+        # Temporarily override the global CONFIG
+        original_config = CONFIG.copy()
+        CONFIG = temp_config
+        
+        try:
+            # Run the optimization for this single strategy
+            modellierung()
+        except Exception as e:
+            logging.error(f"Error processing strategy {strategy}: {e}")
+            print(f"ERROR processing strategy {strategy}: {e}")
+        finally:
+            # Restore the original CONFIG
+            CONFIG = original_config
+    
+    print("All strategies processed")
 
 if __name__ == '__main__':
     start = time.time()

@@ -1,5 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import datetime
+import hashlib
 # Import all the needed variables from config
 from config_grid import (
     aluminium_kabel, 
@@ -65,7 +67,7 @@ def save_optimization_results(results, scenario_name, timestamps, load_profile):
     }
     
     # Save to file
-    filename = f"results/optimization_{scenario_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    filename = f"results/optimization_{scenario_name}.json"
     with open(filename, 'w') as f:
         json.dump(data, f, indent=2)
     
@@ -169,7 +171,7 @@ def print_distances(distances):
     print(f"Powerline distance: {distances['powerline_distance']:.0f}m")
     print("===================================")
 
-def plot_optimization_results(results, timestamps, load_profile, create_plot=True):
+def plot_optimization_results(results, timestamps, load_profile, create_plot=True, filename_base=None):
     """
     Visualize optimization results with time-series plots.
     
@@ -178,6 +180,7 @@ def plot_optimization_results(results, timestamps, load_profile, create_plot=Tru
     - timestamps: Time points for the x-axis
     - load_profile: Original load profile data
     - create_plot: Boolean to control whether to create visual plots
+    - filename_base: Base filename for the output plot (without extension)
     
     Returns:
     - None (displays plots if create_plot is True)
@@ -245,10 +248,16 @@ def plot_optimization_results(results, timestamps, load_profile, create_plot=Tru
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.15)  # Make room for the cost text box
     
+    # Determine filename
+    if filename_base:
+        filename = f"{filename_base}.png"
+    else:
+        filename = "optimization_results.png"
+    
     # Save figure and display
     try:
-        plt.savefig("optimization_results.png", dpi=300, bbox_inches='tight')
-        print("Plot saved as 'optimization_results.png'")
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        print(f"Plot saved as '{filename}'")
         plt.show()
     except Exception as e:
         print(f"Error saving plot: {e}")
@@ -344,4 +353,28 @@ def print_cable_selection_details(model, distances, cable_options=None, power_co
         print(f"  Capacity: {existing_mv_capacity:.2f} kW")
         print(f"  Connection cost: {existing_mv_connection_cost:.2f} EUR")
         print(f"  Capacity fee: {mv_capacity_fee * max_grid_load.X:.2f} EUR")
+
+def generate_result_filename(results, strategy=None):
+    """
+    Generate a standardized filename for optimization results.
+    
+    Args:
+        results: Dictionary containing optimization results
+        strategy: Override strategy name (optional)
+    
+    Returns:
+        String: Filename in format result_{strategy}_{battery_used}_{unique_id}
+    """
+    # Get strategy name
+    strategy_name = strategy if strategy else results.get('charging_strategy', 'unknown')
+    
+    # Check if battery was used (battery capacity > 0)
+    battery_used = "withBat" if results.get('battery_capacity', 0) > 0 else "noBat"
+    
+    # Create a short unique ID based on timestamp and key parameters
+    now = datetime.datetime.now()
+    unique_str = f"{now.strftime('%Y%m%d%H%M%S')}{results.get('max_grid_load', 0)}"
+    short_hash = hashlib.md5(unique_str.encode()).hexdigest()[:6]
+    
+    return f"result_{strategy_name}_{battery_used}_{short_hash}"
 

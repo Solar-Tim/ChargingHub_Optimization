@@ -27,9 +27,9 @@ use_distance_calculation = True    # Set to False to use manual distances instea
 
 create_plot = True                  # Set to False to disable plot generation of optimization results
 
-create_distance_maps = True        # Set to True to generate maps of distance calculations
+create_distance_maps = False        # Set to True to generate maps of distance calculations
 
-include_battery = True              # Toggle for including battery in optimization
+include_battery = False              # Toggle for including battery in optimization
 
 use_manual_charger_count = False    # Set to True to use manual charger count instead of optimization
 

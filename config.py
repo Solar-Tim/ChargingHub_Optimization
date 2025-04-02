@@ -25,6 +25,14 @@ class Config:
         'INCLUDE_BATTERY': True
     }
 
+    # Charging hub configuration
+    CHARGING_CONFIG = {
+        'ALL_STRATEGIES': ["T_min", "Konstant", "Hub"],  # ["T_min", "Konstant", "Hub"]
+        'STRATEGY': ["Konstant"],  # ["T_min", "Konstant", "Hub"]
+        'ladequote': 0.8,  # Charging quota as percentage
+        'power': '100-100-100',  # Power scaling for NCS-HPC-MCS
+        'pause': '45-540'  # Kurze Pause - Lange Pause in minutes
+    }
 
 
     # Traffic calculation settings
@@ -89,13 +97,7 @@ class Config:
     }
     
 
-    # Charging hub configuration
-    CHARGING_CONFIG = {
-        'STRATEGY': ["T_min"],  # ["T_min", "Konstant", "Hub"]
-        'ladequote': 0.8,  # Charging quota as percentage
-        'power': '100-100-100',  # Power scaling for NCS-HPC-MCS
-        'pause': '45-540'  # Kurze Pause - Lange Pause in minutes
-    }
+
     
     # Charging station types
     CHARGING_TYPES = {

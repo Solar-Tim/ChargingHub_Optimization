@@ -21,6 +21,7 @@ CONFIG = {
     # T_min: Minimierung der Ladezeit - Kein Lademanagement
     # Konstant: Möglichst konstante Ladeleistung - Minimierung der Netzanschlusslast - Lademanagement
     # Hub: Minimierung der Hub-Lastspitzen - Globale Lastoptimierung - Hub-Level Lademanagement
+    'ALL_STRATEGIES': Config.CHARGING_CONFIG['ALL_STRATEGIES'],  # Add this line to include all strategies
     'ladequote': Config.CHARGING_CONFIG['ladequote'],  # Ladequote in Prozent
     'power': Config.CHARGING_CONFIG['power'],  # Ladeleistung in Prozent (NCS-HPC-MCS)
     'pause': Config.CHARGING_CONFIG['pause'],  # Pausenzeiten in Minuten (min-max)
