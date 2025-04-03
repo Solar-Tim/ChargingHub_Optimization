@@ -39,8 +39,8 @@ class Config:
     RECALCULATE_BREAKS = False  # Whether to recalculate breaks or use cached data
     RECALCULATE_TOLL_MIDPOINTS = False  # Whether to recalculate toll midpoints or use cached
     DEFAULT_LOCATION = {
-        'LONGITUDE': 6.77483395730945,
-        'LATITUDE': 50.92859531760215
+        'LONGITUDE': 7.017641090421456,
+        'LATITUDE': 51.205628072068606
     }
     
     # Spatial analysis settings

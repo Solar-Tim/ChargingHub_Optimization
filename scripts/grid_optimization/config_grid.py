@@ -29,7 +29,7 @@ create_plot = True                  # Set to False to disable plot generation of
 
 create_distance_maps = True        # Set to True to generate maps of distance calculations
 
-include_battery = False              # Toggle for including battery in optimization
+include_battery = True              # Toggle for including battery in optimization
 
 use_manual_charger_count = False    # Set to True to use manual charger count instead of optimization
 
@@ -39,17 +39,17 @@ existing_mv_connection_cost = 0  # Cost of existing MV connection (EUR) - Hier i
 
 # Manual distance values when not using distance calculation
 manual_distances = {
-    'distribution_distance': 10000,    # Distance to nearest distribution substation (m)
+    'distribution_distance': 25000,    # Distance to nearest distribution substation (m)
     'transmission_distance': 9999999,   # Distance to nearest transmission substation (m)
     'powerline_distance': 9999999,      # Distance to nearest HV power line (m)
 }
 
 
-
+multiple = 5
 # Placeholder for the number of chargers - Wird bei der Optimierung automatisch ermittelt
-MCS_count = 5  # Default manual count
-HPC_count = 10
-NCS_count = 25
+MCS_count = 4 * multiple  # Default manual count
+HPC_count = 4 * multiple
+NCS_count = 42 * multiple
 
 
 
@@ -59,7 +59,7 @@ HPC_cost = 110000  # Cost per HPC charger
 NCS_cost = 35000  # Cost per NCS charger
 
 # Battery parameters
-battery_cost_per_kwh = 175    # Battery storage cost per kWh - Burges & Kippelt Cost für 2030
+battery_cost_per_kwh = 175    # Battery storage cost per kWh - Burges & Kippelt Cost für 2030 # Keine Anschlusskosten berücksichtigt
 battery_cost_per_kw = 100     # New parameter: Battery power cost per kW - Burges & Kippelt Cost für 2030
 battery_capacity_max = 999999    # Maximum battery capacity in kWh
 battery_charge_rate_max = 999999 # Maximum charge/discharge rate in kW
@@ -75,7 +75,7 @@ mv_capacity_fee = 183.56   # Based of BKZ from Regionetz OHNE Reduzierung durch 
 
 
 # Line capacities (in kW) - in Anlehnung an https://www.regionetz.de/fileadmin/regionetz/content/Dokumente/TAB/TAB_MS_2023_Regionetz.pdf
-existing_mv_capacity       = 1500  # 5,5 MW capacity for existing MV line
+existing_mv_capacity       = 1500  # 1,5 MW capacity for existing MV line
 distribution_substation_capacity = 15000  # 15 MW for distribution substation
 transmission_substation_capacity = 15000  # 15 MW for transmission substation
 hv_line_capacity           = 100000  # 100 MW for HV line and a new substation
@@ -100,7 +100,7 @@ transformers = {
     "Kapazität": [
         1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 
         10000, 12500, 16000, 20000, 25000, 31500, 40000, 50000
-    ],
+    ], ## Transformer capacities in kW ACHTUNG!!!!!!!!!!!!!!!! ANPASSEN!!!!!!!!!!!!!!!!!!!!!
     "Kosten": [
         220000,    # 1000 kW: 20000*1 + 200*1000 = 220000 €
         273600,    # 1250 kW: 20000*1.18 + 200*1250 = 273600 €
