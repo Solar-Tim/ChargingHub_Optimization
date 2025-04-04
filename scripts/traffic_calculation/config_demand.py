@@ -12,8 +12,8 @@ from config import Config
 
 # Backwards compatibility variables
 year = Config.FORECAST_YEAR
-neue_pausen = Config.RECALCULATE_BREAKS
-neue_toll_midpoints = Config.RECALCULATE_TOLL_MIDPOINTS
+neue_pausen = Config.EXECUTION_FLAGS['RECALCULATE_BREAKS']
+neue_toll_midpoints = Config.EXECUTION_FLAGS['RECALCULATE_TOLL_MIDPOINTS']
 DEFAULT_LOCATION = Config.DEFAULT_LOCATION
 SCENARIOS = Config.SCENARIOS
 SPATIAL = Config.SPATIAL

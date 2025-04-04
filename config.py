@@ -17,12 +17,28 @@ class Config:
     # Year settings
     FORECAST_YEAR = '2030'  # Default forecast year
     
-        # Grid optimization settings
-    GRID_CONFIG = {
-        'USE_DISTANCE_CALCULATION': True,
-        'CREATE_PLOT': True,
-        'CREATE_DISTANCE_MAPS': False,
-        'INCLUDE_BATTERY': True
+    # Execution control flags - NEW SECTION
+    EXECUTION_FLAGS = {
+        'RUN_TRAFFIC_CALCULATION': True,  # Whether to run traffic calculation module
+        'RUN_CHARGING_HUB_SETUP': True,   # Whether to run charging hub setup module
+        'RUN_GRID_OPTIMIZATION': True,    # Whether to run grid optimization module
+        
+        # Sub-process flags for charging hub setup
+        'RUN_TRUCK_MATCHING': True,       # Whether to run truck-charging type matching
+        'RUN_HUB_CONFIGURATION': True,    # Whether to run charging hub configuration
+        'RUN_DEMAND_OPTIMIZATION': True,  # Whether to run demand optimization
+        
+        # Traffic calculation sub-process flags
+        'RECALCULATE_BREAKS': False,      # Whether to recalculate breaks or use cached data
+        'RECALCULATE_TOLL_MIDPOINTS': False,  # Whether to recalculate toll midpoints or use cached
+        
+        # Grid optimization sub-process flags
+        'USE_DISTANCE_CALCULATION': True,    # Whether to use distance calculation for optimization
+        'CREATE_PLOT': True,                # Whether to generate plot of optimization results
+        'CREATE_DISTANCE_MAPS': False,       # Whether to generate maps of distance calculations
+        'INCLUDE_BATTERY': True,             # Whether to include battery in optimization
+        'USE_MANUAL_CHARGER_COUNT': False,   # Whether to use manual charger count instead of optimizing
+        'DEBUG_MODE': False,                 # Whether to enable debug mode for detailed output
     }
 
     # Charging hub configuration
@@ -35,9 +51,6 @@ class Config:
     }
 
 
-    # Traffic calculation settings
-    RECALCULATE_BREAKS = False  # Whether to recalculate breaks or use cached data
-    RECALCULATE_TOLL_MIDPOINTS = False  # Whether to recalculate toll midpoints or use cached
     DEFAULT_LOCATION = {
         'LONGITUDE': 7.017641090421456,
         'LATITUDE': 51.205628072068606

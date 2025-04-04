@@ -23,6 +23,12 @@ logging.basicConfig(
     format='%(asctime)s; %(levelname)s; %(message)s'
 )
 
+# Add root directory to Python path for configuration access
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+# Import configuration
+from config import Config
+
 # Import local modules
 try:
     import match_truck_chargingtype
@@ -36,6 +42,13 @@ except ImportError as e:
 
 def run_truck_matching():
     """Run Step 1: Match trucks to charging types and generate truck data."""
+    if not Config.EXECUTION_FLAGS['RUN_TRUCK_MATCHING']:
+        logging.info("Step 1: Truck-Charging Type Matching - SKIPPED (disabled in config)")
+        print("\n" + "="*50)
+        print("STEP 1: TRUCK-CHARGING TYPE MATCHING - SKIPPED (disabled in config)")
+        print("="*50)
+        return True
+        
     print("\n" + "="*50)
     print("STEP 1: Match Trucks to Charging Types")
     print("="*50)
@@ -57,6 +70,13 @@ def run_truck_matching():
 
 def run_hub_configuration():
     """Run Step 2: Configure charging hub based on truck data."""
+    if not Config.EXECUTION_FLAGS['RUN_HUB_CONFIGURATION']:
+        logging.info("Step 2: Charging Hub Configuration - SKIPPED (disabled in config)")
+        print("\n" + "="*50)
+        print("STEP 2: CHARGING HUB CONFIGURATION - SKIPPED (disabled in config)")
+        print("="*50)
+        return True
+        
     print("\n" + "="*50)
     print("STEP 2: Charging Hub Configuration")
     print("="*50)
@@ -78,6 +98,13 @@ def run_hub_configuration():
 
 def run_demand_optimization():
     """Run Step 3: Optimize charging demand."""
+    if not Config.EXECUTION_FLAGS['RUN_DEMAND_OPTIMIZATION']:
+        logging.info("Step 3: Demand Optimization - SKIPPED (disabled in config)")
+        print("\n" + "="*50)
+        print("STEP 3: DEMAND OPTIMIZATION - SKIPPED (disabled in config)")
+        print("="*50)
+        return True
+        
     print("\n" + "="*50)
     print("STEP 3: Demand Optimization")
     print("="*50)
@@ -105,6 +132,13 @@ def display_config():
     print(f"  Power Setting: {CONFIG['power']} (NCS-HPC-MCS)")
     print(f"  Pause Times: {CONFIG['pause']} (short-long break minutes)\n")
 
+def display_execution_flags():
+    """Display the execution flags for sub-processes."""
+    print("\nSub-process Execution Configuration:")
+    print(f"  Truck-Charging Type Matching: {'ENABLED' if Config.EXECUTION_FLAGS['RUN_TRUCK_MATCHING'] else 'DISABLED'}")
+    print(f"  Charging Hub Configuration: {'ENABLED' if Config.EXECUTION_FLAGS['RUN_HUB_CONFIGURATION'] else 'DISABLED'}")
+    print(f"  Demand Optimization: {'ENABLED' if Config.EXECUTION_FLAGS['RUN_DEMAND_OPTIMIZATION'] else 'DISABLED'}\n")
+
 def main():
     """Main function to orchestrate the charging hub setup process."""
     print("\n" + "="*50)
@@ -113,30 +147,31 @@ def main():
     
     logging.info("Starting Charging Hub Setup process")
     display_config()
+    display_execution_flags()
     
     # Track overall success
     all_steps_successful = True
     overall_start_time = time.time()
     
-    # Execute steps in sequence
+    # Execute steps in sequence based on flags
     step1_success = run_truck_matching()
     all_steps_successful = all_steps_successful and step1_success
     
-    if step1_success:
-        step2_success = run_hub_configuration()
-        all_steps_successful = all_steps_successful and step2_success
-    else:
+    # Continue with step 2 if step 1 was skipped or successful, otherwise warn
+    if not step1_success and Config.EXECUTION_FLAGS['RUN_TRUCK_MATCHING']:
         print("\nWarning: Step 1 failed. Continuing with Step 2 anyway...")
-        step2_success = run_hub_configuration()
-        all_steps_successful = all_steps_successful and step2_success
+        logging.warning("Step 1 failed. Continuing with Step 2 anyway.")
     
-    if step2_success:
-        step3_success = run_demand_optimization()
-        all_steps_successful = all_steps_successful and step3_success
-    else:
+    step2_success = run_hub_configuration()
+    all_steps_successful = all_steps_successful and step2_success
+    
+    # Continue with step 3 if step 2 was skipped or successful, otherwise warn
+    if not step2_success and Config.EXECUTION_FLAGS['RUN_HUB_CONFIGURATION']:
         print("\nWarning: Step 2 failed. Continuing with Step 3 anyway...")
-        step3_success = run_demand_optimization()
-        all_steps_successful = all_steps_successful and step3_success
+        logging.warning("Step 2 failed. Continuing with Step 3 anyway.")
+    
+    step3_success = run_demand_optimization()
+    all_steps_successful = all_steps_successful and step3_success
     
     # Report overall results
     overall_elapsed_time = time.time() - overall_start_time

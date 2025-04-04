@@ -20,18 +20,13 @@ current_strategy = Config.CHARGING_CONFIG['STRATEGY'][0]
 # Load data
 load_profile, timestamps = load_data(current_strategy)
 
-
-debug_mode = True                  # Set to True to enable debug mode for detailed output
-
-use_distance_calculation = True    # Set to False to use manual distances instead
-
-create_plot = True                  # Set to False to disable plot generation of optimization results
-
-create_distance_maps = True        # Set to True to generate maps of distance calculations
-
-include_battery = True              # Toggle for including battery in optimization
-
-use_manual_charger_count = False    # Set to True to use manual charger count instead of optimization
+# Access grid optimization flags from EXECUTION_FLAGS dictionary
+debug_mode = Config.EXECUTION_FLAGS['DEBUG_MODE']  # Set to True to enable debug mode for detailed output
+use_distance_calculation = Config.EXECUTION_FLAGS['USE_DISTANCE_CALCULATION']  # Set to True to use distance calculation for optimization
+create_plot = Config.EXECUTION_FLAGS['CREATE_PLOT']  # Set to True to generate plot of optimization results
+create_distance_maps = Config.EXECUTION_FLAGS['CREATE_DISTANCE_MAPS']  # Set to True to generate maps of distance calculations
+include_battery = Config.EXECUTION_FLAGS['INCLUDE_BATTERY']  # Set to True to include battery in optimization
+use_manual_charger_count = Config.EXECUTION_FLAGS['USE_MANUAL_CHARGER_COUNT']  # Set to True to use manual charger count instead of optimization
 
 M_value = 1000000  # Big M value for the optimization
 

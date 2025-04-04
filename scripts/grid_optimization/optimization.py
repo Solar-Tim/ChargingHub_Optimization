@@ -8,16 +8,12 @@
 #------------------------------------------------------------------------------
 # SECTION 1: IMPORTS AND INITIALIZATION
 #------------------------------------------------------------------------------
-from gurobipy import Model, GRB, quicksum
+from gurobipy import Model, GRB
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 import sys
 import os
-import subprocess
 from shapely.geometry import Point
-import datetime
-import hashlib
+
 
 # Add the parent directory (scripts) to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -33,8 +29,6 @@ from grid_optimization.data_extraction import extract_charger_counts
 from distance_scripts.distance_functions import *
 from distance_scripts.distance_lines import *
 
-# Clear the console for better readability
-subprocess.run('cls', shell=True) # Clear the console
 
 #------------------------------------------------------------------------------
 # SECTION 2: DATA LOADING AND PREPROCESSING
