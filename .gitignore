@@ -6,6 +6,8 @@ results/*
 
 .vscode/*
 
+# Configuration files
+config.py
 
 optimization_results.png
 
@@ -18,3 +20,4 @@ __pycache__/
 # Log files
 *.log
 logs/
+
