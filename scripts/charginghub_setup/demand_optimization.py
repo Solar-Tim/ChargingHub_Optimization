@@ -6,6 +6,7 @@ import json
 import logging
 from datetime import datetime
 from config_setup import CONFIG as ORIGINAL_CONFIG, leistung_ladetyp
+from concurrent.futures import ProcessPoolExecutor
 
 # Create a working copy of the config that can be modified
 CONFIG = ORIGINAL_CONFIG.copy()
@@ -663,38 +664,37 @@ def modellierung():
     return None
 
 
-def main():
+def process_single_strategy(strategy, config):
+    # Process a single strategy
+    # Return results
     global CONFIG  # Declare at the beginning of the function
-    print("Starting optimization")
-    logging.info(f"Optimization p_max/p_min with configuration: {CONFIG}")
+    print(f"Processing strategy: {strategy}")
+    logging.info(f"Processing strategy: {strategy}")
     
-    # Get all available strategies
-    all_strategies = CONFIG['ALL_STRATEGIES']
+    # Create a temporary config with just this strategy
+    temp_config = config.copy()
+    temp_config['STRATEGIES'] = [strategy]
     
-    # Process each strategy individually
-    for strategy in all_strategies:
-        print(f"Processing strategy: {strategy}")
-        logging.info(f"Processing strategy: {strategy}")
-        
-        # Create a temporary config with just this strategy
-        temp_config = CONFIG.copy()
-        temp_config['STRATEGIES'] = [strategy]
-        
-        # Temporarily override the global CONFIG
-        original_config = CONFIG.copy()
-        CONFIG = temp_config
-        
-        try:
-            # Run the optimization for this single strategy
-            modellierung()
-        except Exception as e:
-            logging.error(f"Error processing strategy {strategy}: {e}")
-            print(f"ERROR processing strategy {strategy}: {e}")
-        finally:
-            # Restore the original CONFIG
-            CONFIG = original_config
+    # Temporarily override the global CONFIG
+    original_config = config.copy()
+    CONFIG = temp_config
     
-    print("All strategies processed")
+    try:
+        # Run the optimization for this single strategy
+        modellierung()
+    except Exception as e:
+        logging.error(f"Error processing strategy {strategy}: {e}")
+        print(f"ERROR processing strategy {strategy}: {e}")
+    finally:
+        # Restore the original CONFIG
+        CONFIG = original_config
+
+
+def main():
+    with ProcessPoolExecutor(max_workers=min(len(CONFIG['ALL_STRATEGIES']), os.cpu_count())) as executor:
+        futures = {executor.submit(process_single_strategy, strategy, CONFIG.copy()): strategy 
+                  for strategy in CONFIG['ALL_STRATEGIES']}
+        # Handle results
 
 if __name__ == '__main__':
     start = time.time()
