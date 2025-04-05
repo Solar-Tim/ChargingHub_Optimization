@@ -88,10 +88,6 @@ def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_ra
     gdf_deutschland_nuts0.reset_index(drop=True, inplace=True)
     gdf_deutschland_nuts0 = gdf_deutschland_nuts0.to_crs(epsg=int(SPATIAL['TARGET_CRS'].split(':')[1]))
     
-    # Create a buffer around the location
-    gdf_location_buffer = gdf_location.copy()
-    gdf_location_buffer['geometry'] = gdf_location['geometry'].buffer(buffer_radius)
-    
     # Spatial join: Filter breaks within Germany
     gdf_short_breaks_germany = gpd.sjoin(gdf_short_breaks, gdf_deutschland_nuts0, predicate='within', how='inner').reset_index(drop=True)
     gdf_long_breaks_germany = gpd.sjoin(gdf_long_breaks, gdf_deutschland_nuts0, predicate='within', how='inner').reset_index(drop=True)
