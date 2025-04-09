@@ -18,5 +18,6 @@ __pycache__/
 # Log files
 *.log
 logs/
-
-ID_Results.csv
+*.log
+*.csv
+*.json
