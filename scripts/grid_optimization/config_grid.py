@@ -70,16 +70,16 @@ mv_capacity_fee = 183.56   # Based of BKZ from Regionetz OHNE Reduzierung durch 
 
 
 # Line capacities (in kW) - in Anlehnung an https://www.regionetz.de/fileadmin/regionetz/content/Dokumente/TAB/TAB_MS_2023_Regionetz.pdf
-existing_mv_capacity       = 1500  # 1,5 MW capacity for existing MV line
-distribution_substation_capacity = 15000  # 15 MW for distribution substation
-transmission_substation_capacity = 15000  # 15 MW for transmission substation
-hv_line_capacity           = 100000  # 100 MW for HV line and a new substation
+existing_mv_capacity       = 5500  # 5,5 MW capacity for existing MV line
+distribution_substation_capacity = 20000  # 20 MW for distribution substation
+transmission_substation_capacity = 20000  # 20 MW for transmission substation
+hv_line_capacity           = 40000  # 40 MW for HV line and a new substation
 
 # Substation expansion parameters - Unsicher ab wann die Erweiterung notwendig ist
-distribution_existing_capacity = 2000  # Initial available capacity (kW)
-distribution_max_expansion = 5000      # Maximum additional expansion (kW)
-transmission_existing_capacity = 10000 # Initial available capacity (kW)
-transmission_max_expansion = 10000     # Maximum additional expansion (kW)
+distribution_existing_capacity = 20000  # Initial available capacity (kW)
+distribution_max_expansion = 20000      # Maximum additional expansion (kW)
+transmission_existing_capacity = 20000 # Initial available capacity (kW)
+transmission_max_expansion = 20000     # Maximum additional expansion (kW)
 distribution_expansion_fixed_cost = 500000  # Fixed cost for expanding distribution substation (EUR)
 transmission_expansion_fixed_cost = 500000 # Fixed cost for expanding transmission substation (EUR)
 
@@ -93,9 +93,8 @@ cost_transformer_perkW = 200    # Cost per kW for transformer
 # === Define discrete transformer options in structured dictionary format ===
 transformers = {
     "Kapazität": [
-        1000, 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 
-        10000, 12500, 16000, 20000, 25000, 31500, 40000, 50000
-    ], ## Transformer capacities in kW ACHTUNG!!!!!!!!!!!!!!!! ANPASSEN!!!!!!!!!!!!!!!!!!!!!
+        1000, 1250, 1600, 2000, 2500, 3150
+    ],
     "Kosten": [
         220000,    # 1000 kW: 20000*1 + 200*1000 = 220000 €
         273600,    # 1250 kW: 20000*1.18 + 200*1250 = 273600 €
@@ -103,18 +102,6 @@ transformers = {
         407568,    # 2000 kW: 20000*1.68 + 200*2000 = 407568 €
         493095,    # 2500 kW: 20000*1.97 + 200*2500 = 493095 €
         600236,    # 3150 kW: 20000*2.33 + 200*3150 = 600236 €
-        735321,    # 4000 kW: 20000*2.83 + 200*4000 = 735321 €
-        886797,    # 5000 kW: 20000*3.43 + 200*5000 = 886797 €
-        1096542,   # 6300 kW: 20000*4.18 + 200*6300 = 1096542 €
-        1349608,   # 8000 kW: 20000*5.12 + 200*8000 = 1349608 €
-        1642456,   # 10000 kW: 20000*6.21 + 200*10000 = 1642456 €
-        1987088,   # 12500 kW: 20000*7.44 + 200*12500 = 1987088 €
-        2457062,   # 16000 kW: 20000*9.29 + 200*16000 = 2457062 €
-        2988281,   # 20000 kW: 20000*11.44 + 200*20000 = 2988281 €
-        3618314,   # 25000 kW: 20000*13.91 + 200*25000 = 3618314 €
-        4406397,   # 31500 kW: 20000*17.03 + 200*31500 = 4406397 €
-        5425984,   # 40000 kW: 20000*21.30 + 200*40000 = 5425984 €
-        6600811    # 50000 kW: 20000*26.00 + 200*50000 = 6600811 €
     ]
 }
 

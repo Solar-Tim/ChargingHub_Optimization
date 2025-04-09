@@ -161,7 +161,8 @@ charginghub_cost_value = model.addVar(name="ChargingHubCostValue", lb=0)
 charger_cost_value = model.addVar(name="ChargerCostValue", lb=0)  # New variable for charger costs
 
 # === 5.7: Transformer Selection Variables ===
-transformer_choice = model.addMVar(len(transformer_capacities), vtype=GRB.BINARY, name="TransformerChoice")
+# Modified to allow multiple transformers of different types
+transformer_count = model.addVars(len(transformer_capacities), vtype=GRB.INTEGER, lb=0, name="TransformerCount")
 
 #------------------------------------------------------------------------------
 # SECTION 6: CONSTRAINT DEFINITIONS
@@ -338,14 +339,20 @@ model.addConstr(
 )
 
 # === 6.8: Transformer Selection Constraints ===
-# Ensure exactly one transformer is selected
-model.addConstr(transformer_choice.sum() == 1, "TransformerSelection")
+# Ensure at least one transformer is selected
+model.addConstr(transformer_count.sum() >= 1, "AtLeastOneTransformer")
 
-# Ensure the selected transformer can handle the maximum grid load
-model.addConstr(transformer_capacities @ transformer_choice >= max_grid_load, "TransformerCapacityCheck")
+# Ensure the sum of selected transformer capacities can handle the maximum grid load
+model.addConstr(
+    sum(transformer_capacities[i] * transformer_count[i] for i in range(len(transformer_capacities))) >= max_grid_load, 
+    "TransformerCapacityCheck"
+)
 
-# Calculate transformer cost based on selected transformer option
-model.addConstr(transformer_cost_value == transformer_costs @ transformer_choice, "TransformerCostCapture")
+# Calculate transformer cost based on selected transformer options
+model.addConstr(
+    transformer_cost_value == sum(transformer_costs[i] * transformer_count[i] for i in range(len(transformer_capacities))), 
+    "TransformerCostCapture"
+)
 
 # === 6.9: Energy Balance and Battery Constraints ===
 # Calculate a reasonable Big-M value based on the load profile
@@ -423,11 +430,18 @@ if model.status == GRB.OPTIMAL:
     # Use aluminium_kabel["Nennquerschnitt"] instead of standard_cable_sizes
     cable_sizes = aluminium_kabel["Nennquerschnitt"]
     
-    # Identify which transformer was selected
-    selected_transformer_idx = [i for i in range(len(transformer_capacities)) 
-                               if transformer_choice[i].X > 0.5][0]
-    selected_transformer_capacity = int(transformer_capacities[selected_transformer_idx])  # Convert to Python int
-    selected_transformer_cost = float(transformer_costs[selected_transformer_idx])  # Convert to Python float
+    # Identify which transformers were selected and their counts
+    transformer_selections = {i: int(transformer_count[i].X) 
+                             for i in range(len(transformer_capacities)) 
+                             if transformer_count[i].X > 0.5}
+    
+    # Calculate total transformer capacity
+    total_transformer_capacity = int(sum(transformer_capacities[i] * count for i, count in transformer_selections.items()))
+    total_transformer_cost = float(sum(transformer_costs[i] * count for i, count in transformer_selections.items()))
+    
+    # Create a readable description of transformer selections
+    transformer_description = ", ".join([f"{count}x {int(transformer_capacities[i])} kW" 
+                                        for i, count in transformer_selections.items()])
     
     results = {
         'total_cost': float(model.objVal),
@@ -461,8 +475,10 @@ if model.status == GRB.OPTIMAL:
         'transmission_capacity': float(transmission_capacity),
         'distribution_capacity': float(distribution_capacity),
         'hv_capacity': float(hv_capacity),
-        'transformer_capacity': selected_transformer_capacity,
-        'transformer_cost': selected_transformer_cost,
+        'transformer_capacity': total_transformer_capacity,
+        'transformer_cost': total_transformer_cost,
+        'transformer_selections': transformer_selections,
+        'transformer_description': transformer_description,
         'internal_cable_cost': float(internal_cable_cost_value.X),
         'charger_cost': float(charger_cost_value.X),  # Add charger cost to results
         'total_charginghub_cost': float(charginghub_cost_value.X),  # Total charging hub cost
@@ -482,7 +498,7 @@ if model.status == GRB.OPTIMAL:
     print(f"Max Load: {max(load_profile)}") # type: ignore
     print(f"Max Grid Load: {max_grid_load.X}")
     print(f"Capacity Limit: {cap_limit.X}")
-    print(f"Selected Transformer: {selected_transformer_capacity} kW (Cost: €{selected_transformer_cost:.2f})")
+    print(f"Selected Transformer: {total_transformer_capacity} kW (Cost: €{total_transformer_cost:.2f})")
     
     # Add additional metrics for expansions
     print("\n=== Substation Expansion Details ===")
@@ -512,6 +528,12 @@ if model.status == GRB.OPTIMAL:
     print(f"HPC Chargers: {HPC_count} x €{HPC_cost:,.2f} = €{HPC_count * HPC_cost:,.2f}")
     print(f"NCS Chargers: {NCS_count} x €{NCS_cost:,.2f} = €{NCS_count * NCS_cost:,.2f}")
     print(f"Total Charger Cost: €{MCS_count * MCS_cost + HPC_count * HPC_cost + NCS_count * NCS_cost:,.2f}")
+        
+    # Update transformer details output
+    print("\n=== Transformer Details ===")
+    print(f"Selected transformers: {transformer_description}")
+    print(f"Total transformer capacity: {total_transformer_capacity} kW")
+    print(f"Total transformer cost: €{total_transformer_cost:,.2f}")
         
 # Plotting results - keep this outside the if statement if you want it to run even if optimization failed
 # At the end of the file where plotting happens
