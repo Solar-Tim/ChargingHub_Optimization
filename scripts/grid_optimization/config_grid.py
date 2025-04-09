@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 from config import Config
 
+# Export location configuration
 DEFAULT_LOCATION = Config.DEFAULT_LOCATION
 
 # Define charging strategy
@@ -32,6 +33,36 @@ use_manual_charger_count = Config.EXECUTION_FLAGS['USE_MANUAL_CHARGER_COUNT']  #
 # Add these variables from Config.RESULT_NAMING
 use_custom_result_id = Config.RESULT_NAMING.get('USE_CUSTOM_ID', False)
 custom_result_id = Config.RESULT_NAMING.get('CUSTOM_ID', None)
+
+# Centralized function for generating result filenames - use this throughout grid optimization scripts
+def generate_result_filename(results=None, strategy=None, battery_allowed=None, custom_id=None):
+    """
+    Centralized function for generating result filenames.
+    This acts as an intermediary that calls Config.generate_result_filename
+    with the correct parameters.
+    
+    Args:
+        results: Dictionary containing optimization results (optional)
+        strategy: Strategy name (optional)
+        battery_allowed: Boolean indicating if battery was allowed (optional)
+        custom_id: User-defined unique identifier (optional)
+        
+    Returns:
+        String: Filename in format {id}_{strategy}_{battery_status}
+    """
+    # First check if we received a custom ID via environment variable
+    env_custom_id = os.environ.get('CHARGING_HUB_CUSTOM_ID')
+    if env_custom_id:
+        print(f"DEBUG: Using custom ID from environment: {env_custom_id}")
+        custom_id = env_custom_id
+    
+    # If custom_id is still not provided, use the one from Config.RESULT_NAMING
+    if custom_id is None and Config.RESULT_NAMING.get('USE_CUSTOM_ID', False):
+        custom_id = Config.RESULT_NAMING.get('CUSTOM_ID', None)
+        print(f"DEBUG: Using custom ID from Config: {custom_id}")
+    
+    # Call the centralized function in Config
+    return Config.generate_result_filename(results, strategy, battery_allowed, custom_id)
 
 M_value = 1000000  # Big M value for the optimization
 

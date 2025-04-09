@@ -152,6 +152,13 @@ def run_grid_optimization():
         env = os.environ.copy()
         env['PYTHONPATH'] = f"{base_dir}:{env.get('PYTHONPATH', '')}"
         
+        # Pass custom ID through environment variables
+        if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False):
+            custom_id = Config.RESULT_NAMING.get('CUSTOM_ID', '')
+            env['CHARGING_HUB_CUSTOM_ID'] = custom_id
+            print(f"DEBUG: Passing custom ID to subprocess: {custom_id}")
+            logging.info(f"DEBUG: Passing custom ID to subprocess: {custom_id}")
+        
         start_time = time.time()
         
         result = subprocess.run([sys.executable, optimization_script], 

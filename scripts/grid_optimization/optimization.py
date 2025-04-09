@@ -22,6 +22,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from functions import * 
 # Import config_grid before other modules that might depend on it
 from grid_optimization.config_grid import *
+from config_grid import generate_result_filename as grid_generate_result_filename
 from cables import *
 from grid_optimization.data_loading import load_data
 from grid_optimization.data_extraction import extract_charger_counts
@@ -510,6 +511,7 @@ def run_optimization_for_strategy(strategy):
         result_filename_base = generate_result_filename(
             results, 
             strategy,
+            include_battery,
             custom_id=Config.RESULT_NAMING['CUSTOM_ID'] if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False) else None
         )
         
@@ -561,12 +563,19 @@ def run_optimization_for_strategy(strategy):
         print(f"Total transformer capacity: {total_transformer_capacity} kW")
         print(f"Total transformer cost: €{total_transformer_cost:,.2f}")
             
+    # Check for custom ID from environment
+    env_custom_id = os.environ.get('CHARGING_HUB_CUSTOM_ID')
+    if env_custom_id:
+        print(f"DEBUG: Found custom ID in environment: {env_custom_id}")
+    else:
+        print("DEBUG: No custom ID found in environment")
+        
     # Generate filename again to ensure consistency 
     result_filename_base = generate_result_filename(
         results, 
         strategy, 
         include_battery,
-        custom_id=custom_result_id if use_custom_result_id else None
+        custom_id=env_custom_id  # Use the environment variable instead of None
     )
     plot_optimization_results(results, timestamps, load_profile, create_plot, result_filename_base)
     
@@ -636,32 +645,7 @@ def main():
 
 
 def generate_result_filename(results, strategy, include_battery=True, custom_id=None):
-    """
-    Generate a standardized filename for results based on strategy and settings.
-    
-    Args:
-        results (dict): The results dictionary
-        strategy (str): Charging strategy used
-        include_battery (bool): Whether battery was enabled in the configuration
-        custom_id (str, optional): Custom identifier for the results
-    
-    Returns:
-        str: Base filename for results (without extension)
-    """
-    # Generate a timestamp or hash if no custom ID is provided
-    if custom_id is None:
-        # Create a hash based on the key parameters
-        hash_input = f"{strategy}_{results['max_grid_load']}_{results['total_cost']}"
-        file_id = hashlib.md5(hash_input.encode()).hexdigest()[:8]
-    else:
-        file_id = custom_id
-    
-    # Create filename components
-    strategy_part = f"{strategy}"
-    battery_part = "withBat" if include_battery else "noBat"
-    
-    # Combine parts
-    return f"{file_id}_{strategy_part}_{battery_part}"
+    return grid_generate_result_filename(results, strategy, include_battery, custom_id)
 
 
 if __name__ == "__main__":

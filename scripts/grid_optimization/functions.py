@@ -9,7 +9,7 @@ from config_grid import (
     mv_capacity_fee, 
     hv_capacity_fee, 
     existing_mv_capacity,
-    existing_mv_connection_cost
+    existing_mv_connection_cost, generate_result_filename
 )
 
 
@@ -94,8 +94,15 @@ def save_optimization_results(results, scenario_name, timestamps, load_profile):
         "load_profile": load_profile_list,
     }
     
+    # FIXED: Use generate_result_filename instead of hardcoding the filename format
+    # This ensures the custom location ID gets properly used
+    # Let generate_result_filename handle battery status based on results
+    strategy = results.get('charging_strategy', 'unknown')
+    filename_base = generate_result_filename(results=results, 
+                                             strategy=strategy)
+    
     # Save to file
-    filename = f"results/optimization_{scenario_name}.json"
+    filename = f"results/optimization_{filename_base}.json"
     with open(filename, 'w') as f:
         json.dump(data, f, indent=2)
     
@@ -384,37 +391,6 @@ def print_cable_selection_details(model, distances, cable_options=None, power_co
         print(f"  Connection cost: {existing_mv_connection_cost:.2f} EUR")
         print(f"  Capacity fee: {mv_capacity_fee * max_grid_load.X:.2f} EUR")
 
-def generate_result_filename(results, strategy=None, battery_allowed=None, custom_id=None):
-    """
-    Generate a standardized filename for optimization results.
-    
-    Args:
-        results: Dictionary containing optimization results
-        strategy: Override strategy name (optional)
-        battery_allowed: Boolean indicating if battery was allowed in optimization (optional)
-        custom_id: User-defined unique identifier from config (optional)
-    
-    Returns:
-        String: Filename in format result_{strategy}_{battery_allowed}_{unique_id}
-    """
-    # Get strategy name
-    strategy_name = strategy if strategy else results.get('charging_strategy', 'unknown')
-    
-    # Check if battery was allowed in the optimization
-    # If battery_allowed parameter is not provided, fall back to checking the results
-    if battery_allowed is None:
-        battery_status = "withBat" if results.get('battery_capacity', 0) > 0 else "noBat"
-    else:
-        battery_status = "withBat" if battery_allowed else "noBat"
-    
-    # Use custom ID if provided, otherwise generate hash
-    if custom_id:
-        unique_id = custom_id
-    else:
-        # Create a short unique ID based on timestamp and key parameters
-        now = datetime.datetime.now()
-        unique_str = f"{now.strftime('%Y%m%d%H%M%S')}{results.get('max_grid_load', 0)}"
-        unique_id = hashlib.md5(unique_str.encode()).hexdigest()[:6]
-    
-    return f"result_{strategy_name}_{battery_status}_{unique_id}"
+
+
 

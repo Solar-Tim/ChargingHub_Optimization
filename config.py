@@ -20,8 +20,8 @@ class Config:
     # Execution control flags - NEW SECTION
     EXECUTION_FLAGS = {
 
-        'RUN_TRAFFIC_CALCULATION': False,  # Whether to run traffic calculation module
-        'RUN_CHARGING_HUB_SETUP': False,   # Whether to run charging hub setup module
+        'RUN_TRAFFIC_CALCULATION': True,  # Whether to run traffic calculation module
+        'RUN_CHARGING_HUB_SETUP': True,   # Whether to run charging hub setup module
         'RUN_GRID_OPTIMIZATION': True,    # Whether to run grid optimization module
         
 
@@ -63,7 +63,7 @@ class Config:
     # Add this to your Config class or configuration section
     RESULT_NAMING = {
         'USE_CUSTOM_ID': True,  # Set to True to use custom ID instead of hash
-        'CUSTOM_ID': '001'  # The custom ID to use when USE_CUSTOM_ID is True
+        'CUSTOM_ID': '015'  # The custom ID to use when USE_CUSTOM_ID is True
     }
     
     # Spatial analysis settings
@@ -208,3 +208,60 @@ class Config:
     def get_traffic_flow_column(cls):
         """Return the traffic flow column name using the current year."""
         return f"Traffic_flow_trucks_{cls.FORECAST_YEAR}"
+
+    @classmethod
+    def generate_result_filename(cls, results=None, strategy=None, battery_allowed=None, custom_id=None):
+        """
+        Generate a standardized filename for optimization results.
+        
+        Args:
+            results: Dictionary containing optimization results (optional)
+            strategy: Strategy name (optional)
+            battery_allowed: Boolean indicating if battery was allowed (optional)
+            custom_id: User-defined unique identifier (optional)
+        
+        Returns:
+            String: Filename in format {id}_{strategy}_{battery_status}
+        """
+        import hashlib
+        import datetime
+        
+        print(f"DEBUG: Config.generate_result_filename called with custom_id={custom_id}")
+        print(f"DEBUG: Config.RESULT_NAMING={cls.RESULT_NAMING}")
+        
+        # Get strategy name
+        strategy_name = strategy
+        if not strategy_name and results:
+            strategy_name = results.get('charging_strategy', 'unknown')
+        
+        # Determine battery status - prioritize the explicit parameter
+        if battery_allowed is not None:
+            battery_status = "withBat" if battery_allowed else "noBat"
+        else:
+            # If not provided, check the global config flag
+            battery_status = "withBat" if cls.EXECUTION_FLAGS.get('INCLUDE_BATTERY', True) else "noBat"
+        
+        # Priority order for ID determination:
+        # 1. custom_id parameter if provided (highest priority)
+        # 2. Value from RESULT_NAMING if USE_CUSTOM_ID is True
+        # 3. Generate hash if neither is available
+        if custom_id:  # Highest priority - use custom_id if provided
+            file_id = custom_id
+            print(f"DEBUG: Using provided custom_id: {custom_id}")
+        elif cls.RESULT_NAMING.get('USE_CUSTOM_ID', False):
+            file_id = cls.RESULT_NAMING.get('CUSTOM_ID', '000')
+            print(f"DEBUG: Using RESULT_NAMING custom_id: {file_id}")
+        else:
+            # Create a hash based on the key parameters
+            if results:
+                hash_input = f"{strategy_name}_{results.get('max_grid_load', 0)}_{results.get('total_cost', 0)}"
+            else:
+                now = datetime.datetime.now()
+                hash_input = f"{now.strftime('%Y%m%d%H%M%S')}{strategy_name}"
+            file_id = hashlib.md5(hash_input.encode()).hexdigest()[:8]
+            print(f"DEBUG: Using generated hash: {file_id}")
+        
+        # Combine parts
+        filename = f"{file_id}_{strategy_name}_{battery_status}"
+        print(f"DEBUG: Final filename: {filename}")
+        return filename
