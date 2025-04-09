@@ -16,6 +16,7 @@ DEFAULT_LOCATION = Config.DEFAULT_LOCATION
 # STRATEGY = 'Konstant'  # Konstant: Möglichst konstante Ladeleistung - Minimierung der Netzanschlusslast - Lademanagement
 # STRATEGY = 'Hub'  # Hub: Minimierung der Hub-Lastspitzen - Globale Lastoptimierung - Hub-Level Lademanagement
 current_strategy = Config.CHARGING_CONFIG['STRATEGY'][0]
+all_strategies = Config.CHARGING_CONFIG['ALL_STRATEGIES']
 
 # Load data
 load_profile, timestamps = load_data(current_strategy)
@@ -27,6 +28,10 @@ create_plot = Config.EXECUTION_FLAGS['CREATE_PLOT']  # Set to True to generate p
 create_distance_maps = Config.EXECUTION_FLAGS['CREATE_DISTANCE_MAPS']  # Set to True to generate maps of distance calculations
 include_battery = Config.EXECUTION_FLAGS['INCLUDE_BATTERY']  # Set to True to include battery in optimization
 use_manual_charger_count = Config.EXECUTION_FLAGS['USE_MANUAL_CHARGER_COUNT']  # Set to True to use manual charger count instead of optimization
+
+# Add these variables from Config.RESULT_NAMING
+use_custom_result_id = Config.RESULT_NAMING.get('USE_CUSTOM_ID', False)
+custom_result_id = Config.RESULT_NAMING.get('CUSTOM_ID', None)
 
 M_value = 1000000  # Big M value for the optimization
 

@@ -384,7 +384,7 @@ def print_cable_selection_details(model, distances, cable_options=None, power_co
         print(f"  Connection cost: {existing_mv_connection_cost:.2f} EUR")
         print(f"  Capacity fee: {mv_capacity_fee * max_grid_load.X:.2f} EUR")
 
-def generate_result_filename(results, strategy=None, battery_allowed=None):
+def generate_result_filename(results, strategy=None, battery_allowed=None, custom_id=None):
     """
     Generate a standardized filename for optimization results.
     
@@ -392,6 +392,7 @@ def generate_result_filename(results, strategy=None, battery_allowed=None):
         results: Dictionary containing optimization results
         strategy: Override strategy name (optional)
         battery_allowed: Boolean indicating if battery was allowed in optimization (optional)
+        custom_id: User-defined unique identifier from config (optional)
     
     Returns:
         String: Filename in format result_{strategy}_{battery_allowed}_{unique_id}
@@ -406,10 +407,14 @@ def generate_result_filename(results, strategy=None, battery_allowed=None):
     else:
         battery_status = "withBat" if battery_allowed else "noBat"
     
-    # Create a short unique ID based on timestamp and key parameters
-    now = datetime.datetime.now()
-    unique_str = f"{now.strftime('%Y%m%d%H%M%S')}{results.get('max_grid_load', 0)}"
-    short_hash = hashlib.md5(unique_str.encode()).hexdigest()[:6]
+    # Use custom ID if provided, otherwise generate hash
+    if custom_id:
+        unique_id = custom_id
+    else:
+        # Create a short unique ID based on timestamp and key parameters
+        now = datetime.datetime.now()
+        unique_str = f"{now.strftime('%Y%m%d%H%M%S')}{results.get('max_grid_load', 0)}"
+        unique_id = hashlib.md5(unique_str.encode()).hexdigest()[:6]
     
-    return f"result_{strategy_name}_{battery_status}_{short_hash}"
+    return f"result_{strategy_name}_{battery_status}_{unique_id}"
 

@@ -20,8 +20,8 @@ class Config:
     # Execution control flags - NEW SECTION
     EXECUTION_FLAGS = {
 
-        'RUN_TRAFFIC_CALCULATION': True,  # Whether to run traffic calculation module
-        'RUN_CHARGING_HUB_SETUP': True,   # Whether to run charging hub setup module
+        'RUN_TRAFFIC_CALCULATION': False,  # Whether to run traffic calculation module
+        'RUN_CHARGING_HUB_SETUP': False,   # Whether to run charging hub setup module
         'RUN_GRID_OPTIMIZATION': True,    # Whether to run grid optimization module
         
 
@@ -58,6 +58,12 @@ class Config:
     DEFAULT_LOCATION = {
         'LONGITUDE': 7.017641090421456,
         'LATITUDE': 51.205628072068606
+    }
+
+    # Add this to your Config class or configuration section
+    RESULT_NAMING = {
+        'USE_CUSTOM_ID': True,  # Set to True to use custom ID instead of hash
+        'CUSTOM_ID': '001'  # The custom ID to use when USE_CUSTOM_ID is True
     }
     
     # Spatial analysis settings
@@ -175,6 +181,8 @@ class Config:
         'CHARGING_DEMAND': os.path.join(TRAFFIC_PATHS['OUTPUT_DIR'], 'charging_demand.json'),
         'FINAL_OUTPUT': os.path.join(TRAFFIC_PATHS['FINAL_OUTPUT_DIR'], 'laden_mauttabelle.json')
     }
+    
+
     
     @classmethod
     def validate_year(cls, year_value):
