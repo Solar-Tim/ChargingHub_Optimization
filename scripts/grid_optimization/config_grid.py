@@ -267,9 +267,9 @@ kupfer_kabel = {
 
 # Internal LV cabling parameters
 charger_distance_increment = 4  # Distance increment between charger positions (m)
-mcs_power_kw = 350  # Power rating of MCS chargers (kW)
-hpc_power_kw = 150  # Power rating of HPC chargers (kW)
-ncs_power_kw = 22   # Power rating of NCS chargers (kW)
+mcs_power_kw = 1000  # Power rating of MCS chargers (kW)
+hpc_power_kw = 400  # Power rating of HPC chargers (kW)
+ncs_power_kw = 100   # Power rating of NCS chargers (kW)
 
 leistung_ladetyp = {
     'NCS': 100,

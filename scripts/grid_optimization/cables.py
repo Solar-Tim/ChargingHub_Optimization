@@ -248,34 +248,33 @@ def get_copper_cable_cost(size):
         # Return the cost of the largest available cable if size not found
         return kupfer_kabel["Kosten"][-1]
 
-def calculate_internal_cable_costs(charger_distance_increment=4, 
-                                  mcs_power_kw=350, 
-                                  hpc_power_kw=150, 
-                                  ncs_power_kw=22):
+def calculate_internal_cable_costs(mcs_count=None, hpc_count=None, ncs_count=None, 
+                                  charger_distance_increment=4,
+                                  mcs_power_kw=1000, 
+                                  hpc_power_kw=400, 
+                                  ncs_power_kw=100):
     """
     Calculate the internal LV cable costs for all chargers in the charging hub.
     
-    Chargers are arranged linearly with MCS chargers first, followed by HPC and NCS.
-    Each charger is individually cabled from the transformer.
-    
     Args:
+        mcs_count (int): Number of MCS chargers (defaults to config value if None)
+        hpc_count (int): Number of HPC chargers (defaults to config value if None)
+        ncs_count (int): Number of NCS chargers (defaults to config value if None)
         charger_distance_increment (float): Distance increment between charger positions in meters
         mcs_power_kw (float): Power rating of MCS chargers in kW
         hpc_power_kw (float): Power rating of HPC chargers in kW
         ncs_power_kw (float): Power rating of NCS chargers in kW
         
     Returns:
-        dict: Dictionary containing cable costs and details:
-            - total_cost: Total cost of all internal cables
-            - cables: List of dictionaries with details for each charger's cable
-            - mcs_cost: Total cost for MCS charger cables
-            - hpc_cost: Total cost for HPC charger cables
-            - ncs_cost: Total cost for NCS charger cables
+        dict: Dictionary containing cable costs and details
     """
-    # Get charger counts from configuration
-    mcs_count = MCS_count
-    hpc_count = HPC_count
-    ncs_count = NCS_count
+    # Get charger counts from configuration if not provided
+    if mcs_count is None:
+        mcs_count = MCS_count
+    if hpc_count is None:
+        hpc_count = HPC_count
+    if ncs_count is None:
+        ncs_count = NCS_count
     
     # Initialize result structure
     result = {
@@ -392,14 +391,17 @@ def optimize_charger_arrangement():
     
     return standard_cost
 
-def get_internal_cable_cost():
+def get_internal_cable_cost(mcs_count=None, hpc_count=None, ncs_count=None):
     """
     Calculate the optimized internal cable cost for the charging hub.
     
+    Args:
+        mcs_count (int): Number of MCS chargers (defaults to config value if None)
+        hpc_count (int): Number of HPC chargers (defaults to config value if None)
+        ncs_count (int): Number of NCS chargers (defaults to config value if None)
+        
     Returns:
         float: Total cost of internal cabling
     """
-    # For now, just use the standard arrangement
-    # In the future, this could use optimize_charger_arrangement()
-    result = calculate_internal_cable_costs()
+    result = calculate_internal_cable_costs(mcs_count, hpc_count, ncs_count)
     return result["total_cost"]

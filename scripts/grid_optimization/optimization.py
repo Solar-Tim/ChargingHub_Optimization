@@ -312,7 +312,7 @@ def run_optimization_for_strategy(strategy):
     model.addConstr(charger_cost_value == total_charger_cost, "ChargerCostCapture")
 
     # 7. Calculate internal cable costs and include in charging hub cost
-    internal_cable_cost = get_internal_cable_cost()
+    internal_cable_cost = get_internal_cable_cost(MCS_count, HPC_count, NCS_count)
     model.addConstr(internal_cable_cost_value == internal_cable_cost, "InternalCableCostCapture")
 
     # Charging hub cost to include both internal cabling and charger costs
