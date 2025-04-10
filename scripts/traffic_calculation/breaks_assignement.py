@@ -71,6 +71,13 @@ def assign_breaks_to_locations(df_location, df_breaks, nuts_data_file, buffer_ra
         - 'short_breaks_count': Total number of short breaks assigned to the location
         - 'long_breaks_count': Total number of long breaks assigned to the location
     """
+    # Debug statements to verify location
+    print(f"DEBUG [breaks_assignment]: Location received = {df_location.to_dict()}")
+    from config import Config
+    from config_demand import get_default_location
+    print(f"DEBUG [breaks_assignment]: Config.DEFAULT_LOCATION = {Config.DEFAULT_LOCATION}")
+    print(f"DEBUG [breaks_assignment]: get_default_location() = {get_default_location()}")
+    
     # Load Germany NUTS data
     gdf_deutschland_nuts1 = gpd.read_file(nuts_data_file, layer='nuts5000_n1')
     

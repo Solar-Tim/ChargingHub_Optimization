@@ -14,7 +14,12 @@ from config import Config
 year = Config.FORECAST_YEAR
 neue_pausen = Config.EXECUTION_FLAGS['RECALCULATE_BREAKS']
 neue_toll_midpoints = Config.EXECUTION_FLAGS['RECALCULATE_TOLL_MIDPOINTS']
-DEFAULT_LOCATION = Config.DEFAULT_LOCATION
+
+# Instead of copying these values, create property functions that always get the current value
+def get_default_location():
+    return Config.DEFAULT_LOCATION
+
+# Replace static variables with property functions
 SCENARIOS = Config.SCENARIOS
 SPATIAL = Config.SPATIAL
 BREAKS = Config.BREAKS

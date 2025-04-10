@@ -18,7 +18,7 @@ from toll_matching import toll_section_matching_and_daily_demand, find_nearest_t
 from new_breaks import calculate_new_breaks
 from new_toll_midpoints import get_toll_midpoints
 from json_utils import dataframe_to_json, json_to_dataframe, load_json_data
-from config_demand import (FILES, OUTPUT_DIR, FINAL_OUTPUT_DIR, DEFAULT_LOCATION, CSV, 
+from config_demand import (FILES, OUTPUT_DIR, FINAL_OUTPUT_DIR, get_default_location, CSV, 
                            neue_pausen, neue_toll_midpoints, SPATIAL, year, TIME, 
                            validate_year, get_charging_column, GERMAN_DAYS, SCENARIOS)
 
@@ -93,15 +93,21 @@ def save_dataframe(df, output_path, sep=CSV['DEFAULT_SEPARATOR'], decimal=CSV['D
     logger.info(f"Data saved to {output_path}")
 
 def main():
+    # Add debugging for location
+    print(f"DEBUG [traffic_main]: Current location from get_default_location() = {get_default_location()}")
+    
     # Load shared data files once
     logger.info("Loading shared data files...")
     df_befahrung = load_data_file(FILES['BEFAHRUNGEN'])
     
-    # Create a single reference location
+    # Create a single reference location using the function instead of static import
+    current_location = get_default_location()
     df_location = pd.DataFrame({
-        'Laengengrad': [DEFAULT_LOCATION['LONGITUDE']],
-        'Breitengrad': [DEFAULT_LOCATION['LATITUDE']]
+        'Laengengrad': [current_location['LONGITUDE']],
+        'Breitengrad': [current_location['LATITUDE']]
     })
+    
+    print(f"DEBUG [traffic_main]: df_location = {df_location.to_dict()}")
     
     # Handle breaks calculation
     if neue_pausen:
@@ -148,14 +154,15 @@ def main():
     logger.info(f"Reference toll section ID: {reference_id}")
 
     # Create enriched metadata with toll section information
+    current_location = get_default_location()
     metadata = {
         "forecast_years": SCENARIOS['TARGET_YEARS'],  # Include all target years
         "forecast_year": year,  # Keep current year for backward compatibility
         "base_year": year,
         "buffer_radius_m": SPATIAL['BUFFER_RADIUS'],
         "location": {
-            "latitude": DEFAULT_LOCATION['LATITUDE'],
-            "longitude": DEFAULT_LOCATION['LONGITUDE']
+            "latitude": current_location['LATITUDE'],
+            "longitude": current_location['LONGITUDE']
         },
         "toll_section": {
             "id": reference_id,

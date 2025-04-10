@@ -8,12 +8,14 @@
 #------------------------------------------------------------------------------
 # SECTION 1: IMPORTS AND INITIALIZATION
 #------------------------------------------------------------------------------
-from gurobipy import Model, GRB
-import numpy as np
-import sys
 import os
-from shapely.geometry import Point
+import sys
+import json
 import time
+import numpy as np
+from pathlib import Path  # Add this import here
+from gurobipy import Model, GRB
+from shapely.geometry import Point
 from concurrent.futures import ProcessPoolExecutor
 
 # Add the parent directory (scripts) to the path
@@ -516,6 +518,9 @@ def run_optimization_for_strategy(strategy):
             'NCS_count': int(NCS_count)
         }
         
+        # Add charging sessions data
+        results = add_charging_sessions_data(results, strategy)
+
         # Generate standardized filename base
         result_filename_base = generate_result_filename(
             results, 
@@ -571,6 +576,21 @@ def run_optimization_for_strategy(strategy):
         print(f"Selected transformers: {transformer_description}")
         print(f"Total transformer capacity: {total_transformer_capacity} kW")
         print(f"Total transformer cost: €{total_transformer_cost:,.2f}")
+        
+        # Add traffic data summary
+        print("\n=== Daily Charging Sessions ===")
+        for day, sessions in results['daily_charging_sessions'].items():
+            print(f"{day}: MCS: {sessions['MCS']}, HPC: {sessions['HPC']}, NCS: {sessions['NCS']}")
+
+        print("\n=== Weekly Charging Totals ===")
+        print(f"MCS: {results['weekly_charging_totals']['MCS']} sessions/week")
+        print(f"HPC: {results['weekly_charging_totals']['HPC']} sessions/week")
+        print(f"NCS: {results['weekly_charging_totals']['NCS']} sessions/week")
+
+        print("\n=== Charger Utilization ===")
+        print(f"MCS: {results['charger_utilization']['MCS']:.2f} sessions/charger/day")
+        print(f"HPC: {results['charger_utilization']['HPC']:.2f} sessions/charger/day")
+        print(f"NCS: {results['charger_utilization']['NCS']:.2f} sessions/charger/day")
             
     # Check for custom ID from environment
     env_custom_id = os.environ.get('CHARGING_HUB_CUSTOM_ID')
@@ -655,6 +675,90 @@ def main():
 
 def generate_result_filename(results, strategy, include_battery=True, custom_id=None):
     return grid_generate_result_filename(results, strategy, include_battery, custom_id)
+
+
+def add_charging_sessions_data(results, strategy):
+    """
+    Add charging sessions data per day per charger type to the results dictionary.
+    
+    Args:
+        results (dict): The results dictionary to update
+        strategy (str): The charging strategy used
+        
+    Returns:
+        dict: The updated results dictionary with charging sessions data
+    """
+    try:
+        # Define paths to relevant JSON files
+        project_root = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        traffic_data_path = project_root / "data" / "traffic" / "final_traffic" / "laden_mauttabelle.json"
+        
+        # Initialize daily sessions data structure with German day names
+        daily_sessions = {
+            "Montag": {"MCS": 0, "HPC": 0, "NCS": 0},
+            "Dienstag": {"MCS": 0, "HPC": 0, "NCS": 0},
+            "Mittwoch": {"MCS": 0, "HPC": 0, "NCS": 0},
+            "Donnerstag": {"MCS": 0, "HPC": 0, "NCS": 0},
+            "Freitag": {"MCS": 0, "HPC": 0, "NCS": 0},
+            "Samstag": {"MCS": 0, "HPC": 0, "NCS": 0},
+            "Sonntag": {"MCS": 0, "HPC": 0, "NCS": 0}
+        }
+        
+        # Define reverse mapping from English to German day names
+        english_to_german = {value: key for key, value in Config.DAY_MAPPING.items()}
+        
+        if traffic_data_path.exists():
+            with open(traffic_data_path, 'r') as f:
+                traffic_data = json.load(f)
+            
+            # Extract daily distribution data if available
+            if "data" in traffic_data and "daily_distribution" in traffic_data["data"]:
+                forecast_year = traffic_data.get("metadata", {}).get("forecast_year", "2030")
+                
+                for day_data in traffic_data["data"]["daily_distribution"]:
+                    day = day_data["day"]
+                    # Convert English day name to German
+                    german_day = english_to_german.get(day, day)
+                    
+                    # Map charger types to forecast year columns
+                    hpc_key = f"HPC_{forecast_year}"
+                    ncs_key = f"NCS_{forecast_year}"
+                    
+                    # Get values or default to 0
+                    hpc_value = day_data.get(hpc_key, 0)
+                    ncs_value = day_data.get(ncs_key, 0)
+                    
+                    # Calculate MCS value based on ratio (approx 1:5 of HPC)
+                    mcs_value = day_data.get(f"MCS_{forecast_year}", round(hpc_value * 0.2))
+                    
+                    daily_sessions[german_day] = {
+                        "MCS": round(mcs_value),
+                        "HPC": round(hpc_value),
+                        "NCS": round(ncs_value)
+                    }
+        
+        # Add to results dictionary
+        results['daily_charging_sessions'] = daily_sessions
+        
+        # Calculate weekly totals
+        weekly_totals = {
+            "MCS": sum(day["MCS"] for day in daily_sessions.values()),
+            "HPC": sum(day["HPC"] for day in daily_sessions.values()),
+            "NCS": sum(day["NCS"] for day in daily_sessions.values())
+        }
+        results['weekly_charging_totals'] = weekly_totals
+        
+        # Calculate charger utilization metrics
+        results['charger_utilization'] = {
+            "MCS": weekly_totals["MCS"] / (results['MCS_count'] * 7) if results['MCS_count'] > 0 else 0,
+            "HPC": weekly_totals["HPC"] / (results['HPC_count'] * 7) if results['HPC_count'] > 0 else 0,
+            "NCS": weekly_totals["NCS"] / (results['NCS_count'] * 7) if results['NCS_count'] > 0 else 0
+        }
+        
+        return results
+    except Exception as e:
+        print(f"Warning: Could not add charging sessions data: {e}")
+        return results
 
 
 if __name__ == "__main__":

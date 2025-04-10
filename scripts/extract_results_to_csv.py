@@ -6,7 +6,7 @@ import re
 def extract_metrics_from_results(results_dir, csv_file):
     """
     Extract all static metrics from optimization result JSON files and write them to a CSV file.
-    Excludes time-series data such as grid_energy, battery_soc, etc.
+    Includes time-series data and charger information.
     
     Parameters:
     -----------
@@ -36,9 +36,33 @@ def extract_metrics_from_results(results_dir, csv_file):
                     # Extract static fields from results
                     results = data.get('results', {})
                     for key, value in results.items():
-                        # Skip time-series data (arrays) and complex objects except transformer_selections
-                        if not isinstance(value, (list, dict)) or key == 'transformer_selections':
-                            all_fields.add(key)
+                        # Always include non-array fields for primitives
+                        if not isinstance(value, list):
+                            # Handle dictionaries - include special ones directly
+                            if isinstance(value, dict):
+                                # Include the base field for special dictionaries
+                                all_fields.add(key)
+                                
+                                # Handle special dictionaries by flattening them
+                                if key == 'transformer_selections':
+                                    # Already handled specially later
+                                    pass
+                                elif key == 'daily_charging_sessions':
+                                    # Flatten daily charging sessions
+                                    for day, types in value.items():
+                                        for charger_type, count in types.items():
+                                            all_fields.add(f"{day}_{charger_type}")
+                                elif key == 'weekly_charging_totals':
+                                    # Flatten weekly totals
+                                    for charger_type, count in value.items():
+                                        all_fields.add(f"weekly_total_{charger_type}")
+                                elif key == 'charger_utilization':
+                                    # Flatten utilization
+                                    for charger_type, util in value.items():
+                                        all_fields.add(f"utilization_{charger_type}")
+                            else:
+                                # For normal values
+                                all_fields.add(key)
                     
                 except Exception as e:
                     print(f"Error reading {filename} for header collection: {e}")
@@ -102,14 +126,28 @@ def extract_metrics_from_results(results_dir, csv_file):
                 # Extract all static fields from results
                 results = data.get('results', {})
                 for key, value in results.items():
-                    # Skip time-series data (arrays) and specific time-related fields
+                    # Skip very large time-series arrays to keep CSV manageable
                     if key in ['grid_energy', 'battery_soc', 'battery_charge', 'battery_discharge']:
                         continue
                     
-                    # Special handling for transformer_selections (convert to string)
-                    if key == 'transformer_selections' and isinstance(value, dict):
-                        row_data[key] = str(value)
-                    # Skip any other arrays
+                    # Handle special dictionaries
+                    if isinstance(value, dict):
+                        if key == 'transformer_selections':
+                            row_data[key] = str(value)
+                        elif key == 'daily_charging_sessions':
+                            # Extract daily charging sessions by day and type
+                            for day, types in value.items():
+                                for charger_type, count in types.items():
+                                    row_data[f"{day}_{charger_type}"] = count
+                        elif key == 'weekly_charging_totals':
+                            # Extract weekly totals by charger type
+                            for charger_type, count in value.items():
+                                row_data[f"weekly_total_{charger_type}"] = count
+                        elif key == 'charger_utilization':
+                            # Extract utilization by charger type
+                            for charger_type, util in value.items():
+                                row_data[f"utilization_{charger_type}"] = util
+                    # Skip other arrays but keep the normal values
                     elif not isinstance(value, list):
                         # Round numeric values for readability
                         if isinstance(value, (float, int)):

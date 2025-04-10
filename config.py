@@ -40,7 +40,7 @@ class Config:
         'USE_DISTANCE_CALCULATION': True,    # Whether to use distance calculation for optimization
         'CREATE_PLOT': False,                # Whether to generate plot of optimization results
         'CREATE_DISTANCE_MAPS': False,       # Whether to generate maps of distance calculations
-        'INCLUDE_BATTERY': False,             # Whether to include battery in optimization
+        'INCLUDE_BATTERY': True,             # Whether to include battery in optimization
         'USE_MANUAL_CHARGER_COUNT': False,   # Whether to use manual charger count instead of optimizing
         'DEBUG_MODE': False,                 # Whether to enable debug mode for detailed output
     }
@@ -56,8 +56,8 @@ class Config:
 
 
     DEFAULT_LOCATION = {
-        'LONGITUDE': 7.017641090421456,
-        'LATITUDE': 51.205628072068606
+        'LONGITUDE': 6.216436,
+        'LATITUDE': 50.816937
     }
 
     # Add this to your Config class or configuration section
