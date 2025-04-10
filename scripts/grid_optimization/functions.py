@@ -109,19 +109,6 @@ def save_optimization_results(results, scenario_name, timestamps, load_profile):
     print(f"Results saved to {filename}")
     return filename
 
-def visualize_results(timestamps, load_profile, result, cluster_name):
-    """Create visualization of optimization results"""
-    plt.figure(figsize=(12, 6))
-    plt.plot(timestamps, load_profile, label='Load Profile', alpha=0.7)
-    plt.plot(timestamps, result['grid_energy'], label='Grid Energy', alpha=0.7)
-    plt.plot(timestamps, result['battery_soc'], label='Battery SOC', alpha=0.7)
-    plt.title(f'Energy Flow - {cluster_name}')
-    plt.xlabel('Time')
-    plt.ylabel('Power (kW)')
-    plt.legend()
-    plt.savefig(f"./Results/optimization_plot_{cluster_name}.png")
-    plt.close()
-
 def print_optimization_summary(results, distances=None):
     """Print key optimization results to the terminal."""
     print("\n" + "="*50)
@@ -225,37 +212,105 @@ def plot_optimization_results(results, timestamps, load_profile, create_plot=Tru
         return
         
     import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
+    import datetime
+    import numpy as np
     
-    # Create a figure with subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+    # Determine if battery was used in the optimization
+    battery_used = results['battery_capacity'] > 0
+    
+    # Convert timestamps to numeric values (assuming they're minutes from start)
+    # If timestamps are already datetime objects, adjust accordingly
+    if isinstance(timestamps[0], str):
+        # Try to parse timestamps if they're strings
+        try:
+            # Attempt to parse as datetime
+            datetime_timestamps = [datetime.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") for ts in timestamps]
+        except ValueError:
+            # If that fails, assume they're minutes and create dummy datetimes
+            base_date = datetime.datetime(2023, 1, 1)  # Arbitrary start date
+            datetime_timestamps = [base_date + datetime.timedelta(minutes=float(ts)) for ts in timestamps]
+    elif isinstance(timestamps[0], (int, float)):
+        # Assume timestamps are minutes from start
+        base_date = datetime.datetime(2023, 1, 1)  # Arbitrary start date
+        datetime_timestamps = [base_date + datetime.timedelta(minutes=t) for t in timestamps]
+    else:
+        # Assume they're already datetime objects
+        datetime_timestamps = timestamps
+    
+    # Create day labels for x-axis
+    # Calculate elapsed days for each timestamp
+    start_date = datetime_timestamps[0].date()
+    day_numbers = [(dt.date() - start_date).days + 1 for dt in datetime_timestamps]
+    
+    # Find indices where a new day starts
+    day_change_indices = [i for i in range(1, len(day_numbers)) if day_numbers[i] > day_numbers[i-1]]
+    # Add start of first day
+    day_change_indices = [0] + day_change_indices
+    
+    # Create figure with appropriate number of subplots
+    if battery_used:
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), sharex=True, 
+                                      gridspec_kw={'height_ratios': [3, 2]})
+    else:
+        fig, ax1 = plt.subplots(figsize=(14, 6))
     
     # First subplot - Energy flows
-    ax1.plot(timestamps, load_profile, label='Load Profile', color='blue')
-    ax1.plot(timestamps, results['grid_energy'], label='Grid Energy', color='red')
-    ax1.fill_between(timestamps, results['battery_discharge'], 
-                     alpha=0.3, color='green', label='Battery Discharge')
-    ax1.fill_between(timestamps, [0] * len(timestamps), results['battery_charge'], 
-                     alpha=0.3, color='orange', label='Battery Charge')
+    ax1.plot(datetime_timestamps, load_profile, label='Demand', color='blue', linewidth=2)
+    ax1.plot(datetime_timestamps, results['grid_energy'], label='Grid Energy', color='red', linewidth=2)
     
-    ax1.axhline(y=results['max_grid_load'], color='red', linestyle='--', 
+    # Add battery-related plots only if battery was used
+    if battery_used:
+        # Use fill_between with positive values for better visualization 
+        ax1.fill_between(datetime_timestamps, results['battery_discharge'], 
+                        alpha=0.4, color='green', label='Battery Discharge')
+        ax1.fill_between(datetime_timestamps, [0] * len(datetime_timestamps), results['battery_charge'], 
+                        alpha=0.4, color='orange', label='Battery Charge')
+    
+    ax1.axhline(y=results['max_grid_load'], color='red', linestyle='--', linewidth=1.5,
                 label=f"Max Grid Load: {results['max_grid_load']:.2f} kW")
-    ax1.set_title('Energy Flows')
-    ax1.set_ylabel('Power (kW)')
+    ax1.set_title('Energy Flows Over Time', fontsize=14, fontweight='bold')
+    ax1.set_ylabel('Power [kW]', fontsize=12)
     ax1.grid(True, alpha=0.3)
-    ax1.legend(loc='upper right')
+    ax1.legend(loc='upper right', fontsize=10)
     
-    # Second subplot - Battery state of charge
-    ax2.plot(timestamps, results['battery_soc'], label='Battery State of Charge', color='purple')
-    if results['battery_capacity'] > 0:
-        ax2.axhline(y=results['battery_capacity'], color='purple', linestyle='--', 
+    # Set custom x-tick labels showing days
+    unique_days = sorted(set(day_numbers))
+    day_positions = [datetime_timestamps[day_change_indices[i]] for i in range(len(day_change_indices))]
+    day_labels = [f"Day {day}" for day in unique_days]
+    
+    ax1.set_xticks(day_positions)
+    ax1.set_xticklabels(day_labels)
+    
+    # Format the x-axis to show vertical lines at day boundaries
+    for day_idx in day_change_indices:
+        ax1.axvline(x=datetime_timestamps[day_idx], color='gray', linestyle='-', alpha=0.2)
+    
+    # Only create the second subplot if battery was used
+    if battery_used:
+        # Second subplot - Battery state of charge
+        ax2.plot(datetime_timestamps, results['battery_soc'], 
+                 label='Battery State of Charge', color='purple', linewidth=2)
+        ax2.axhline(y=results['battery_capacity'], color='purple', linestyle='--', linewidth=1.5,
                     label=f"Battery Capacity: {results['battery_capacity']:.2f} kWh")
-    ax2.set_title('Battery State of Charge')
-    ax2.set_ylabel('Energy (kWh)')
-    ax2.set_xlabel('Time')
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(loc='upper right')
+        ax2.set_title('Battery State of Charge', fontsize=14, fontweight='bold')
+        ax2.set_ylabel('Energy [kWh]', fontsize=12)
+        ax2.set_xlabel('Time', fontsize=12)
+        ax2.grid(True, alpha=0.3)
+        ax2.legend(loc='upper right', fontsize=10)
+        
+        # Set the same x-ticks for battery SOC plot
+        ax2.set_xticks(day_positions)
+        ax2.set_xticklabels(day_labels)
+        
+        # Format the x-axis to show vertical lines at day boundaries
+        for day_idx in day_change_indices:
+            ax2.axvline(x=datetime_timestamps[day_idx], color='gray', linestyle='-', alpha=0.2)
+    else:
+        # If no battery, add x-label to the first plot
+        ax1.set_xlabel('Time', fontsize=12)
     
-    # Add cost information in a text box
+    # Connection type determination
     connection_type = ""
     if results['use_hv'] > 0.5:
         connection_type = "HV Line"
@@ -265,19 +320,23 @@ def plot_optimization_results(results, timestamps, load_profile, create_plot=Tru
         connection_type = "Distribution Substation"
     elif results['use_existing_mv'] > 0.5:
         connection_type = "Existing MV Line"
-        
+    
+    # Create a more compact, organized summary box
     costinfo = (
         f"Total Cost: €{results['total_cost']:,.2f}\n"
-        f"Connection Cost: €{results['connection_cost']:,.2f}\n"
-        f"Capacity Cost: €{results['capacity_cost']:,.2f}\n"
-        f"Battery Cost: €{results['battery_cost']:,.2f}\n"
-        f"Transformer Cost: €{results['transformer_cost']:,.2f}\n"
-        f"Connection Type: {connection_type}"
+        f"Connection: {connection_type} (€{results['connection_cost']:,.2f})\n"
+        f"Capacity: €{results['capacity_cost']:,.2f}\n"
+        f"Battery: {results['battery_capacity']:.1f} kWh (€{results['battery_cost']:,.2f})\n"
+        f"Transformer: €{results['transformer_cost']:,.2f}"
     )
     
     # Add text box to the figure
     plt.figtext(0.02, 0.02, costinfo, fontsize=10, 
-                bbox=dict(facecolor='white', alpha=0.8, boxstyle='round,pad=0.5'))
+                bbox=dict(facecolor='white', alpha=0.8, boxstyle='round,pad=0.5', edgecolor='gray'))
+    
+    # Add a subtitle with the charging strategy
+    plt.figtext(0.5, 0.01, f"Charging Strategy: {results['charging_strategy']}", 
+                fontsize=10, ha='center')
     
     # Adjust layout and save
     plt.tight_layout()
