@@ -49,16 +49,22 @@ def run_optimization_for_strategy(strategy):
     """
     print(f"\n{'='*80}\nRunning optimization for strategy: {strategy}\n{'='*80}")
     
+    # Get location from environment variables or fall back to config
+    location_longitude = float(os.environ.get('CHARGING_HUB_LONGITUDE', Config.DEFAULT_LOCATION['LONGITUDE']))
+    location_latitude = float(os.environ.get('CHARGING_HUB_LATITUDE', Config.DEFAULT_LOCATION['LATITUDE']))
+
+    # Print location for verification
+    print(f"Using location: Longitude={location_longitude}, Latitude={location_latitude}")
+    ref_point = Point(location_longitude, location_latitude)
+
     # Define a large value for M constraints early - will be refined later
     M_value = 1000000  # Initial large value for big-M constraints
     
-    # Define charging hub location
-    ref_point = Point(DEFAULT_LOCATION['LONGITUDE'], DEFAULT_LOCATION['LATITUDE'])  # Use default location from config
-
+    
     # Toggle between calculated distances and manual distances
     if use_distance_calculation: # type: ignore
         distances = calculate_all_distances(ref_point, create_distance_maps) # type: ignore
-        print("Using calculated distances")
+        print(f"Using calculated distances for coordinates: ({location_longitude}, {location_latitude})")
     else:
         distances = manual_distances # type: ignore
         print("Using manual distances from config file")
@@ -503,8 +509,11 @@ def run_optimization_for_strategy(strategy):
             'transformer_selections': transformer_selections,
             'transformer_description': transformer_description,
             'internal_cable_cost': float(internal_cable_cost_value.X),
-            'charger_cost': float(charger_cost_value.X),  # Add charger cost to results
-            'total_charginghub_cost': float(charginghub_cost_value.X),  # Total charging hub cost
+            'charger_cost': float(charger_cost_value.X),
+            'total_charginghub_cost': float(charginghub_cost_value.X),
+            'MCS_count': int(MCS_count),
+            'HPC_count': int(HPC_count),
+            'NCS_count': int(NCS_count)
         }
         
         # Generate standardized filename base

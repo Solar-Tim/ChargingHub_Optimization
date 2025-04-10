@@ -158,6 +158,12 @@ def run_grid_optimization():
             env['CHARGING_HUB_CUSTOM_ID'] = custom_id
             print(f"DEBUG: Passing custom ID to subprocess: {custom_id}")
             logging.info(f"DEBUG: Passing custom ID to subprocess: {custom_id}")
+            
+        # Pass location coordinates through environment variables
+        env['CHARGING_HUB_LONGITUDE'] = str(Config.DEFAULT_LOCATION['LONGITUDE'])
+        env['CHARGING_HUB_LATITUDE'] = str(Config.DEFAULT_LOCATION['LATITUDE'])
+        print(f"DEBUG: Passing coordinates to subprocess: ({Config.DEFAULT_LOCATION['LONGITUDE']}, {Config.DEFAULT_LOCATION['LATITUDE']})")
+        logging.info(f"DEBUG: Passing coordinates to subprocess: ({Config.DEFAULT_LOCATION['LONGITUDE']}, {Config.DEFAULT_LOCATION['LATITUDE']})")
         
         start_time = time.time()
         
