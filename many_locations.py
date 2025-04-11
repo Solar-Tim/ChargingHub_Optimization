@@ -5,6 +5,9 @@ from config import Config
 from main import main as run_all_processes
 import logging
 import os
+from concurrent.futures import ProcessPoolExecutor
+import copy
+import traceback
 
 # Configure logging
 log_dir = Path("logs")
@@ -16,6 +19,33 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+def process_single_location(location_data):
+    """Process a single location in its own process."""
+    try:
+        location_id, longitude, latitude = location_data
+        
+        # Create a local Config instance to avoid modifying the global one
+        local_config = copy.deepcopy(Config)
+        local_config.DEFAULT_LOCATION = {'LONGITUDE': float(longitude), 'LATITUDE': float(latitude)}
+        
+        # Set result naming configuration
+        if not hasattr(local_config, 'RESULT_NAMING'):
+            local_config.RESULT_NAMING = {}
+        local_config.RESULT_NAMING['USE_CUSTOM_ID'] = True
+        local_config.RESULT_NAMING['CUSTOM_ID'] = str(location_id)
+        
+        # Debug output
+        print(f"Processing location {location_id} with coordinates ({longitude}, {latitude})")
+        
+        # Run the optimization with the local config
+        # Need to modify run_all_processes to accept a config parameter
+        run_all_processes(config=local_config)
+        
+        return f"Location {location_id} completed successfully"
+    except Exception as e:
+        error_msg = f"Error processing location {location_id}: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)
+        return error_msg
 
 def run_for_location(location_id, longitude, latitude):
     """Runs the optimization process for a specific location."""
@@ -44,7 +74,6 @@ def run_for_location(location_id, longitude, latitude):
         logging.error(f"Error running optimization for location {location_id}: {e}", exc_info=True)
         print(f"Error running optimization for location {location_id}: {e}")
 
-
 def main():
     """Main function to iterate through locations and run the optimization."""
     locations_file = Path("locations_all.csv")
@@ -62,32 +91,50 @@ def main():
             if col not in df_locations.columns:
                 raise ValueError(f"Required column '{col}' missing in locations_all.csv")
 
+        # Prepare location data for parallel processing
+        location_data_list = []
         for _, row in df_locations.iterrows():
             try:
                 location_id = row['id']
                 longitude = row['longitude']
                 latitude = row['latitude']
 
-                # Validate data types and format location_id
+                # Format location_id
                 if not isinstance(location_id, (int, str)):
                     try:
-                        location_id = int(location_id)  # Convert to int first to handle floats like 7.0
-                        location_id = str(location_id).zfill(3)  # Convert to string and pad with leading zeros
+                        location_id = int(location_id)
+                        location_id = str(location_id).zfill(3)
                     except ValueError:
-                        raise ValueError(f"Invalid location_id type: {type(location_id)}. Could not convert to string.")
+                        raise ValueError(f"Invalid location_id type: {type(location_id)}")
                 else:
                     try:
-                        location_id = str(int(location_id)).zfill(3) # Ensure it's an integer before padding
+                        location_id = str(int(location_id)).zfill(3)
                     except ValueError:
-                         raise ValueError(f"Invalid location_id type: {type(location_id)}. Could not convert to string.")
+                        raise ValueError(f"Invalid location_id type: {type(location_id)}")
+                
                 longitude = float(longitude)
                 latitude = float(latitude)
-
-                run_for_location(location_id, longitude, latitude)
-
+                
+                location_data_list.append((location_id, longitude, latitude))
+                
             except Exception as e:
-                logging.error(f"Error processing row: {row.to_dict()}. Error: {e}", exc_info=True)
-                print(f"Error processing row: {row.to_dict()}. Error: {e}")
+                logging.error(f"Error preparing row: {row.to_dict()}. Error: {e}", exc_info=True)
+                print(f"Error preparing row: {row.to_dict()}. Error: {e}")
+        
+        # Determine number of workers (adjust based on your system's capabilities)
+        max_workers = min(os.cpu_count() or 1, len(location_data_list))
+        print(f"Processing {len(location_data_list)} locations with {max_workers} parallel workers")
+        
+        # Process locations in parallel
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            results = list(executor.map(process_single_location, location_data_list))
+        
+        # Log results
+        for result in results:
+            if "completed successfully" in result:
+                logging.info(result)
+            else:
+                logging.error(result)
 
     except FileNotFoundError:
         logging.error(f"locations_all.csv not found at {locations_file}")
@@ -104,7 +151,6 @@ def main():
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}", exc_info=True)
         print(f"An unexpected error occurred: {e}")
-
 
 if __name__ == "__main__":
     main()

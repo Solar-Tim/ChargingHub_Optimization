@@ -205,10 +205,18 @@ def display_execution_flags():
         print("    Demand Optimization:", "ENABLED" if Config.EXECUTION_FLAGS['RUN_DEMAND_OPTIMIZATION'] else "DISABLED")
 
 
-def main():
+def main(config=None):
     """
     Main function to orchestrate the entire charging hub optimization process.
+    
+    Args:
+        config: Optional configuration object. If None, uses the global Config.
     """
+    # If a config is provided, use it instead of the global one
+    if config:
+        global Config
+        Config = config
+
     print("\n" + "="*80)
     print("CHARGING HUB OPTIMIZATION - MAIN CONTROL SCRIPT")
     print("="*80)
