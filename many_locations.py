@@ -76,27 +76,33 @@ def run_for_location(location_id, longitude, latitude):
 
 def main():
     """Main function to iterate through locations and run the optimization."""
-    locations_file = Path("locations_all.csv")
-    if not locations_file.exists():
-        logging.error("locations_all.csv not found.")
-        print("Error: locations_all.csv not found.")
-        return
-
+    # Get absolute path to locations file relative to script location
+    script_dir = Path(__file__).parent.absolute()
+    locations_file = script_dir / "locations_all.csv"
+    
     try:
-        df_locations = pd.read_csv(locations_file, sep=";")
-
-        # Validate required columns
-        required_columns = ['id', 'longitude', 'latitude']
-        for col in required_columns:
-            if col not in df_locations.columns:
-                raise ValueError(f"Required column '{col}' missing in locations_all.csv")
-
-        # Prepare location data for parallel processing
+        # Read CSV with explicit path and error handling
+        logging.info(f"Attempting to read locations from: {locations_file}")
+        print(f"Reading locations from: {locations_file}")
+        
+        # Read with proper encoding and separator 
+        df_locations = pd.read_csv(
+            locations_file,
+            delimiter=';',
+            encoding='utf-8',
+            dtype={
+                'id': str,
+                'longitude': float, 
+                'latitude': float
+            }
+        )
+        
         location_data_list = []
+        
         for _, row in df_locations.iterrows():
             try:
                 location_id = row['id']
-                longitude = row['longitude']
+                longitude = row['longitude'] 
                 latitude = row['latitude']
 
                 # Format location_id
