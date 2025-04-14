@@ -1,66 +1,130 @@
-import pandas as pd
-import numpy as np
 import os
+import sys
+import pandas as pd
+from pathlib import Path
+import logging
 
-def load_charging_hub_profile(file_path=None):
+# Add the project root to path to import from parent directory
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(project_root)
+
+from config import Config
+
+def get_location_id_suffix():
+    """Get location ID suffix from config if available."""
+    if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False):
+        return f"_{Config.RESULT_NAMING.get('CUSTOM_ID', '')}"
+    return ""
+
+def get_location_specific_filename(filename_pattern, location_id_suffix=None):
     """
-    Load the charging hub load profile from CSV data.
+    Construct a location-specific filename by adding the location ID suffix.
     
     Args:
-        file_path (str, optional): Path to the load profile CSV file. If None, 
-                                   uses the default path.
-    
-    Returns:
-        tuple: (load_profile, timestamps) where load_profile is a list of power values in kW
-               and timestamps is a list of time values in minutes
-    """
-    if file_path is None:
-        # Default path relative to the project structure
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        file_path = os.path.join(base_dir, 'data', 'load', 'lastgang_Hub.csv')
-    
-    # Load the CSV file with proper delimiter
-    try:
-        df = pd.read_csv(file_path, delimiter=';')
-        print(f"Successfully loaded data from: {file_path}")
-    except Exception as e:
-        print(f"Error loading data: {e}")
-        return [], []
-    
-    # Extract time values and load values
-    timestamps = df['time (5min steps)'].values  # Time in minutes
-    load_profile = df['Last'].values  # Load in kW
-    
-    print(f"Loaded {len(load_profile)} data points for charging hub profile")
-    
-    return load_profile.tolist(), timestamps.tolist()
-
-def load_data(strategy):
-    """
-    Load load profile data based on the specified strategy.
-    
-    Args:
-        strategy (str): The charging strategy to use. Supports "T_min", "Konstant", and "Hub".
-    
-    Returns:
-        tuple: (load_profile, timestamps) for the selected strategy
-    """
-    # Define valid strategies
-    valid_strategies = ["T_min", "Konstant", "Hub"]
-    
-    if strategy in valid_strategies:
-        # Generate file path for the requested strategy
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        file_path = os.path.join(base_dir, 'data', 'load', f'lastgang_{strategy}.csv')
+        filename_pattern: Base filename pattern without location ID
+        location_id_suffix: Optional explicit suffix. If None, will be determined from Config.
         
-        # Try to load the data for the specified strategy
-        try:
-            return load_charging_hub_profile(file_path)
-        except Exception as e:
-            print(f"Error loading data for strategy '{strategy}': {e}")
-            print("Falling back to Hub strategy.")
-    else:
-        print(f"Strategy '{strategy}' not implemented. Falling back to Hub strategy.")
+    Returns:
+        Modified filename with location ID suffix
+    """
+    if location_id_suffix is None:
+        location_id_suffix = get_location_id_suffix()
+    
+    if not location_id_suffix:
+        return filename_pattern
+        
+    # Extract parts of the filename
+    path_obj = Path(filename_pattern)
+    new_name = f"{path_obj.stem}{location_id_suffix}{path_obj.suffix}"
+    return str(path_obj.parent / new_name)
+
+def load_charging_hub_profile(strategy=None):
+    """
+    Load charging hub profile data from CSV file output by demand_optimization.py.
+    
+    Args:
+        strategy: Strategy name (T_min, Konstant, or Hub), defaults to 'Hub'
+        
+    Returns:
+        tuple: (load_profile, timestamps)
+    """
+    if strategy is None:
+        # Default to Hub strategy
+        strategy = 'Hub'
+    
+    # Location ID suffix from Config
+    location_suffix = get_location_id_suffix()
+    
+    # Define load directory
+    load_dir = os.path.join(project_root, "data", "load")
+    
+    # Try to find the file with location suffix first
+    # Look for files with the pattern lastgang_{strategy}{_location_id}.csv 
+    filename = get_location_specific_filename(f"lastgang_{strategy}.csv", location_suffix)
+    file_path = os.path.join(load_dir, filename)
+    
+    if not os.path.exists(file_path):
+        # Try detailed file
+        filename = get_location_specific_filename(f"lastgang_detailed_{strategy}.csv", location_suffix)
+        file_path = os.path.join(load_dir, filename)
+    
+    if not os.path.exists(file_path):
+        # Fallback to basic filename without strategy
+        filename = get_location_specific_filename(f"lastgang.csv", location_suffix)
+        file_path = os.path.join(load_dir, filename)
+    
+    if not os.path.exists(file_path):
+        # Fallback to default demo file if location-specific files don't exist
+        fallback_file = os.path.join(load_dir, "lastgang_demo.csv")
+        print(f"Warning: Could not find location-specific file ({file_path}). Using fallback: {fallback_file}")
+        if os.path.exists(fallback_file):
+            file_path = fallback_file
+        else:
+            raise FileNotFoundError(f"Could not find any valid load profile file. Tried location-specific: {file_path} and fallback: {fallback_file}")
+    
+    try:
+        # Load data from CSV
+        print(f"Loading load profile data from: {file_path}")
+        df = pd.read_csv(file_path, sep=';')
+        
+        if df.empty:
+            print(f"Warning: Load profile file {file_path} is empty.")
+            return [], []
+        
+        # Extract load column (might be 'Last' or 'Leistung_Total')
+        load_column = 'Last' if 'Last' in df.columns else 'Leistung_Total'
+        load_profile = df[load_column].values
+        
+        # Extract timestamps
+        if 'time (5min steps)' in df.columns:
+            timestamps = df['time (5min steps)'].values
+        else:
+            # If no timestamp column, generate 5-minute intervals
+            timestamps = list(range(0, len(load_profile) * 5, 5))
+        
+        return load_profile, timestamps
+    
+    except Exception as e:
+        print(f"Error loading charging hub profile: {e}")
+        # Return empty arrays as fallback
+        return [], []
+
+def load_data(strategy=None):
+    """
+    Load the appropriate load profile data based on the strategy.
+    
+    Args:
+        strategy: Strategy name (T_min, Konstant, or Hub)
+        
+    Returns:
+        tuple: (load_profile, timestamps)
+    """
+    if strategy is None:
+        # Default to Hub strategy
+        return load_charging_hub_profile()
+    
+    if strategy in ['Hub', 'T_min', 'Konstant']:
+        return load_charging_hub_profile(strategy)
     
     # Fallback to Hub strategy
     return load_charging_hub_profile()

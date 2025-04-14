@@ -1,4 +1,3 @@
-# filepath: c:\Users\sande\OneDrive\Dokumente\GitHub\ChargingHub_Optimization\many_locations.py
 import pandas as pd
 from pathlib import Path
 from config import Config

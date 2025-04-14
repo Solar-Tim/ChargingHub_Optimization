@@ -42,6 +42,17 @@ def validate_truck_data(df):
     
     return df
 
+def get_location_id_suffix():
+    """Get location ID suffix from config if available."""
+    import sys
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent.parent.parent))
+    from config import Config
+    
+    if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False):
+        return f"_{Config.RESULT_NAMING.get('CUSTOM_ID', '')}"
+    return ""
+
 def modellierung():
     """
     Optimizes the charging hub for a specific week using configuration from charging_config_base.json file.
@@ -556,10 +567,13 @@ def modellierung():
     json_dir = os.path.join(root_dir, 'data', 'load')
     os.makedirs(json_dir, exist_ok=True)
 
+    # Get location ID suffix
+    location_suffix = get_location_id_suffix()
+
     # Define the output JSON filename
-    # Create a filename that includes the strategy
+    # Create a filename that includes the strategy and location ID
     strategies_string = "_".join(CONFIG['STRATEGIES'])
-    json_filename = f'metadata_charginghub_{strategies_string}.json'
+    json_filename = f'metadata_charginghub_{strategies_string}{location_suffix}.json'
     json_filepath = os.path.join(json_dir, json_filename)
 
     # Save the simplified data to a pretty-printed JSON file
@@ -577,8 +591,8 @@ def modellierung():
     
     # Create a CSV file with the same structure as lastgang_demo.csv
     try:
-        # Create a CSV filename that includes the strategy
-        csv_filename = f'lastgang_{strategies_string}.csv'
+        # Create a CSV filename that includes the strategy and location ID
+        csv_filename = f'lastgang_{strategies_string}{location_suffix}.csv'
         csv_filepath = os.path.join(json_dir, csv_filename)
         
         logging.info(f"Creating load profile CSV file")
@@ -624,8 +638,8 @@ def modellierung():
     
     # Create a detailed CSV file with power breakdown by charging type
     try:
-        # Create a detailed CSV filename that includes the strategy
-        detailed_csv_filename = f'lastgang_detailed_{strategies_string}.csv'
+        # Create a detailed CSV filename that includes the strategy and location ID
+        detailed_csv_filename = f'lastgang_detailed_{strategies_string}{location_suffix}.csv'
         detailed_csv_filepath = os.path.join(json_dir, detailed_csv_filename)
         
         logging.info(f"Creating detailed load profile CSV file")

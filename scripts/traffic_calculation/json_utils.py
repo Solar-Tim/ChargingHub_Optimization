@@ -7,8 +7,29 @@ import pandas as pd
 import numpy as np
 import datetime
 import os
-from config_demand import get_breaks_column, get_charging_column, year
 from pathlib import Path
+from config_demand import get_breaks_column, get_charging_column, year
+
+def get_location_id_suffix():
+    """Get location ID suffix from config if available."""
+    # Import here to avoid circular imports
+    import sys
+    sys.path.append(str(Path(__file__).parent.parent.parent))
+    from config import Config
+    
+    if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False):
+        return f"_{Config.RESULT_NAMING.get('CUSTOM_ID', '')}"
+    return ""
+
+def get_path_with_location_id(original_path):
+    """Add location ID suffix to a file path."""
+    location_suffix = get_location_id_suffix()
+    if not location_suffix:
+        return original_path
+        
+    path_obj = Path(original_path)
+    new_name = f"{path_obj.stem}{location_suffix}{path_obj.suffix}"
+    return str(path_obj.parent / new_name)
 
 def dataframe_to_json(df, output_path, metadata=None, structure_type='demand'):
     """
@@ -97,12 +118,32 @@ def dataframe_to_json(df, output_path, metadata=None, structure_type='demand'):
     # Apply cleaning function to create optimized structure
     clean_data = clean_json_structure(data_dict, structure_type)
     
-    # Save to file
-    import json
-    import os
+    # Create output directory if needed
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    # Add location ID to metadata if available
+    location_suffix = get_location_id_suffix()
+    if location_suffix and "metadata" in clean_data:
+        if "location_id" not in clean_data["metadata"]:
+            clean_data["metadata"]["location_id"] = location_suffix.strip('_')
+    
+    # Save to file
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(clean_data, f, indent=2)
+
+def find_location_specific_file(file_path):
+    """Try to find a location-specific version of a file if it exists."""
+    # First check if the provided path exists
+    if os.path.exists(file_path):
+        return file_path
+    
+    # Try adding location suffix
+    location_path = get_path_with_location_id(file_path)
+    if os.path.exists(location_path):
+        return location_path
+    
+    # If neither exists, return the original path
+    return file_path
 
 def load_json_data(file_path):
     """
@@ -114,11 +155,14 @@ def load_json_data(file_path):
     Returns:
         Dictionary containing the loaded data
     """
-    file_path = Path(file_path)
-    if not file_path.exists():
-        raise FileNotFoundError(f"{file_path} does not exist")
+    # Check for location-specific file
+    actual_path = find_location_specific_file(file_path)
     
-    with open(file_path, 'r') as f:
+    # Check if file exists
+    if not os.path.exists(actual_path):
+        raise FileNotFoundError(f"Neither {file_path} nor a location-specific version exists")
+    
+    with open(actual_path, 'r') as f:
         data = json.load(f)
     
     return data
@@ -134,7 +178,15 @@ def json_to_dataframe(json_path_or_data):
         DataFrame containing the data
     """
     if isinstance(json_path_or_data, (str, Path)):
-        data = load_json_data(json_path_or_data)
+        try:
+            data = load_json_data(json_path_or_data)
+        except FileNotFoundError:
+            # Try with location-specific filename
+            location_path = get_path_with_location_id(json_path_or_data)
+            if os.path.exists(location_path):
+                data = load_json_data(location_path)
+            else:
+                raise FileNotFoundError(f"Neither {json_path_or_data} nor {location_path} exists")
     else:
         data = json_path_or_data
     
@@ -170,16 +222,23 @@ def json_to_dataframe(json_path_or_data):
     
     elif "charging_demand" in data["data"]:
         # Complex demand structure - convert to flattened dataframe
-        location = data["data"]["location"]
-        breaks = data["data"]["breaks"]
-        charging_demand = data["data"]["charging_demand"]
+        location = data["data"].get("location", {})
+        breaks = data["data"].get("breaks", {})
+        charging_demand = data["data"].get("charging_demand", {})
         daily_demand = data["data"].get("daily_demand", {})
         
         # Create a single row dataframe with all the data
-        df_data = {
-            "Breitengrad": location.get("latitude"),
-            "Laengengrad": location.get("longitude")
-        }
+        df_data = {}
+        
+        # Add location coordinates if available
+        if "metadata" in data and "location" in data["metadata"]:
+            df_data["Breitengrad"] = data["metadata"]["location"].get("latitude")
+            df_data["Laengengrad"] = data["metadata"]["location"].get("longitude")
+        elif location:
+            if "latitude" in location:
+                df_data["Breitengrad"] = location.get("latitude")
+            if "longitude" in location:
+                df_data["Laengengrad"] = location.get("longitude")
         
         # Add breaks columns
         for break_type, count in breaks.items():

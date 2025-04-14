@@ -92,6 +92,27 @@ def save_dataframe(df, output_path, sep=CSV['DEFAULT_SEPARATOR'], decimal=CSV['D
     df.to_csv(output_path, sep=sep, decimal=decimal, index=False)
     logger.info(f"Data saved to {output_path}")
 
+def get_location_id_suffix():
+    """Get location ID suffix from config if available."""
+    # Import here to avoid circular imports
+    import sys
+    sys.path.append(str(Path(__file__).parent.parent.parent))
+    from config import Config
+    
+    if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False):
+        return f"_{Config.RESULT_NAMING.get('CUSTOM_ID', '')}"
+    return ""
+
+def get_path_with_location_id(original_path):
+    """Add location ID suffix to a file path."""
+    location_suffix = get_location_id_suffix()
+    if not location_suffix:
+        return original_path
+        
+    path_obj = Path(original_path)
+    new_name = f"{path_obj.stem}{location_suffix}{path_obj.suffix}"
+    return str(path_obj.parent / new_name)
+
 def main():
     # Add debugging for location
     print(f"DEBUG [traffic_main]: Current location from get_default_location() = {get_default_location()}")
@@ -109,6 +130,12 @@ def main():
     
     print(f"DEBUG [traffic_main]: df_location = {df_location.to_dict()}")
     
+    # Get location-specific file paths
+    breaks_output_path = get_path_with_location_id(FILES['BREAKS_OUTPUT'])
+    toll_midpoints_output_path = get_path_with_location_id(FILES['TOLL_MIDPOINTS_OUTPUT'])
+    final_output_path = get_path_with_location_id(FILES['FINAL_OUTPUT'])
+    charging_demand_path = get_path_with_location_id(FILES['CHARGING_DEMAND'])
+    
     # Handle breaks calculation
     if neue_pausen:
         logger.info("Calculating new breaks...")
@@ -118,16 +145,16 @@ def main():
     else:
         # Load breaks from JSON if file exists, otherwise calculate new breaks
         try:
-            df_breaks = json_to_dataframe(FILES['BREAKS_OUTPUT'])
+            df_breaks = json_to_dataframe(breaks_output_path)
         except FileNotFoundError:
-            logger.warning(f"Breaks file not found at {FILES['BREAKS_OUTPUT']}. Calculating new breaks.")
+            logger.warning(f"Breaks file not found at {breaks_output_path}. Calculating new breaks.")
             input_dir = os.path.dirname(FILES['TRAFFIC_FLOW'])
             df_breaks = calculate_new_breaks(base_path=input_dir)
     
     # Handle toll midpoints calculation
     df_mauttabelle = get_toll_midpoints(
         FILES['MAUT_TABLE'], 
-        FILES['TOLL_MIDPOINTS_OUTPUT'], 
+        toll_midpoints_output_path, 
         skiprows=1,
         force_recalculate=neue_toll_midpoints
     )
@@ -175,8 +202,8 @@ def main():
         traffic_data = df_befahrung[df_befahrung['Strecken-ID'] == reference_id].iloc[0]
         metadata["toll_section"]["traffic"] = {day: int(traffic_data[day]) for day in GERMAN_DAYS if day in traffic_data}
 
-    # Save results as structured JSON
-    dataframe_to_json(results_df, FILES['FINAL_OUTPUT'], metadata=metadata, structure_type='demand')
+    # Save results as structured JSON - use location-specific path
+    dataframe_to_json(results_df, final_output_path, metadata=metadata, structure_type='demand')
     
     # Calculate robust charging demand scaling
     try:
@@ -207,20 +234,20 @@ def main():
         logger.info(f"Weekly HPC sessions: {weekly_total:.0f}")
         logger.info(f"Yearly HPC sessions: {yearly_total:.0f} (estimated from weekly pattern)")
         
-        # Save charging demand as structured JSON
+        # Save charging demand as structured JSON - use location-specific path
         charging_metadata = {
             "reference_toll_section_id": reference_id,
             "weeks_per_year": TIME['WEEKS_PER_YEAR'],
             "forecast_year": year
         }
-        dataframe_to_json(robust_sessions, FILES['CHARGING_DEMAND'], 
+        dataframe_to_json(robust_sessions, charging_demand_path, 
                           metadata=charging_metadata, structure_type='charging_sessions')
         
         logger.info("Scaling of charging sessions completed")
     except Exception as e:
         logger.error(f"Error in scaling: {e}")
     
-    logger.info(f"Processing complete. Final results saved to {FILES['FINAL_OUTPUT']}")
+    logger.info(f"Processing complete. Final results saved to {final_output_path}")
 
 if __name__ == "__main__":
     main()

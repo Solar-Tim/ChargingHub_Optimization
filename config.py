@@ -63,7 +63,7 @@ class Config:
     # Add this to your Config class or configuration section
     RESULT_NAMING = {
         'USE_CUSTOM_ID': True,  # Set to True to use custom ID instead of hash
-        'CUSTOM_ID': '015'  # The custom ID to use when USE_CUSTOM_ID is True
+        'CUSTOM_ID': '777'  # The custom ID to use when USE_CUSTOM_ID is True
     }
     
     # Spatial analysis settings
