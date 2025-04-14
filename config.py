@@ -40,7 +40,7 @@ class Config:
         'USE_DISTANCE_CALCULATION': True,    # Whether to use distance calculation for optimization
         'CREATE_PLOT': False,                # Whether to generate plot of optimization results
         'CREATE_DISTANCE_MAPS': False,       # Whether to generate maps of distance calculations
-        'INCLUDE_BATTERY': False,             # Whether to include battery in optimization
+        'INCLUDE_BATTERY': True,             # Whether to include battery in optimization
         'USE_MANUAL_CHARGER_COUNT': False,   # Whether to use manual charger count instead of optimizing
         'DEBUG_MODE': False,                 # Whether to enable debug mode for detailed output
     }
@@ -75,16 +75,18 @@ class Config:
     
     # BEV adoption scenarios
     SCENARIOS = {
-        'TARGET_YEARS': ['2030', '2035', '2040'],
+        'TARGET_YEARS': ['2030', '2035', '2040', '2045'],
         'R_BEV': {
-            '2030': 0.15,  # Updated from 0.05 to 0.15
-            '2035': 0.50,  # Updated from 0.20 to 0.50
-            '2040': 0.80,  # Updated from 0.40 to 0.80
+            '2030': 0.15,  #
+            '2035': 0.61,  #
+            '2040': 0.94,  #
+            '2045': 1.00   #
         },
         'R_TRAFFIC': {
-            '2030': 1.00,  # Updated from 1.0 to 1.00
-            '2035': 1.06,  # Updated from 1.05 to 1.06
-            '2040': 1.12,  # Updated from 1.10 to 1.12
+            '2030': 1.00,  #
+            '2035': 1.0462,  #
+            '2040': 1.0549,  #
+            '2045': 1.1672   #
         }
     }
     

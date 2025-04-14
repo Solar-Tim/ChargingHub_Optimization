@@ -64,7 +64,7 @@ def run_traffic_calculation():
         os.chdir(traffic_dir)
         
         # Import here to avoid issues with module paths
-        from traffic_calculation.main import main as traffic_main
+        from traffic_calculation.main import main as traffic_main # type: ignore
         
         start_time = time.time()
         traffic_main()
@@ -105,7 +105,7 @@ def run_charging_hub_setup():
         os.chdir(charginghub_dir)
         
         # Import here to avoid issues with module paths
-        from charginghub_setup.main import main as hub_main
+        from charginghub_setup.main import main as hub_main # type: ignore
         
         start_time = time.time()
         hub_main()

@@ -6,6 +6,8 @@ import logging
 from pathlib import Path
 import warnings
 import json
+import multiprocessing
+from functools import partial
 warnings.filterwarnings('ignore', category=pd.errors.SettingWithCopyWarning)
 
 # Configure logging
@@ -176,6 +178,124 @@ def build_flow_network(df_filter, anzahl_ladesaeulen):
         # Return empty flow dict as fallback
         return {}
 
+def process_charging_type(ladetyp, dict_ladequoten, df_eingehende_lkws, df_konf_optionen_shared):
+    """Process a single charging type in parallel"""
+    ladquote_ziel = dict_ladequoten[ladetyp]
+    logging.info(f"Processing charging type: {ladetyp}, target quota: {ladquote_ziel:.2f}")
+
+    # Filter matching trucks: correct charging station type only
+    df_eingehende_lkws_filter = df_eingehende_lkws[
+        df_eingehende_lkws['Ladesäule'] == ladetyp
+    ]
+
+    ankommende_lkws = len(df_eingehende_lkws_filter)
+    logging.info(f"Found {ankommende_lkws} trucks for charging type {ladetyp}")
+    
+    ladequote = 0
+    anzahl_ladesaeulen = 1
+    df_eingehende_lkws_filter_with_status = None
+    df_konf_optionen_local = []
+
+    if ankommende_lkws == 0:
+        logging.warning(f"No trucks found for charging type {ladetyp}")
+        return {
+            'ladetyp': ladetyp,
+            'anzahl_ladesaeulen': 0,
+            'ladequote': 0,
+            'df_with_status': None,
+            'df_konf_optionen': df_konf_optionen_local
+        }
+
+    # Repeat in steps until the target charging quota
+    for durchgang in range(min(ankommende_lkws, 20)):  # Limit iterations to prevent infinite loops
+        logging.info(f"[{ladetyp}] Iteration {durchgang+1}: Starting with {anzahl_ladesaeulen} charging stations")
+        
+        # Build graph via node-splitting approach
+        logging.info(f"[{ladetyp}] Building flow network with {anzahl_ladesaeulen} charging stations for {len(df_eingehende_lkws_filter)} trucks")
+        flow_dict = build_flow_network(df_eingehende_lkws_filter, anzahl_ladesaeulen)
+
+        # Determine how many trucks were actually charged
+        lkw_geladen = 0
+        for idx, row in df_eingehende_lkws_filter.iterrows():
+            # Check if flow through LKW{i}_arr -> LKW{i}_dep > 0
+            lkw_id = row['Nummer']
+            lkw_arr = f"LKW{lkw_id}_arr"
+            lkw_dep = f"LKW{lkw_id}_dep"
+            flow_val = flow_dict.get(lkw_arr, {}).get(lkw_dep, 0)
+            if flow_val > 0:
+                lkw_geladen += 1
+
+        # Calculate charging quota
+        ladequote = lkw_geladen / ankommende_lkws if ankommende_lkws > 0 else 0
+        lkw_pro_ladesaeule = lkw_geladen / anzahl_ladesaeulen / 7 if anzahl_ladesaeulen > 0 else 0
+
+        # Document configuration options
+        df_konf_optionen_local.append({
+            'Ladesäule': ladetyp, 
+            'Anzahl': anzahl_ladesaeulen, 
+            'Ladequote': ladequote, 
+            'LKW_pro_Ladesaeule': lkw_pro_ladesaeule
+        })
+        
+        # Debug output
+        logging.info(f"[{ladetyp}] Results: Stations={anzahl_ladesaeulen}, Charged trucks={lkw_geladen}/{ankommende_lkws}, Quota={ladequote:.2f}, Trucks per station={lkw_pro_ladesaeule:.2f}")
+        print(f"[{ladetyp}], Stations={anzahl_ladesaeulen}, Quota={ladequote:.2f}, Trucks per station={lkw_pro_ladesaeule:.2f}")
+
+        # If target charging quota reached/exceeded, save LoadStatus & break
+        if ladequote >= ladquote_ziel:
+            logging.info(f"[{ladetyp}] Target quota of {ladquote_ziel:.2f} reached with {anzahl_ladesaeulen} charging stations")
+            liste_lkw_status = []
+            for idx, row in df_eingehende_lkws_filter.iterrows():
+                lkw_id = row['Nummer']
+                lkw_arr = f"LKW{lkw_id}_arr"
+                lkw_dep = f"LKW{lkw_id}_dep"
+                flow_of_this_truck = flow_dict.get(lkw_arr, {}).get(lkw_dep, 0)
+                if flow_of_this_truck > 0:
+                    liste_lkw_status.append(1)
+                else:
+                    liste_lkw_status.append(0)
+
+            # Append LoadStatus column
+            df_eingehende_lkws_filter_copy = df_eingehende_lkws_filter.copy()
+            df_eingehende_lkws_filter_copy['LoadStatus'] = liste_lkw_status
+            df_eingehende_lkws_filter_with_status = df_eingehende_lkws_filter_copy
+            break
+        else:
+            # Adapt number of charging stations and next round
+            anzahl_ladesaeulen = np.ceil(anzahl_ladesaeulen / ladequote * ladquote_ziel).astype(int) if ladequote > 0 else anzahl_ladesaeulen + 1
+
+    # Return results
+    return {
+        'ladetyp': ladetyp,
+        'anzahl_ladesaeulen': anzahl_ladesaeulen,
+        'ladequote': ladequote,
+        'df_with_status': df_eingehende_lkws_filter_with_status,
+        'df_konf_optionen': df_konf_optionen_local
+    }
+
+# Replace the loop over charging types with parallel processing
+def parallel_charging_types_processing(dict_ladequoten, df_eingehende_lkws, df_konf_optionen):
+    # Setup multiprocessing
+    num_cores = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(processes=3)  # Leave one core free for system
+    
+    logging.info(f"Starting parallel processing using 3 cores")
+    
+    # Create partial function with fixed parameters
+    process_func = partial(process_charging_type, 
+                           dict_ladequoten=dict_ladequoten, 
+                           df_eingehende_lkws=df_eingehende_lkws,
+                           df_konf_optionen_shared=df_konf_optionen)
+    
+    # Run processing in parallel
+    results = pool.map(process_func, dict_ladequoten.keys())
+    
+    # Close the pool
+    pool.close()
+    pool.join()
+    
+    return results
+
 def konfiguration_ladehub(df_eingehende_lkws):
     """
     Main function: Determines for each charging type (HPC/MCS/NCS) how many charging stations
@@ -205,84 +325,29 @@ def konfiguration_ladehub(df_eingehende_lkws):
     df_anzahl_ladesaeulen = pd.DataFrame(columns=['NCS','Ladequote_NCS','HPC','Ladequote_HPC','MCS','Ladequote_MCS'])
     df_konf_optionen = pd.DataFrame(columns=['Ladetype','Anzahl_Ladesaeulen','Ladequote','LKW_pro_Ladesaeule'])
     
-    # Loop over the different charging station types
-    for ladetyp in dict_ladequoten:
-        ladquote_ziel = dict_ladequoten[ladetyp]
-        logging.info(f"Processing charging type: {ladetyp}, target quota: {ladquote_ziel:.2f}")
+    # Replace the loop with this code:
+    results = parallel_charging_types_processing(dict_ladequoten, df_eingehende_lkws, df_konf_optionen)
 
-        # Filter matching trucks: correct charging station type only
-        df_eingehende_lkws_filter = df_eingehende_lkws[
-            df_eingehende_lkws['Ladesäule'] == ladetyp
-        ]
-
-        ankommende_lkws = len(df_eingehende_lkws_filter)
-        logging.info(f"Found {ankommende_lkws} trucks for charging type {ladetyp}")
+    # Process results
+    df_eingehende_lkws_loadstatus = pd.DataFrame()
+    for result in results:
+        ladetyp = result['ladetyp']
+        anzahl_ladesaeulen = result['anzahl_ladesaeulen']
+        ladequote = result['ladequote']
         
-        ladequote = 0
-        anzahl_ladesaeulen = 1
-
-        if ankommende_lkws == 0:
-            logging.warning(f"No trucks found for charging type {ladetyp}")
-            df_anzahl_ladesaeulen.loc[0, ladetyp] = 0
-            df_anzahl_ladesaeulen.loc[0, f'Ladequote_{ladetyp}'] = 0
-            continue
-
-        # Repeat in steps until the target charging quota
-        for durchgang in range(min(ankommende_lkws, 20)):  # Limit iterations to prevent infinite loops
-            logging.info(f"[{ladetyp}] Iteration {durchgang+1}: Starting with {anzahl_ladesaeulen} charging stations")
-            
-            # Build graph via node-splitting approach
-            logging.info(f"[{ladetyp}] Building flow network with {anzahl_ladesaeulen} charging stations for {len(df_eingehende_lkws_filter)} trucks")
-            flow_dict = build_flow_network(df_eingehende_lkws_filter, anzahl_ladesaeulen)
-
-            # Determine how many trucks were actually charged
-            lkw_geladen = 0
-            for idx, row in df_eingehende_lkws_filter.iterrows():
-                # Check if flow through LKW{i}_arr -> LKW{i}_dep > 0
-                lkw_id = row['Nummer']
-                lkw_arr = f"LKW{lkw_id}_arr"
-                lkw_dep = f"LKW{lkw_id}_dep"
-                flow_val = flow_dict.get(lkw_arr, {}).get(lkw_dep, 0)
-                if flow_val > 0:
-                    lkw_geladen += 1
-
-            # Calculate charging quota
-            ladequote = lkw_geladen / ankommende_lkws if ankommende_lkws > 0 else 0
-            lkw_pro_ladesaeule = lkw_geladen / anzahl_ladesaeulen / 7 if anzahl_ladesaeulen > 0 else 0
-
-            # Document configuration options
-            df_konf_optionen.loc[len(df_konf_optionen)] = [ladetyp, anzahl_ladesaeulen, ladequote, lkw_pro_ladesaeule]
-            
-            # Debug output
-            logging.info(f"[{ladetyp}] Results: Stations={anzahl_ladesaeulen}, Charged trucks={lkw_geladen}/{ankommende_lkws}, Quota={ladequote:.2f}, Trucks per station={lkw_pro_ladesaeule:.2f}")
-            print(f"[{ladetyp}], Stations={anzahl_ladesaeulen}, Quota={ladequote:.2f}, Trucks per station={lkw_pro_ladesaeule:.2f}")
-
-            # If target charging quota reached/exceeded, save LoadStatus & break
-            if ladequote >= ladquote_ziel:
-                logging.info(f"[{ladetyp}] Target quota of {ladquote_ziel:.2f} reached with {anzahl_ladesaeulen} charging stations")
-                liste_lkw_status = []
-                for idx, row in df_eingehende_lkws_filter.iterrows():
-                    lkw_id = row['Nummer']
-                    lkw_arr = f"LKW{lkw_id}_arr"
-                    lkw_dep = f"LKW{lkw_id}_dep"
-                    flow_of_this_truck = flow_dict.get(lkw_arr, {}).get(lkw_dep, 0)
-                    if flow_of_this_truck > 0:
-                        liste_lkw_status.append(1)
-                    else:
-                        liste_lkw_status.append(0)
-
-                # Append LoadStatus column
-                df_eingehende_lkws_filter_copy = df_eingehende_lkws_filter.copy()
-                df_eingehende_lkws_filter_copy['LoadStatus'] = liste_lkw_status
-                df_eingehende_lkws_loadstatus = pd.concat([df_eingehende_lkws_loadstatus, df_eingehende_lkws_filter_copy])
-                break
-            else:
-                # Adapt number of charging stations and next round
-                anzahl_ladesaeulen = np.ceil(anzahl_ladesaeulen / ladequote * ladquote_ziel).astype(int) if ladequote > 0 else anzahl_ladesaeulen + 1
-
-        # Save results - removed cluster reference
+        # Save results
         df_anzahl_ladesaeulen.loc[0, ladetyp] = anzahl_ladesaeulen
         df_anzahl_ladesaeulen.loc[0, f'Ladequote_{ladetyp}'] = ladequote
+        
+        # Process LoadStatus data
+        if result['df_with_status'] is not None:
+            df_eingehende_lkws_loadstatus = pd.concat([df_eingehende_lkws_loadstatus, result['df_with_status']])
+        
+        # Add configuration options
+        for opt in result['df_konf_optionen']:
+            df_konf_optionen.loc[len(df_konf_optionen)] = [
+                opt['Ladesäule'], opt['Anzahl'], opt['Ladequote'], opt['LKW_pro_Ladesaeule']
+            ]
     
     # Path for files - use project structure
     project_root = Path(__file__).parent.parent.parent
