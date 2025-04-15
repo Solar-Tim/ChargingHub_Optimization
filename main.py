@@ -165,6 +165,11 @@ def run_grid_optimization():
         print(f"DEBUG: Passing coordinates to subprocess: ({Config.DEFAULT_LOCATION['LONGITUDE']}, {Config.DEFAULT_LOCATION['LATITUDE']})")
         logging.info(f"DEBUG: Passing coordinates to subprocess: ({Config.DEFAULT_LOCATION['LONGITUDE']}, {Config.DEFAULT_LOCATION['LATITUDE']})")
         
+        # Pass battery status through environment variables
+        env['CHARGING_HUB_INCLUDE_BATTERY'] = str(int(Config.EXECUTION_FLAGS['INCLUDE_BATTERY']))
+        print(f"DEBUG: Passing battery status to subprocess: {Config.EXECUTION_FLAGS['INCLUDE_BATTERY']}")
+        logging.info(f"DEBUG: Passing battery status to subprocess: {Config.EXECUTION_FLAGS['INCLUDE_BATTERY']}")
+        
         start_time = time.time()
         
         result = subprocess.run([sys.executable, optimization_script], 

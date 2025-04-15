@@ -528,6 +528,8 @@ def run_optimization_for_strategy(strategy):
             include_battery,
             custom_id=Config.RESULT_NAMING['CUSTOM_ID'] if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False) else None
         )
+         # Get the current battery setting directly from Config
+        current_include_battery = Config.EXECUTION_FLAGS['INCLUDE_BATTERY']
         
         # Save results using the new naming convention
         save_optimization_results(results, result_filename_base, timestamps, load_profile)
@@ -598,12 +600,24 @@ def run_optimization_for_strategy(strategy):
         print(f"DEBUG: Found custom ID in environment: {env_custom_id}")
     else:
         print("DEBUG: No custom ID found in environment")
-        
+    # Check for custom ID from environment
+    env_custom_id = os.environ.get('CHARGING_HUB_CUSTOM_ID')
+    
+    # Get battery status from environment variable or fall back to config
+    env_include_battery = os.environ.get('CHARGING_HUB_INCLUDE_BATTERY')
+    if env_include_battery is not None:
+        current_include_battery = bool(int(env_include_battery))
+        print(f"DEBUG: Using battery status from environment: {current_include_battery}")
+    else:
+        current_include_battery = include_battery
+        print(f"DEBUG: Using battery status from config: {current_include_battery}")
+    
+
     # Generate filename again to ensure consistency 
     result_filename_base = generate_result_filename(
         results, 
         strategy, 
-        include_battery,
+        current_include_battery,  # Use the current setting we just retrieved
         custom_id=env_custom_id  # Use the environment variable instead of None
     )
     plot_optimization_results(results, timestamps, load_profile, create_plot, result_filename_base)

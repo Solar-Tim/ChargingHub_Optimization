@@ -16,6 +16,13 @@ class Config:
     
     # Year settings
     FORECAST_YEAR = '2030'  # Default forecast year
+
+        # Add this to your Config class or configuration section
+    RESULT_NAMING = {
+        'USE_CUSTOM_ID': True,  # Set to True to use custom ID instead of hash
+        'CUSTOM_ID': '930'  # The custom ID to use when USE_CUSTOM_ID is True
+    }
+    
     
     # Execution control flags - NEW SECTION
     EXECUTION_FLAGS = {
@@ -40,7 +47,7 @@ class Config:
         'USE_DISTANCE_CALCULATION': True,    # Whether to use distance calculation for optimization
         'CREATE_PLOT': False,                # Whether to generate plot of optimization results
         'CREATE_DISTANCE_MAPS': False,       # Whether to generate maps of distance calculations
-        'INCLUDE_BATTERY': True,             # Whether to include battery in optimization
+        'INCLUDE_BATTERY': False,             # Whether to include battery in optimization
         'USE_MANUAL_CHARGER_COUNT': False,   # Whether to use manual charger count instead of optimizing
         'DEBUG_MODE': False,                 # Whether to enable debug mode for detailed output
     }
@@ -53,19 +60,14 @@ class Config:
         'power': '100-100-100',  # Power scaling for NCS-HPC-MCS
         'pause': '45-540'  # Kurze Pause - Lange Pause in minutes
     }
-
+ 
 
     DEFAULT_LOCATION = {
-        'LONGITUDE': 6.216436,
-        'LATITUDE': 50.816937
+        'LONGITUDE': 6.77880074559991,
+        'LATITUDE': 50.928641843666085
     }
 
-    # Add this to your Config class or configuration section
-    RESULT_NAMING = {
-        'USE_CUSTOM_ID': True,  # Set to True to use custom ID instead of hash
-        'CUSTOM_ID': '015'  # The custom ID to use when USE_CUSTOM_ID is True
-    }
-    
+
     # Spatial analysis settings
     SPATIAL = {
         'DEFAULT_CRS': 'EPSG:4326',
@@ -94,7 +96,7 @@ class Config:
     BREAKS = {
         'DISTANCE_THRESHOLD': 360,  # km - Distance after which a break is required
         'MAX_DISTANCE_SINGLEDRIVER': 4320,  # km - Limit between single and double driver routes
-        'RANDOM_RANGE': (-50, 50),  # Random variation for break distances
+        'RANDOM_RANGE': (0,0),  # Random variation for break distances
         'TWO_DRIVER_SHORT_BREAKS_BEFORE_LONG': 2  # Number of short breaks before a long break for two drivers
     }
     
