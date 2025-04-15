@@ -15,12 +15,12 @@ class Config:
     CONTINUE_ON_ERROR = False  # Whether to continue pipeline if a step fails
     
     # Year settings
-    FORECAST_YEAR = '2030'  # Default forecast year
+    FORECAST_YEAR = '2045'  # Default forecast year
 
         # Add this to your Config class or configuration section
     RESULT_NAMING = {
         'USE_CUSTOM_ID': True,  # Set to True to use custom ID instead of hash
-        'CUSTOM_ID': '930'  # The custom ID to use when USE_CUSTOM_ID is True
+        'CUSTOM_ID': '945'  # The custom ID to use when USE_CUSTOM_ID is True
     }
     
     
@@ -47,7 +47,7 @@ class Config:
         'USE_DISTANCE_CALCULATION': True,    # Whether to use distance calculation for optimization
         'CREATE_PLOT': False,                # Whether to generate plot of optimization results
         'CREATE_DISTANCE_MAPS': False,       # Whether to generate maps of distance calculations
-        'INCLUDE_BATTERY': False,             # Whether to include battery in optimization
+        'INCLUDE_BATTERY': True,             # Whether to include battery in optimization
         'USE_MANUAL_CHARGER_COUNT': False,   # Whether to use manual charger count instead of optimizing
         'DEBUG_MODE': False,                 # Whether to enable debug mode for detailed output
     }
