@@ -15,12 +15,12 @@ class Config:
     CONTINUE_ON_ERROR = False  # Whether to continue pipeline if a step fails
     
     # Year settings
-    FORECAST_YEAR = '2045'  # Default forecast year
+    FORECAST_YEAR = '2030'  # Default forecast year
 
         # Add this to your Config class or configuration section
     RESULT_NAMING = {
         'USE_CUSTOM_ID': True,  # Set to True to use custom ID instead of hash
-        'CUSTOM_ID': '945'  # The custom ID to use when USE_CUSTOM_ID is True
+        'CUSTOM_ID': '830'  # The custom ID to use when USE_CUSTOM_ID is True
     }
     
     
@@ -29,7 +29,7 @@ class Config:
 
         'RUN_TRAFFIC_CALCULATION': True,  # Whether to run traffic calculation module
         'RUN_CHARGING_HUB_SETUP': True,   # Whether to run charging hub setup module
-        'RUN_GRID_OPTIMIZATION': True,    # Whether to run grid optimization module
+        'RUN_GRID_OPTIMIZATION': False,    # Whether to run grid optimization module
         
 
         # Traffic calculation sub-process flags
@@ -40,7 +40,7 @@ class Config:
         # Sub-process flags for charging hub setup
         'RUN_TRUCK_MATCHING': True,       # Whether to run truck-charging type matching
         'RUN_HUB_CONFIGURATION': True,    # Whether to run charging hub configuration
-        'RUN_DEMAND_OPTIMIZATION': True,  # Whether to run demand optimization
+        'RUN_DEMAND_OPTIMIZATION': False,  # Whether to run demand optimization
         
         
         # Grid optimization sub-process flags
