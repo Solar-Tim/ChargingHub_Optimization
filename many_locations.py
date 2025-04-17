@@ -47,10 +47,10 @@ def run_for_location(location_id, longitude, latitude):
 
 def main():
     """Main function to iterate through locations and run the optimization."""
-    locations_file = Path("locations_all.csv")
+    locations_file = Path("locations.csv")
     if not locations_file.exists():
-        logging.error("locations_all.csv not found.")
-        print("Error: locations_all.csv not found.")
+        logging.error("locations.csv not found.")
+        print("Error: locations.csv not found.")
         return
 
     try:
@@ -60,7 +60,7 @@ def main():
         required_columns = ['id', 'longitude', 'latitude']
         for col in required_columns:
             if col not in df_locations.columns:
-                raise ValueError(f"Required column '{col}' missing in locations_all.csv")
+                raise ValueError(f"Required column '{col}' missing in locations.csv")
 
         for _, row in df_locations.iterrows():
             try:
@@ -90,14 +90,14 @@ def main():
                 print(f"Error processing row: {row.to_dict()}. Error: {e}")
 
     except FileNotFoundError:
-        logging.error(f"locations_all.csv not found at {locations_file}")
-        print(f"Error: locations_all.csv not found at {locations_file}")
+        logging.error(f"locations.csv not found at {locations_file}")
+        print(f"Error: locations.csv not found at {locations_file}")
     except pd.errors.EmptyDataError:
-        logging.error(f"locations_all.csv is empty")
-        print("Error: locations_all.csv is empty")
+        logging.error(f"locations.csv is empty")
+        print("Error: locations.csv is empty")
     except pd.errors.ParserError as e:
-        logging.error(f"Error parsing locations_all.csv: {e}")
-        print(f"Error parsing locations_all.csv: {e}")
+        logging.error(f"Error parsing locations.csv: {e}")
+        print(f"Error parsing locations.csv: {e}")
     except ValueError as e:
         logging.error(f"Data validation error: {e}")
         print(f"Data validation error: {e}")

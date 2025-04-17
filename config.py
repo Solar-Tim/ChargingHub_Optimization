@@ -29,7 +29,7 @@ class Config:
 
         'RUN_TRAFFIC_CALCULATION': True,  # Whether to run traffic calculation module
         'RUN_CHARGING_HUB_SETUP': True,   # Whether to run charging hub setup module
-        'RUN_GRID_OPTIMIZATION': False,    # Whether to run grid optimization module
+        'RUN_GRID_OPTIMIZATION': True,    # Whether to run grid optimization module
         
 
         # Traffic calculation sub-process flags
@@ -40,12 +40,12 @@ class Config:
         # Sub-process flags for charging hub setup
         'RUN_TRUCK_MATCHING': True,       # Whether to run truck-charging type matching
         'RUN_HUB_CONFIGURATION': True,    # Whether to run charging hub configuration
-        'RUN_DEMAND_OPTIMIZATION': False,  # Whether to run demand optimization
+        'RUN_DEMAND_OPTIMIZATION': True,  # Whether to run demand optimization
         
         
         # Grid optimization sub-process flags
         'USE_DISTANCE_CALCULATION': True,    # Whether to use distance calculation for optimization
-        'CREATE_PLOT': False,                # Whether to generate plot of optimization results
+        'CREATE_PLOT': True,                # Whether to generate plot of optimization results
         'CREATE_DISTANCE_MAPS': False,       # Whether to generate maps of distance calculations
         'INCLUDE_BATTERY': True,             # Whether to include battery in optimization
         'USE_MANUAL_CHARGER_COUNT': False,   # Whether to use manual charger count instead of optimizing
