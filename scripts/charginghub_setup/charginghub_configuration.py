@@ -8,6 +8,7 @@ import warnings
 import json
 import multiprocessing
 from functools import partial
+from config import Config
 
 warnings.filterwarnings('ignore', category=pd.errors.SettingWithCopyWarning)
 
@@ -37,20 +38,37 @@ CHARGING_TIMES = {
 }
 SCENARIO_NAME = "Base"
 
+def _get_location_id():
+    """Helper function to safely get the location ID from Config."""
+    if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False):
+        return Config.RESULT_NAMING.get('CUSTOM_ID')
+    return None
+
+def _add_id_to_path(path, location_id):
+    """Adds location_id before the file extension."""
+    if location_id:
+        p = Path(path)
+        return p.parent / f"{p.stem}_{location_id}{p.suffix}"
+    return path
+
 # -----------------------------------------------------------------------------
 # DATA IMPORT
 # -----------------------------------------------------------------------------
 
-def datenimport() -> pd.DataFrame:
-    """Load incoming‑truck JSON produced by the upstream demand model."""
+def datenimport(location_id=None) -> pd.DataFrame:
+    """Load incoming‑truck JSON produced by the upstream demand model.
+    Uses location_id to load the correct file.
+    """
     project_root = Path(__file__).parent.parent.parent.resolve()
-    src = project_root / "data" / "load" / "truckdata" / "eingehende_lkws_ladesaeule.json"
+    # Add location_id to the source file path
+    src_base = project_root / "data" / "load" / "truckdata" / "eingehende_lkws_ladesaeule.json"
+    src = _add_id_to_path(src_base, location_id)
 
-    logger.info("Loading truck data from %s", src)
+    logger.info(f"Loading truck data from {src} for location_id: {location_id}")
     if not src.exists():
         raise FileNotFoundError(
             f"Truck data file not found at {src}. "
-            "Ensure 'eingehende_lkws_ladesaeule.json' exists under data/load/truckdata."
+            f"Ensure 'eingehende_lkws_ladesaeule_{location_id}.json' exists under data/load/truckdata."
         )
 
     with open(src, "r", encoding="utf-8") as f:
@@ -78,7 +96,7 @@ def datenimport() -> pd.DataFrame:
             df[dest] = pd.NA
 
     df.dropna(subset=["Nummer", "Ankunftszeit", "Ladesäule"], inplace=True)
-    logger.info("Loaded %d trucks", len(df))
+    logger.info(f"Loaded {len(df)} trucks for location_id: {location_id}")
     return df
 
 # -----------------------------------------------------------------------------
@@ -190,7 +208,11 @@ def parallel_charging_types_processing(df_trucks: pd.DataFrame):
 # HUB CONFIGURATION
 # -----------------------------------------------------------------------------
 
-def konfiguration_ladehub(df_trucks: pd.DataFrame):
+def konfiguration_ladehub(df_trucks: pd.DataFrame, location_id=None):
+    """
+    Configures the charging hub based on truck data and saves results.
+    Accepts location_id for saving the output file.
+    """
     # adjust pause lengths
     df_trucks.loc[df_trucks["Pausentyp"] == "Nachtlader", "Pausenlaenge"] = CHARGING_TIMES["Nacht"]
     df_trucks.loc[df_trucks["Pausentyp"] == "Schnelllader", "Pausenlaenge"] = CHARGING_TIMES["Schnell"]
@@ -217,23 +239,37 @@ def konfiguration_ladehub(df_trucks: pd.DataFrame):
 
     out_dir = Path(__file__).parent.parent.parent / "data" / "load" / "truckdata"
     out_dir.mkdir(parents=True, exist_ok=True)
-    export_results_as_json(df_counts, df_status, df_opts, out_dir / f"charging_config_{SCENARIO_NAME.lower()}.json")
+    # Pass location_id to export function
+    export_results_as_json(
+        df_counts, 
+        df_status, 
+        df_opts, 
+        out_dir / f"charging_config_{SCENARIO_NAME.lower()}.json",
+        location_id=location_id
+    )
     return df_counts
 
 # -----------------------------------------------------------------------------
 # JSON EXPORT (BACKWARD‑COMPATIBLE)
 # -----------------------------------------------------------------------------
 
-def export_results_as_json(df_counts: pd.DataFrame, df_status: pd.DataFrame, df_opts: pd.DataFrame, dest: Path):
+def export_results_as_json(df_counts: pd.DataFrame, df_status: pd.DataFrame, df_opts: pd.DataFrame, dest_base: Path, location_id=None):
+    """
+    Exports the configuration results to a JSON file, incorporating location_id.
+    """
     from datetime import datetime
+
+    # Add location_id to the destination path
+    dest_with_id = _add_id_to_path(dest_base, location_id)
 
     result = {
         "metadata": {
             "scenario": SCENARIO_NAME,
             "charging_quotas": CHARGING_QUOTAS,
             "charging_times": CHARGING_TIMES,
-            "timestamp": datetime.now().isoformat(),  # local time to match legacy files
+            "timestamp": datetime.now().isoformat(),
             "description": "Charging hub configuration results",
+            "location_id": location_id # Add location_id to metadata
         },
         "charging_stations": {},
         "configuration_options": [],
@@ -293,21 +329,25 @@ def export_results_as_json(df_counts: pd.DataFrame, df_status: pd.DataFrame, df_
     # ------------------------------------------------------------------
     # write file --------------------------------------------------------
     # ------------------------------------------------------------------
-    with open(dest, "w", encoding="utf-8") as f:
+    with open(dest_with_id, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
-    logger.info("Configuration results exported to JSON: %s", dest)
+    logger.info(f"Configuration results exported to JSON: {dest_with_id}")
 
 # -----------------------------------------------------------------------------
 # MAIN ENTRY
 # -----------------------------------------------------------------------------
 
 def main():
-    print("Starting charging hub configuration")
-    logger.info("Starting charging hub configuration")
-    df_trucks = datenimport()
-    konfiguration_ladehub(df_trucks)
-    print("Charging hub configuration completed successfully")
-    logger.info("Charging hub configuration completed successfully")
+    # Get location_id for file naming
+    location_id = _get_location_id()
+    print(f"Starting charging hub configuration for location_id: {location_id}")
+    logger.info(f"Starting charging hub configuration for location_id: {location_id}")
+    # Pass location_id to datenimport
+    df_trucks = datenimport(location_id=location_id)
+    # Pass location_id to konfiguration_ladehub
+    konfiguration_ladehub(df_trucks, location_id=location_id)
+    print(f"Charging hub configuration completed successfully for location_id: {location_id}")
+    logger.info(f"Charging hub configuration completed successfully for location_id: {location_id}")
 
 if __name__ == "__main__":
     main()

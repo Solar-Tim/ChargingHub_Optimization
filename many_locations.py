@@ -5,6 +5,8 @@ from config import Config
 from main import main as run_all_processes
 import logging
 import os
+import concurrent.futures
+from os import cpu_count # Import cpu_count
 
 # Configure logging
 log_dir = Path("logs")
@@ -28,17 +30,21 @@ def run_for_location(location_id, longitude, latitude):
             Config.RESULT_NAMING = {}
         Config.RESULT_NAMING['USE_CUSTOM_ID'] = True
         Config.RESULT_NAMING['CUSTOM_ID'] = str(location_id)
-        
-        # Debug output
-        print(f"DEBUG: Setting custom ID to: {str(location_id)}")
-        logging.info(f"DEBUG: Setting custom ID to: {str(location_id)}")
 
-        logging.info(f"Running optimization for location {location_id} with coordinates ({longitude}, {latitude})")
-        print(f"\nRunning optimization for location {location_id} with coordinates ({longitude}, {latitude})")
+        # Debug output - Use location_id in log message for clarity
+        print(f"DEBUG: [{location_id}] Setting custom ID to: {str(location_id)}")
+        logging.info(f"DEBUG: [{location_id}] Setting custom ID to: {str(location_id)}")
 
+        logging.info(f"[{location_id}] Running optimization for location {location_id} with coordinates ({longitude}, {latitude})")
+        print(f"\n[{location_id}] Running optimization for location {location_id} with coordinates ({longitude}, {latitude})")
+
+        # It's crucial that run_all_processes and its subprocesses
+        # correctly use the Config settings (location, custom_id) set above
+        # for this specific process/worker.
         run_all_processes()  # Execute the main optimization process
 
-        logging.info(f"Optimization completed successfully for location {location_id}")
+        logging.info(f"[{location_id}] Optimization completed successfully for location {location_id}")
+        print(f"[{location_id}] Optimization completed successfully for location {location_id}")
 
     except Exception as e:
         logging.error(f"Error running optimization for location {location_id}: {e}", exc_info=True)
@@ -46,7 +52,7 @@ def run_for_location(location_id, longitude, latitude):
 
 
 def main():
-    """Main function to iterate through locations and run the optimization."""
+    """Main function to iterate through locations and run the optimization in parallel."""
     locations_file = Path("locations.csv")
     if not locations_file.exists():
         logging.error("locations.csv not found.")
@@ -62,32 +68,50 @@ def main():
             if col not in df_locations.columns:
                 raise ValueError(f"Required column '{col}' missing in locations.csv")
 
-        for _, row in df_locations.iterrows():
-            try:
-                location_id = row['id']
-                longitude = row['longitude']
-                latitude = row['latitude']
+        # Determine the number of workers
+        # Use slightly less than max CPUs to leave resources for OS/other tasks
+        max_workers = max(1, cpu_count() - 1 if cpu_count() else 1)
+        print(f"Using {max_workers} workers for parallel processing.")
+        logging.info(f"Initializing ProcessPoolExecutor with {max_workers} workers.")
 
-                # Validate data types and format location_id
-                if not isinstance(location_id, (int, str)):
-                    try:
-                        location_id = int(location_id)  # Convert to int first to handle floats like 7.0
-                        location_id = str(location_id).zfill(3)  # Convert to string and pad with leading zeros
-                    except ValueError:
-                        raise ValueError(f"Invalid location_id type: {type(location_id)}. Could not convert to string.")
-                else:
-                    try:
-                        location_id = str(int(location_id)).zfill(3) # Ensure it's an integer before padding
-                    except ValueError:
-                         raise ValueError(f"Invalid location_id type: {type(location_id)}. Could not convert to string.")
-                longitude = float(longitude)
-                latitude = float(latitude)
+        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = []
+            for _, row in df_locations.iterrows():
+                try:
+                    location_id = row['id']
+                    longitude = row['longitude']
+                    latitude = row['latitude']
 
-                run_for_location(location_id, longitude, latitude)
+                    # Validate data types and format location_id
+                    if not isinstance(location_id, (int, str)):
+                        try:
+                            location_id = int(location_id)  # Convert to int first to handle floats like 7.0
+                            location_id = str(location_id).zfill(3)  # Convert to string and pad with leading zeros
+                        except ValueError:
+                            raise ValueError(f"Invalid location_id type: {type(location_id)}. Could not convert to string.")
+                    else:
+                        try:
+                            location_id = str(int(location_id)).zfill(3) # Ensure it's an integer before padding
+                        except ValueError:
+                             raise ValueError(f"Invalid location_id type: {type(location_id)}. Could not convert to string.")
+                    longitude = float(longitude)
+                    latitude = float(latitude)
 
-            except Exception as e:
-                logging.error(f"Error processing row: {row.to_dict()}. Error: {e}", exc_info=True)
-                print(f"Error processing row: {row.to_dict()}. Error: {e}")
+                    # Submit task to the executor
+                    futures.append(executor.submit(run_for_location, location_id, longitude, latitude))
+
+                except Exception as e:
+                    logging.error(f"Error processing row before submission: {row.to_dict()}. Error: {e}", exc_info=True)
+                    print(f"Error processing row before submission: {row.to_dict()}. Error: {e}")
+
+            # Wait for all futures to complete
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    future.result()  # Retrieve result or raise exception if task failed
+                except Exception as e:
+                    # Error is already logged within run_for_location, but log completion status here too
+                    logging.error(f"A location task failed: {e}", exc_info=True)
+                    print(f"A location task failed: {e}")
 
     except FileNotFoundError:
         logging.error(f"locations.csv not found at {locations_file}")

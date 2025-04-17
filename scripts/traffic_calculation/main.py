@@ -17,7 +17,7 @@ from breaks_assignement import assign_breaks_to_locations
 from toll_matching import toll_section_matching_and_daily_demand, find_nearest_traffic_point, scale_charging_sessions
 from new_breaks import calculate_new_breaks
 from new_toll_midpoints import get_toll_midpoints
-from json_utils import dataframe_to_json, json_to_dataframe, load_json_data
+from json_utils import dataframe_to_json, json_to_dataframe, load_json_data, _get_location_id, _add_id_to_path
 from config_demand import (FILES, OUTPUT_DIR, FINAL_OUTPUT_DIR, get_default_location, CSV, 
                            neue_pausen, neue_toll_midpoints, SPATIAL, year, TIME, 
                            validate_year, get_charging_column, GERMAN_DAYS, SCENARIOS)
@@ -93,6 +93,11 @@ def save_dataframe(df, output_path, sep=CSV['DEFAULT_SEPARATOR'], decimal=CSV['D
     logger.info(f"Data saved to {output_path}")
 
 def main():
+    # Get location_id for file naming
+    location_id = _get_location_id()
+    print(f"DEBUG [traffic_main]: Using location_id: {location_id}")
+    logger.info(f"[traffic_main] Using location_id: {location_id}")
+
     # Add debugging for location
     print(f"DEBUG [traffic_main]: Current location from get_default_location() = {get_default_location()}")
     
@@ -110,26 +115,30 @@ def main():
     print(f"DEBUG [traffic_main]: df_location = {df_location.to_dict()}")
     
     # Handle breaks calculation
-    if neue_pausen:
+    breaks_output_path = FILES['BREAKS_OUTPUT']
+    if neue_pausen or not Path(_add_id_to_path(breaks_output_path, location_id)).exists(): # Check ID-specific file
         logger.info("Calculating new breaks...")
-        # Pass the correct input directory path
         input_dir = os.path.dirname(FILES['TRAFFIC_FLOW'])
-        df_breaks = calculate_new_breaks(base_path=input_dir)
+        # Assuming calculate_new_breaks saves the file internally with ID
+        df_breaks = calculate_new_breaks(base_path=input_dir, location_id=location_id)
     else:
-        # Load breaks from JSON if file exists, otherwise calculate new breaks
         try:
-            df_breaks = json_to_dataframe(FILES['BREAKS_OUTPUT'])
+            # Load ID-specific breaks file
+            df_breaks = json_to_dataframe(breaks_output_path, location_id=location_id)
         except FileNotFoundError:
-            logger.warning(f"Breaks file not found at {FILES['BREAKS_OUTPUT']}. Calculating new breaks.")
+            logger.warning(f"Breaks file not found for ID {location_id}. Calculating new breaks.")
             input_dir = os.path.dirname(FILES['TRAFFIC_FLOW'])
-            df_breaks = calculate_new_breaks(base_path=input_dir)
+            df_breaks = calculate_new_breaks(base_path=input_dir, location_id=location_id)
     
     # Handle toll midpoints calculation
+    # Toll midpoints are likely location-independent, so no ID needed for the file itself
+    # But the function needs to know the ID if it loads other ID-specific files
     df_mauttabelle = get_toll_midpoints(
         FILES['MAUT_TABLE'], 
-        FILES['TOLL_MIDPOINTS_OUTPUT'], 
+        FILES['TOLL_MIDPOINTS_OUTPUT'], # Keep original name for shared cache
         skiprows=1,
-        force_recalculate=neue_toll_midpoints
+        force_recalculate=neue_toll_midpoints,
+        location_id=location_id # Pass ID for potential internal use
     )
     
     # Process breaks and assign to locations
@@ -145,7 +154,7 @@ def main():
     
     # Match toll sections and calculate daily demand
     logger.info("Matching toll sections and calculating daily demand...")
-    results_df = toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahrung)
+    results_df = toll_section_matching_and_daily_demand(results_df, df_mauttabelle, df_befahrung, location_id=location_id)
     
     # Find nearest traffic point and scale charging sessions
     lat = df_location['Breitengrad'].iloc[0]
@@ -175,8 +184,8 @@ def main():
         traffic_data = df_befahrung[df_befahrung['Strecken-ID'] == reference_id].iloc[0]
         metadata["toll_section"]["traffic"] = {day: int(traffic_data[day]) for day in GERMAN_DAYS if day in traffic_data}
 
-    # Save results as structured JSON
-    dataframe_to_json(results_df, FILES['FINAL_OUTPUT'], metadata=metadata, structure_type='demand')
+    # Save results as structured JSON with location_id
+    dataframe_to_json(results_df, FILES['FINAL_OUTPUT'], metadata=metadata, structure_type='demand', location_id=location_id)
     
     # Calculate robust charging demand scaling
     try:
@@ -192,7 +201,8 @@ def main():
             reference_id, 
             annual_hpc_sessions=annual_hpc_sessions,
             annual_ncs_sessions=annual_ncs_sessions,
-            df_befahrung=df_befahrung
+            df_befahrung=df_befahrung,
+            location_id=location_id
         )
         
         # Add detailed logging of HPC sessions - FIXED: Removed duplicate logging section
@@ -207,20 +217,22 @@ def main():
         logger.info(f"Weekly HPC sessions: {weekly_total:.0f}")
         logger.info(f"Yearly HPC sessions: {yearly_total:.0f} (estimated from weekly pattern)")
         
-        # Save charging demand as structured JSON
+        # Save charging demand as structured JSON with location_id
         charging_metadata = {
             "reference_toll_section_id": reference_id,
             "weeks_per_year": TIME['WEEKS_PER_YEAR'],
-            "forecast_year": year
+            "forecast_year": year,
+            "location_id": location_id # Add location_id to metadata
         }
         dataframe_to_json(robust_sessions, FILES['CHARGING_DEMAND'], 
-                          metadata=charging_metadata, structure_type='charging_sessions')
+                          metadata=charging_metadata, structure_type='charging_sessions', location_id=location_id)
         
         logger.info("Scaling of charging sessions completed")
     except Exception as e:
         logger.error(f"Error in scaling: {e}")
     
-    logger.info(f"Processing complete. Final results saved to {FILES['FINAL_OUTPUT']}")
+    final_output_path_with_id = _add_id_to_path(FILES['FINAL_OUTPUT'], location_id)
+    logger.info(f"Processing complete. Final results saved to {final_output_path_with_id}")
 
 if __name__ == "__main__":
     main()

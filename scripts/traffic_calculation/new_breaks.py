@@ -10,7 +10,7 @@ import logging
 from typing import Dict, List, Tuple, Any
 from functools import lru_cache
 from config_demand import BREAKS, FILES, CSV, get_traffic_flow_column, year
-from json_utils import dataframe_to_json, json_to_dataframe
+from json_utils import dataframe_to_json, json_to_dataframe, _get_location_id, _add_id_to_path
 
 logger = logging.getLogger(__name__)
 
@@ -295,14 +295,16 @@ def process_two_driver_breaks(
     return breaks_data
 
 
-def calculate_new_breaks(base_path=None, random_seed=42, export=True):
+def calculate_new_breaks(base_path=None, random_seed=42, export=True, location_id=None):
     """
     Calculate new breaks based on traffic patterns.
+    Accepts location_id for file naming.
     
     Args:
         base_path: Base directory path (defaults to script directory if None)
         random_seed: Seed for random number generation (optional)
         export: Whether to export the results to JSON (default: True)
+        location_id: Optional location ID for file naming.
     
     Returns:
         DataFrame containing break data
@@ -312,7 +314,12 @@ def calculate_new_breaks(base_path=None, random_seed=42, export=True):
     if base_path is None:
         base_path = os.path.dirname(os.path.abspath(__file__))
     
-    logger.info("Starting new break calculation...")
+    # If location_id is not provided, try to get it from Config
+    if location_id is None:
+        location_id = _get_location_id()
+        logger.info(f"[calculate_new_breaks] Retrieved location_id from Config: {location_id}")
+
+    logger.info(f"Starting new break calculation for location_id: {location_id}...")
     
     # 1. Load data
     df_traffic_flow, df_edges, df_nodes = load_data(base_path)
@@ -381,17 +388,22 @@ def calculate_new_breaks(base_path=None, random_seed=42, export=True):
     
     # 10. Export results if required
     if export:
-        output_path = FILES['BREAKS_OUTPUT']
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        output_path_base = FILES['BREAKS_OUTPUT']
+        # Add location_id to the path using the helper function
+        output_path_with_id = _add_id_to_path(output_path_base, location_id)
+        
+        os.makedirs(os.path.dirname(output_path_with_id), exist_ok=True)
         
         # Save as JSON with structured format - changed BASE_YEAR to year
         metadata = {
             'base_year': year,
             'random_seed': random_seed,
-            'calculation_time': time.time() - time_start
+            'calculation_time': time.time() - time_start,
+            'location_id': location_id # Add location_id to metadata
         }
-        dataframe_to_json(result_df, output_path, metadata=metadata, structure_type='breaks')
-        logger.info(f"Results exported to: {output_path}")
+        # Pass location_id=None here because it's already in the path
+        dataframe_to_json(result_df, output_path_with_id, metadata=metadata, structure_type='breaks', location_id=None)
+        logger.info(f"Results exported to: {output_path_with_id}")
     
     # Log summary statistics
     short_breaks_count = len(df_breaks[df_breaks['Break_Type'] == 'short'])

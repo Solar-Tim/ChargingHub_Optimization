@@ -6,7 +6,16 @@ from shapely.geometry import Point
 import folium
 from folium.features import DivIcon
 from datetime import datetime
+from pathlib import Path # Import Path
 from .distance_lines import calc_power_lines
+
+# Helper function for adding ID to path
+def _add_id_to_path(path: str, location_id: Optional[str]) -> str:
+    """Adds location_id before the file extension if provided."""
+    if location_id:
+        p = Path(path)
+        return str(p.parent / f"{p.stem}_{location_id}{p.suffix}")
+    return path
 
 # Add function to get the map directory
 def get_map_directory():
@@ -181,20 +190,27 @@ def create_map(
 
     return map_obj
 
-def calc_substations(ref_point: Point, map: bool = False):
+def calc_substations(ref_point: Point, map: bool = False, location_id: Optional[str] = None):
     """
     Load distribution and transmission data,
     find the closest substations to the given reference point,
     and optionally create and save a map.
 
     :param ref_point: A shapely.geometry.Point specifying the location to check.
-    :param create_map: Boolean indicating whether to generate a map HTML file.
-    :return: (distribution_result, transmission_result) 
+    :param map: Boolean indicating whether to generate a map HTML file.
+    :param location_id: Optional identifier to append to the map filename.
+    :return: (distribution_result, transmission_result)
              The closest distribution and transmission substations.
     """
     # Update file paths to match project structure
-    distribution_data = load_geojson("data/osm/osm_sub_distribution_V2.geojson")
-    transmission_data = load_geojson("data/osm/osm_sub_transmission.geojson")
+    # Consider making these paths configurable or relative to project root
+    project_root = Path(__file__).resolve().parents[2]
+    distribution_path = project_root / "data" / "osm" / "osm_sub_distribution_V2.geojson"
+    transmission_path = project_root / "data" / "osm" / "osm_sub_transmission.geojson"
+
+    distribution_data = load_geojson(str(distribution_path))
+    transmission_data = load_geojson(str(transmission_path))
+
 
     # Find closest substations
     distribution_result, transmission_result = find_closest_substations(
@@ -205,14 +221,16 @@ def calc_substations(ref_point: Point, map: bool = False):
     if map:
         result_map = create_map(ref_point, distribution_result, transmission_result)
         timestamp = datetime.now().strftime('%m%d_%H%M')
-        map_name = os.path.join(get_map_directory(), f"{timestamp}_substation_map.html")
+        base_map_name = os.path.join(get_map_directory(), f"{timestamp}_substation_map.html")
+        # Add location_id to the filename if provided
+        map_name = _add_id_to_path(base_map_name, location_id)
         result_map.save(map_name)
         print(f"Map saved as: {map_name}")
 
     return distribution_result, transmission_result
 
-def create_combined_map(ref_point: Point, 
-                       substation_results: tuple, 
+def create_combined_map(ref_point: Point,
+                       substation_results: tuple,
                        powerline_distance: float,
                        powerline_point: tuple) -> folium.Map:
     """Create map showing reference point, substations and nearest powerline point."""
@@ -259,33 +277,43 @@ def create_combined_map(ref_point: Point,
     
     return map_obj
 
-def calculate_all_distances(ref_point: Point, create_map: bool) -> Dict[str, Any]:
-    """Calculate distances to substations and power lines."""
-    # Get substation results
-    substation_results = calc_substations(ref_point, map=create_map)
+def calculate_all_distances(ref_point: Point, create_map: bool, location_id: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Calculate distances to substations and power lines, optionally adding location_id to map filenames.
+
+    :param ref_point: A shapely.geometry.Point specifying the location to check.
+    :param create_map: Boolean indicating whether to generate map HTML files.
+    :param location_id: Optional identifier to append to the map filenames.
+    :return: Dictionary containing distance results.
+    """
+    # Get substation results, passing location_id for potential map saving
+    substation_results = calc_substations(ref_point, map=create_map, location_id=location_id)
     dist_result, trans_result = substation_results
-    
+
     # Calculate powerline distance
-    powerline_result = calc_power_lines(ref_point, create_map)
+    # Note: calc_power_lines might also need modification if it saves maps
+    powerline_result = calc_power_lines(ref_point, create_map=False) # Avoid double map saving for now
     powerline_distance = None
     nearest_point = None
-    
+
     if powerline_result:
         powerline_distance, _, nearest_point = powerline_result
-    
+
     # Create combined map if requested
-    if create_map and powerline_result:
+    if create_map and (dist_result or trans_result or powerline_result): # Only create if there's something to show
         map_obj = create_combined_map(
-            ref_point, 
-            substation_results, 
-            powerline_distance or 0, 
+            ref_point,
+            substation_results,
+            powerline_distance or 0,
             nearest_point # type: ignore
         )
         timestamp = datetime.now().strftime('%m%d_%H%M')
-        map_name = os.path.join(get_map_directory(), f"{timestamp}_combined_distance_map.html")
+        base_map_name = os.path.join(get_map_directory(), f"{timestamp}_combined_distance_map.html")
+        # Add location_id to the filename if provided
+        map_name = _add_id_to_path(base_map_name, location_id)
         map_obj.save(map_name)
-        print(f"Map saved as: {map_name}")
-    
+        print(f"Combined map saved as: {map_name}")
+
     return {
         'distribution_distance': dist_result[0] if dist_result else None,
         'transmission_distance': trans_result[0] if trans_result else None,
@@ -295,15 +323,30 @@ def calculate_all_distances(ref_point: Point, create_map: bool) -> Dict[str, Any
 
 # Example usage:
 if __name__ == "__main__":
-    # Reference point: Berlin, Germany (longitude, latitude)
+    # Reference point: Example coordinates (longitude, latitude)
     reference_point = Point(6.214699333123033, 50.81648528837548)
-    if False: #only Substations calculation 
-        # Call the function, specifying whether a map is needed
-        dist_result, trans_result = calc_substations(berlin, map=True)
-    if True: # all distances calculation
-        # Example usage
-        results = calculate_all_distances(reference_point, create_map=True)
+    custom_location_id = "Aachen_Test" # Example ID
 
+    # Example: Calculate only substation distances with map and ID
+    # dist_result, trans_result = calc_substations(reference_point, map=True, location_id=custom_location_id)
+    # if dist_result:
+    #     print(f"Distribution substation distance: {dist_result[0]:.0f}m")
+    # if trans_result:
+    #     print(f"Transmission substation distance: {trans_result[0]:.0f}m")
+
+
+    # Example: Calculate all distances with combined map and ID
+    results = calculate_all_distances(reference_point, create_map=True, location_id=custom_location_id)
+
+    if results['distribution_distance'] is not None:
         print(f"Distribution substation distance: {results['distribution_distance']:.0f}m")
+    else:
+        print("Distribution substation distance: Not found")
+    if results['transmission_distance'] is not None:
         print(f"Transmission substation distance: {results['transmission_distance']:.0f}m")
+    else:
+        print("Transmission substation distance: Not found")
+    if results['powerline_distance'] is not None:
         print(f"Powerline distance: {results['powerline_distance']:.0f}m")
+    else:
+        print("Powerline distance: Not found")

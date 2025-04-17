@@ -7,6 +7,8 @@ import logging
 from datetime import datetime
 from config_setup import CONFIG as ORIGINAL_CONFIG, leistung_ladetyp
 from concurrent.futures import ProcessPoolExecutor
+from config import Config
+from pathlib import Path
 
 # Create a working copy of the config that can be modified
 CONFIG = ORIGINAL_CONFIG.copy()
@@ -42,14 +44,33 @@ def validate_truck_data(df):
     
     return df
 
+def _get_location_id():
+    """Helper function to safely get the location ID from Config."""
+    if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False):
+        return Config.RESULT_NAMING.get('CUSTOM_ID')
+    return None
+
+def _add_id_to_path(path, location_id):
+    """Adds location_id before the file extension."""
+    if location_id:
+        p = Path(path)
+        return p.parent / f"{p.stem}_{location_id}{p.suffix}"
+    return path
+
 def modellierung():
     """
     Optimizes the charging hub for a specific week using configuration from charging_config_base.json file.
     The optimization prioritizes using trucks data from this file if available.
+    Saves results with location_id in filenames.
     
     Returns:
-        None: Results are saved to a JSON file
+        None: Results are saved to files
     """
+    # Get location_id for file naming
+    location_id = _get_location_id()
+    logging.info(f"[demand_optimization] Running for location_id: {location_id}")
+    print(f"[demand_optimization] Running for location_id: {location_id}")
+
     logging.info(f"Optimizing for scenario {CONFIG['STRATEGIES']}")
     print(f"Optimizing for scenario {CONFIG['STRATEGIES']}")
  
@@ -71,95 +92,97 @@ def modellierung():
     print(f"Root directory: {root_dir}")
     
     # ------------------------------
-    # Load charging hub configuration from JSON - this is our primary data source
+    # Load charging hub configuration from JSON - potentially ID-specific
     # ------------------------------
-    ladehub_filepath = os.path.join(root_dir, 'data', 'load', 'truckdata', 'charging_config_base.json')
+    # Use helper to potentially add ID to the truck data filename
+    ladehub_filepath_base = os.path.join(root_dir, 'data', 'load', 'truckdata', 'charging_config_base.json')
+    ladehub_filepath = _add_id_to_path(ladehub_filepath_base, location_id)
     
     logging.info(f"Checking charging config path: {ladehub_filepath}")
     print(f"Checking path: {ladehub_filepath}")
     
-
+    truck_data_from_config = False
+    df_lkws = pd.DataFrame() # Initialize df_lkws
+    charging_config = {} # Initialize charging_config
 
     try:
-        logging.info(f"Loading charging hub config from: {ladehub_filepath}")
-        print(f"Loading charging hub config from: {ladehub_filepath}")
-        with open(ladehub_filepath, 'r') as f:
-            charging_config = json.load(f)
-        logging.info(f"Successfully loaded charging hub config")
-        print(f"Successfully loaded charging hub config")
-            
-        # Try to extract truck data from charging_config_base.json
-        if "trucks" in charging_config and charging_config["trucks"]:
-            truck_data_from_config = {"trucks": charging_config["trucks"]}
-            logging.info(f"Using truck data from charging_config_base.json - {len(charging_config['trucks'])} trucks found")
-            print(f"Using truck data from charging_config_base.json - {len(charging_config['trucks'])} trucks found")
+        with open(ladehub_filepath, 'r', encoding='utf-8') as f:
+            ladehub_data = json.load(f)
+            charging_config = ladehub_data # Store the loaded config
+        
+        # Check if truck data exists within the config file
+        if 'trucks' in ladehub_data and ladehub_data['trucks']:
+            df_lkws = pd.DataFrame(ladehub_data['trucks'])
+            df_lkws = validate_truck_data(df_lkws) # Validate and standardize
+            truck_data_from_config = True
+            logging.info(f"Loaded {len(df_lkws)} trucks from {ladehub_filepath}")
+            print(f"Loaded {len(df_lkws)} trucks from {ladehub_filepath}")
         else:
-            truck_data_from_config = None
-            logging.warning("No truck data found in charging_config_base.json")
-            print("WARNING: No truck data found in charging_config_base.json")
+            logging.warning(f"No truck data found in {ladehub_filepath}")
+            print(f"Warning: No truck data found in {ladehub_filepath}")
                 
+    except FileNotFoundError:
+        logging.warning(f"Charging config file not found at {ladehub_filepath}. Will try separate truck file.")
+        print(f"Warning: Charging config file not found at {ladehub_filepath}. Will try separate truck file.")
     except Exception as e:
-        logging.error(f"Error loading charging hub config: {e}")
-        print(f"ERROR loading charging hub data: {e}")
-        # Create default configuration on error
-        charging_config = {
-            "charging_stations": {
-                "NCS": {"count": 4},
-                "HPC": {"count": 2},
-                "MCS": {"count": 1}
-            }
-        }
-        truck_data_from_config = None
+        logging.error(f"Error loading or processing {ladehub_filepath}: {e}")
+        print(f"ERROR loading or processing {ladehub_filepath}: {e}")
     
     # ------------------------------
     # Only load truck data from separate file if not found in charging_config_base.json
     # ------------------------------
-    if truck_data_from_config is None:
-        lkw_filepath = os.path.join(root_dir, 'data', 'load', 'truckdata', 'eingehende_lkws_ladesaeule.json')
+    if not truck_data_from_config:
+        # Use helper to potentially add ID to the separate truck data filename
+        truck_data_filepath_base = os.path.join(root_dir, 'data', 'load', 'truckdata', 'eingehende_lkws_ladesaeule.json')
+        truck_data_filepath = _add_id_to_path(truck_data_filepath_base, location_id)
         
-        logging.info(f"Checking truck data path: {lkw_filepath}")
-        print(f"Checking path: {lkw_filepath}")
+        logging.info(f"Attempting to load truck data from separate file: {truck_data_filepath}")
+        print(f"Attempting to load truck data from separate file: {truck_data_filepath}")
         
-        if not os.path.exists(lkw_filepath):
-            logging.error("Could not find truck data file and no truck data in charging config")
-            print("ERROR: Could not find truck data file and no truck data in charging config")
-            return None
-        
-        # Load truck data from separate file
         try:
-            logging.info(f"Loading truck data from: {lkw_filepath}")
-            print(f"Loading truck data from: {lkw_filepath}")
-            with open(lkw_filepath, 'r') as f:
-                truck_data = json.load(f)
+            with open(truck_data_filepath, 'r', encoding='utf-8') as f:
+                truck_json_data = json.load(f)
             
-            print(f"Successfully loaded truck data. Found {len(truck_data['trucks'])} trucks.")
-            logging.info(f"Successfully loaded truck data from external file.")
+            if 'trucks' in truck_json_data and truck_json_data['trucks']:
+                df_lkws = pd.DataFrame(truck_json_data['trucks'])
+                df_lkws = validate_truck_data(df_lkws) # Validate and standardize
+                logging.info(f"Loaded {len(df_lkws)} trucks from {truck_data_filepath}")
+                print(f"Loaded {len(df_lkws)} trucks from {truck_data_filepath}")
+            else:
+                logging.error(f"No truck data found in {truck_data_filepath}")
+                print(f"ERROR: No truck data found in {truck_data_filepath}")
+                return # Exit if no truck data is available
+        except FileNotFoundError:
+            logging.error(f"Separate truck data file not found: {truck_data_filepath}")
+            print(f"ERROR: Separate truck data file not found: {truck_data_filepath}")
+            return # Exit if no truck data is available
         except Exception as e:
-            logging.error(f"Error loading truck data: {e}")
-            print(f"ERROR loading truck data: {e}")
-            return None
-    else:
-        # Use truck data from charging_config_base.json
-        truck_data = truck_data_from_config
+            logging.error(f"Error loading truck data from {truck_data_filepath}: {e}")
+            print(f"ERROR loading truck data from {truck_data_filepath}: {e}")
+            return # Exit on error
+
+    # *** REMOVED Redundant DataFrame creation and validation ***
+    # # Convert truck list to DataFrame
+    # df_lkw = pd.DataFrame(truck_data["trucks"]) # 'truck_data' is likely undefined here
     
-    # Convert truck list to DataFrame
-    df_lkw = pd.DataFrame(truck_data["trucks"])
-    
-    # Validate and standardize the truck data columns
-    df_lkw = validate_truck_data(df_lkw)
-    
-    if df_lkw.empty:
-        logging.error("Truck data is empty after validation")
-        print("ERROR: Truck data is empty after validation")
+    # # Validate and standardize the truck data columns
+    # df_lkw = validate_truck_data(df_lkw) # Use df_lkws instead
+
+    # *** Use df_lkws consistently ***
+    if df_lkws.empty: # Check the correctly loaded DataFrame
+        logging.error("Truck data (df_lkws) is empty after loading/validation")
+        print("ERROR: Truck data (df_lkws) is empty after loading/validation")
         return None
     
         # *** UPDATED: Account for day offset ***
     # Update arrival times: add day offset (in minutes) to the arrival_time_minutes field.
-    df_lkw['Ankunftszeit_total'] = (df_lkw['Tag'] - 1) * 1440 + df_lkw['Ankunftszeit_total']
+    # *** Use df_lkws consistently ***
+    df_lkws['Ankunftszeit_total'] = (df_lkws['Tag'] - 1) * 1440 + df_lkws['Ankunftszeit_total']
     
     
     # Add after loading truck data
-    day_counts = df_lkw['Tag'].value_counts().sort_index()
+    # *** Use df_lkws consistently ***
+    day_counts = df_lkws['Tag'].value_counts().sort_index()
     print(f"Truck distribution by day: {day_counts.to_dict()}")
     
     # Extract charging station counts from JSON
@@ -232,24 +255,28 @@ def modellierung():
     }
 
     # Calculate arrival and departure indices with the updated arrival times
-    df_lkw['t_a'] = (df_lkw['Ankunftszeit_total'] // TIMESTEP).astype(int)
-    df_lkw['t_d'] = ((df_lkw['Ankunftszeit_total'] + df_lkw['Pausenlaenge'] - TIMESTEP) // TIMESTEP).astype(int)
+    # *** Use df_lkws consistently ***
+    df_lkws['t_a'] = (df_lkws['Ankunftszeit_total'] // TIMESTEP).astype(int)
+    df_lkws['t_d'] = ((df_lkws['Ankunftszeit_total'] + df_lkws['Pausenlaenge'] - TIMESTEP) // TIMESTEP).astype(int)
 
     # Bound checking to ensure we stay within T_7
-    df_lkw['t_a'] = df_lkw['t_a'].clip(0, T_7-1)
-    df_lkw['t_d'] = df_lkw['t_d'].clip(0, T_7-1)
+    # *** Use df_lkws consistently ***
+    df_lkws['t_a'] = df_lkws['t_a'].clip(0, T_7-1)
+    df_lkws['t_d'] = df_lkws['t_d'].clip(0, T_7-1)
     
-    if df_lkw.empty:
-        logging.warning("Filtered truck data is empty after calculating arrival/departure times")
+    # *** Use df_lkws consistently ***
+    if df_lkws.empty:
+        logging.warning("Filtered truck data (df_lkws) is empty after calculating arrival/departure times")
         return None
 
-    t_in     = df_lkw['t_a'].tolist()        
-    t_out    = df_lkw['t_d'].tolist()
-    l        = df_lkw['Ladesäule'].tolist()
-    SOC_A    = df_lkw['SOC'].tolist()
-    kapaz    = df_lkw['Kapazitaet'].tolist()
-    maxLKW   = df_lkw['Max_Leistung'].tolist()
-    SOC_req  = df_lkw['SOC_Target'].tolist()
+    # *** Use df_lkws consistently ***
+    t_in     = df_lkws['t_a'].tolist()        
+    t_out    = df_lkws['t_d'].tolist()
+    l        = df_lkws['Ladesäule'].tolist()
+    SOC_A    = df_lkws['SOC'].tolist()
+    kapaz    = df_lkws['Kapazitaet'].tolist()
+    maxLKW   = df_lkws['Max_Leistung'].tolist()
+    SOC_req  = df_lkws['SOC_Target'].tolist()
 
     # Leistungsskalierung
     power_values = CONFIG['power'].split('-')
@@ -261,8 +288,9 @@ def modellierung():
         logging.warning("No power values found in CONFIG, using default scaling of 1.0")
 
     max_lkw_leistung = [m * lkw_leistung_skalierung for m in maxLKW]
-    E_req = [kapaz[i] * (SOC_req[i] - SOC_A[i]) for i in range(len(df_lkw))]
-    I = len(df_lkw)
+    # *** Use df_lkws consistently ***
+    E_req = [kapaz[i] * (SOC_req[i] - SOC_A[i]) for i in range(len(df_lkws))]
+    I = len(df_lkws)
 
     # -------------------------------------
     # Strategien p_max / p_min
@@ -420,17 +448,21 @@ def modellierung():
                     list_volladungen.append(1)
                 else:
                     list_volladungen.append(0)
-            ladequote_week = sum(list_volladungen) / len(list_volladungen)
+            # *** Use df_lkws consistently ***
+            ladequote_week = sum(list_volladungen) / len(df_lkws) if df_lkws.empty == False else 0 # Avoid division by zero
             
             # Gesamtkosten
             if strategie == 'T_min':
-                print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkw)}")
+                # *** Use df_lkws consistently ***
+                print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkws)}")
             elif strategie == 'Konstant':
-                print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkw)}")
+                # *** Use df_lkws consistently ***
+                print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkws)}")
             elif strategie == 'Hub':
                 # Get the peak load value from the model
                 peak_load_value = peak_load.X if model.Status == GRB.OPTIMAL else "N/A"
-                print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkw)}, Peak Load: {peak_load_value:.2f} kW")
+                # *** Use df_lkws consistently ***
+                print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkws)}, Peak Load: {peak_load_value:.2f} kW")
 
             
             # Lastgang: direkt in rows eintragen
@@ -469,8 +501,9 @@ def modellierung():
                 t_charging = 0
                 for t in range(T_7):   
                     if t_in[i] <= t <= t_out[i]+1:
-                        dict_lkw_lastgang['LKW_ID'].append(df_lkw.iloc[i]['Nummer'])
-                        dict_lkw_lastgang['Tag'].append(df_lkw.iloc[i]['Tag'] % 7)
+                        # *** Use df_lkws consistently ***
+                        dict_lkw_lastgang['LKW_ID'].append(df_lkws.iloc[i]['Nummer'])
+                        dict_lkw_lastgang['Tag'].append(df_lkws.iloc[i]['Tag'] % 7)
                         dict_lkw_lastgang['Zeit'].append((t * 5) % 1440)
                         dict_lkw_lastgang['Ladestrategie'].append(strategie)
                         dict_lkw_lastgang['Ladetyp'].append(l[i])
@@ -556,11 +589,10 @@ def modellierung():
     json_dir = os.path.join(root_dir, 'data', 'load')
     os.makedirs(json_dir, exist_ok=True)
 
-    # Define the output JSON filename
-    # Create a filename that includes the strategy
+    # Define the output JSON filename with location_id
     strategies_string = "_".join(CONFIG['STRATEGIES'])
-    json_filename = f'metadata_charginghub_{strategies_string}.json'
-    json_filepath = os.path.join(json_dir, json_filename)
+    json_filename_base = f'metadata_charginghub_{strategies_string}.json'
+    json_filepath = _add_id_to_path(os.path.join(json_dir, json_filename_base), location_id)
 
     # Save the simplified data to a pretty-printed JSON file
     logging.info(f"Saving simplified load profile data to load folder")
@@ -577,9 +609,9 @@ def modellierung():
     
     # Create a CSV file with the same structure as lastgang_demo.csv
     try:
-        # Create a CSV filename that includes the strategy
-        csv_filename = f'lastgang_{strategies_string}.csv'
-        csv_filepath = os.path.join(json_dir, csv_filename)
+        # Create a CSV filename that includes the strategy and location_id
+        csv_filename_base = f'lastgang_{strategies_string}.csv'
+        csv_filepath = _add_id_to_path(os.path.join(json_dir, csv_filename_base), location_id)
         
         logging.info(f"Creating load profile CSV file")
         print(f"Creating load profile CSV file...")
@@ -624,9 +656,9 @@ def modellierung():
     
     # Create a detailed CSV file with power breakdown by charging type
     try:
-        # Create a detailed CSV filename that includes the strategy
-        detailed_csv_filename = f'lastgang_detailed_{strategies_string}.csv'
-        detailed_csv_filepath = os.path.join(json_dir, detailed_csv_filename)
+        # Create a detailed CSV filename that includes the strategy and location_id
+        detailed_csv_filename_base = f'lastgang_detailed_{strategies_string}.csv'
+        detailed_csv_filepath = _add_id_to_path(os.path.join(json_dir, detailed_csv_filename_base), location_id)
         
         logging.info(f"Creating detailed load profile CSV file")
         print(f"Creating detailed load profile CSV file...")

@@ -7,18 +7,34 @@ import pandas as pd
 import numpy as np
 import datetime
 import os
-from config_demand import get_breaks_column, get_charging_column, year
+# Removed direct import of year, get it from Config
+from config_demand import get_breaks_column, get_charging_column, Config # Import Config
 from pathlib import Path
 
-def dataframe_to_json(df, output_path, metadata=None, structure_type='demand'):
+def _get_location_id():
+    """Helper function to safely get the location ID from Config."""
+    if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False):
+        return Config.RESULT_NAMING.get('CUSTOM_ID')
+    return None
+
+def _add_id_to_path(path, location_id):
+    """Adds location_id before the file extension."""
+    if location_id:
+        p = Path(path)
+        return p.parent / f"{p.stem}_{location_id}{p.suffix}"
+    return path
+
+def dataframe_to_json(df, output_path, metadata=None, structure_type='demand', location_id=None):
     """
     Convert a DataFrame to a clean JSON structure and save it to a file.
+    Includes location_id in the filename if provided.
     
     Args:
         df: DataFrame with traffic data
-        output_path: Path to save the output file
+        output_path: Base path to save the output file
         metadata: Dictionary with metadata
         structure_type: Type of structure to create ('demand', 'charging_sessions', etc.)
+        location_id: Optional location ID to append to the filename.
     """
     # Create initial data structure
     data_dict = {"metadata": metadata or {}, "data": {}}
@@ -97,44 +113,54 @@ def dataframe_to_json(df, output_path, metadata=None, structure_type='demand'):
     # Apply cleaning function to create optimized structure
     clean_data = clean_json_structure(data_dict, structure_type)
     
+    # Add location ID to output path
+    final_output_path = _add_id_to_path(output_path, location_id)
+    
     # Save to file
     import json
     import os
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, 'w', encoding='utf-8') as f:
+    os.makedirs(os.path.dirname(final_output_path), exist_ok=True)
+    with open(final_output_path, 'w', encoding='utf-8') as f:
         json.dump(clean_data, f, indent=2)
+    print(f"DEBUG: Saved JSON to {final_output_path}") # Added debug print
 
-def load_json_data(file_path):
+def load_json_data(file_path, location_id=None):
     """
     Load data from a JSON file, handling the specific structure we create.
+    Includes location_id in the filename if provided.
     
     Args:
-        file_path: Path to the JSON file
+        file_path: Base path to the JSON file
+        location_id: Optional location ID to append to the filename.
     
     Returns:
         Dictionary containing the loaded data
     """
-    file_path = Path(file_path)
-    if not file_path.exists():
-        raise FileNotFoundError(f"{file_path} does not exist")
+    final_file_path = Path(_add_id_to_path(file_path, location_id))
+    print(f"DEBUG: Attempting to load JSON from {final_file_path}") # Added debug print
+    if not final_file_path.exists():
+        raise FileNotFoundError(f"{final_file_path} does not exist")
     
-    with open(file_path, 'r') as f:
+    with open(final_file_path, 'r') as f:
         data = json.load(f)
     
     return data
 
-def json_to_dataframe(json_path_or_data):
+def json_to_dataframe(json_path_or_data, location_id=None):
     """
     Convert a structured JSON file back to a pandas DataFrame.
+    Includes location_id in the filename if provided when loading from path.
     
     Args:
-        json_path_or_data: Either a path to a JSON file or a loaded JSON dictionary
+        json_path_or_data: Either a base path to a JSON file or a loaded JSON dictionary
+        location_id: Optional location ID to append to the filename if loading from path.
     
     Returns:
         DataFrame containing the data
     """
     if isinstance(json_path_or_data, (str, Path)):
-        data = load_json_data(json_path_or_data)
+        # Pass location_id to load_json_data
+        data = load_json_data(json_path_or_data, location_id=location_id)
     else:
         data = json_path_or_data
     

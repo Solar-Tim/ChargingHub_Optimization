@@ -450,6 +450,191 @@ def print_cable_selection_details(model, distances, cable_options=None, power_co
         print(f"  Connection cost: {existing_mv_connection_cost:.2f} EUR")
         print(f"  Capacity fee: {mv_capacity_fee * max_grid_load.X:.2f} EUR")
 
+import json
+import os
+import matplotlib.pyplot as plt
+import numpy as np
+from pathlib import Path
+from config import Config
+
+# Helper functions for location ID
+def _get_location_id():
+    """Helper function to safely get the location ID from Config or environment."""
+    # Prioritize environment variable if set (passed from main.py)
+    env_id = os.environ.get('CHARGING_HUB_CUSTOM_ID')
+    if env_id:
+        return env_id
+    # Fallback to Config setting
+    if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False):
+        return Config.RESULT_NAMING.get('CUSTOM_ID')
+    return None
+
+def _add_id_to_path(path, location_id):
+    """Adds location_id before the file extension."""
+    if location_id:
+        p = Path(path)
+        return p.parent / f"{p.stem}_{location_id}{p.suffix}"
+    return path
+
+def save_optimization_results(results, strategy, battery_allowed):
+    """
+    Save optimization results to a JSON file with a standardized name including location_id.
+    
+    Args:
+        results (dict): Dictionary containing optimization results.
+        strategy (str): Charging strategy used.
+        battery_allowed (bool): Whether battery was included in the optimization.
+    """
+    # Get location_id
+    location_id = _get_location_id()
+    print(f"[functions] Saving results for strategy: {strategy}, battery: {battery_allowed}, location_id: {location_id}")
+
+    # Generate filename using the Config method, passing the explicit custom_id
+    # The Config method handles the logic of using custom_id vs hash
+    base_filename = Config.generate_result_filename(
+        results=results, 
+        strategy=strategy, 
+        battery_allowed=battery_allowed,
+        custom_id=location_id # Pass the retrieved ID here
+    )
+    
+    # Construct full path
+    results_dir = Config.PATHS['RESULTS']
+    os.makedirs(results_dir, exist_ok=True)
+    file_path = os.path.join(results_dir, f"optimization_{base_filename}.json")
+    
+    try:
+        with open(file_path, 'w') as f:
+            json.dump(results, f, indent=4)
+        print(f"Optimization results saved to: {file_path}")
+    except Exception as e:
+        print(f"Error saving optimization results to {file_path}: {e}")
+
+def plot_optimization_results(results, strategy, battery_allowed, timestamps):
+    """
+    Plot optimization results (load profile, grid energy, battery usage) and save the plot.
+    Uses location_id in the filename.
+    
+    Args:
+        results (dict): Dictionary containing optimization results.
+        strategy (str): Charging strategy used.
+        battery_allowed (bool): Whether battery was included in the optimization.
+        timestamps (list): List of timestamps corresponding to the data points.
+    """
+    # Get location_id
+    location_id = _get_location_id()
+    print(f"[functions] Plotting results for strategy: {strategy}, battery: {battery_allowed}, location_id: {location_id}")
+
+    # Generate base filename using the Config method
+    base_filename = Config.generate_result_filename(
+        results=results, 
+        strategy=strategy, 
+        battery_allowed=battery_allowed,
+        custom_id=location_id # Pass the retrieved ID here
+    )
+    
+    # Extract data from results
+    load_profile = results.get('load_profile', [])
+    grid_energy = results.get('grid_energy', [])
+    battery_charge = results.get('battery_charge', [])
+    battery_discharge = results.get('battery_discharge', [])
+    battery_soc = results.get('battery_soc', [])
+    battery_capacity = results.get('battery_capacity', 0)
+    max_grid_load = results.get('max_grid_load', 0)
+    
+    if not load_profile or not timestamps:
+        print("Warning: Cannot plot results - load profile or timestamps missing.")
+        return
+
+    time_periods = len(load_profile)
+    x_ticks = np.arange(time_periods)
+
+    fig, ax1 = plt.subplots(figsize=(15, 7))
+
+    # Plot Load Profile and Grid Energy
+    ax1.plot(x_ticks, load_profile, label='Load Profile (kW)', color='black', linestyle='--')
+    ax1.plot(x_ticks, grid_energy, label='Grid Energy (kW)', color='blue')
+    ax1.axhline(y=max_grid_load, color='red', linestyle=':', label=f'Max Grid Load ({max_grid_load:.2f} kW)')
+    ax1.set_xlabel('Time Period')
+    ax1.set_ylabel('Power (kW)', color='black')
+    ax1.tick_params(axis='y', labelcolor='black')
+    ax1.grid(True)
+
+    # Add Battery Charge/Discharge if battery is used
+    if battery_allowed and battery_capacity > 0:
+        ax1.plot(x_ticks, battery_charge, label='Battery Charge (kW)', color='orange', alpha=0.7)
+        ax1.plot(x_ticks, battery_discharge, label='Battery Discharge (kW)', color='green', alpha=0.7)
+        
+        # Add second y-axis for Battery SOC
+        ax2 = ax1.twinx()
+        ax2.plot(x_ticks, battery_soc, label='Battery SOC (kWh)', color='purple', linestyle='-.')
+        ax2.set_ylabel('Battery State of Charge (kWh)', color='purple')
+        ax2.tick_params(axis='y', labelcolor='purple')
+        ax2.set_ylim(bottom=0) # Ensure SOC starts from 0
+        # Combine legends from both axes
+        lines, labels = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax2.legend(lines + lines2, labels + labels2, loc='upper left')
+    else:
+        # If no battery, just use the legend from ax1
+        ax1.legend(loc='upper left')
+
+    # Set title and save plot
+    title = f'Optimization Results - Strategy: {strategy}'
+    if battery_allowed:
+        title += f' (Battery Included: {battery_capacity:.2f} kWh)'
+    else:
+        title += ' (No Battery)'
+    if location_id:
+        title += f' - ID: {location_id}'
+        
+    plt.title(title)
+    
+    # Configure x-axis ticks and labels (show fewer labels for readability)
+    num_labels = 10 # Adjust as needed
+    step = max(1, time_periods // num_labels)
+    ax1.set_xticks(x_ticks[::step])
+    ax1.set_xticklabels([timestamps[i] for i in x_ticks[::step]], rotation=45, ha='right')
+    
+    plt.tight_layout()
+    
+    # Construct full path for the plot
+    results_dir = Config.PATHS['RESULTS']
+    os.makedirs(results_dir, exist_ok=True)
+    plot_path = os.path.join(results_dir, f"{base_filename}.png")
+    
+    try:
+        plt.savefig(plot_path)
+        print(f"Optimization plot saved to: {plot_path}")
+    except Exception as e:
+        print(f"Error saving optimization plot to {plot_path}: {e}")
+    plt.close(fig) # Close the figure to free memory
+
+
+def get_internal_cable_cost(mcs_count, hpc_count, ncs_count):
+    """
+    Calculate the estimated cost for internal cabling based on charger counts.
+    This is a simplified placeholder. Replace with more detailed calculation if needed.
+    
+    Args:
+        mcs_count (int): Number of MCS chargers.
+        hpc_count (int): Number of HPC chargers.
+        ncs_count (int): Number of NCS chargers.
+        
+    Returns:
+        float: Estimated internal cabling cost.
+    """
+    # Placeholder costs per charger type for internal cabling
+    cost_per_mcs = 5000  # Example cost
+    cost_per_hpc = 2000  # Example cost
+    cost_per_ncs = 1000  # Example cost
+    
+    total_cost = (mcs_count * cost_per_mcs + 
+                  hpc_count * cost_per_hpc + 
+                  ncs_count * cost_per_ncs)
+                  
+    return total_cost
+
 
 
 
