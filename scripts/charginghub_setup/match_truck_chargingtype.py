@@ -16,7 +16,7 @@ from pathlib import Path
 import logging
 
 
-np.random.seed(42)
+
 
 # ======================================================
 # Main Function
@@ -25,6 +25,7 @@ def main():
     """
     Main function to execute the truck simulation pipeline.
     """
+    np.random.seed(42)
     # Load configurations and data
     CONFIG = load_configurations()
     df_verteilungsfunktion, df_ladevorgaenge_daily = load_input_data(CONFIG['path'])
