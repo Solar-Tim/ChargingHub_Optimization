@@ -45,7 +45,7 @@ class Config:
         
         # Grid optimization sub-process flags
         'USE_DISTANCE_CALCULATION': True,    # Whether to use distance calculation for optimization
-        'CREATE_PLOT': True,                # Whether to generate plot of optimization results
+        'CREATE_PLOT': False,                # Whether to generate plot of optimization results
         'CREATE_DISTANCE_MAPS': False,       # Whether to generate maps of distance calculations
         'INCLUDE_BATTERY': True,             # Whether to include battery in optimization
         'USE_MANUAL_CHARGER_COUNT': False,   # Whether to use manual charger count instead of optimizing
@@ -128,7 +128,7 @@ class Config:
     
     # Charging station types
     CHARGING_TYPES = {
-        'NCS': {'power_kw': 75, 'cost': 35000},
+        'NCS': {'power_kw': 100, 'cost': 35000},
         'HPC': {'power_kw': 400, 'cost': 110000},
         'MCS': {'power_kw': 1000, 'cost': 375000}
     }

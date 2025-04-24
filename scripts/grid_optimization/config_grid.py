@@ -159,6 +159,7 @@ lv_voltage = 400  # V
 lv_voltage_drop_percent = 2.0
 lv_power_factor = 0.95
 lv_conductivity = 56  # Copper
+number_dc_cables = 2  # Number of cables for DC connections (positive and negative)
 
 # Medium voltage cable parameters
 mv_voltage = 20000  # V

@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from config import Config
 
 # Backwards compatibility variables
-year = '2030'
+year = Config.FORECAST_YEAR
 neue_pausen = Config.EXECUTION_FLAGS['RECALCULATE_BREAKS']
 neue_toll_midpoints = Config.EXECUTION_FLAGS['RECALCULATE_TOLL_MIDPOINTS']
 
