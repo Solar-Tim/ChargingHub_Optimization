@@ -20,7 +20,7 @@ class Config:
         # Add this to your Config class or configuration section
     RESULT_NAMING = {
         'USE_CUSTOM_ID': True,  # Set to True to use custom ID instead of hash
-        'CUSTOM_ID': '830'  # The custom ID to use when USE_CUSTOM_ID is True
+        'CUSTOM_ID': '999'  # The custom ID to use when USE_CUSTOM_ID is True
     }
     
     
@@ -47,14 +47,14 @@ class Config:
         'USE_DISTANCE_CALCULATION': True,    # Whether to use distance calculation for optimization
         'CREATE_PLOT': False,                # Whether to generate plot of optimization results
         'CREATE_DISTANCE_MAPS': False,       # Whether to generate maps of distance calculations
-        'INCLUDE_BATTERY': True,             # Whether to include battery in optimization
+        'INCLUDE_BATTERY': False,             # Whether to include battery in optimization
         'USE_MANUAL_CHARGER_COUNT': False,   # Whether to use manual charger count instead of optimizing
         'DEBUG_MODE': False,                 # Whether to enable debug mode for detailed output
     }
 
     # Charging hub configuration
     CHARGING_CONFIG = {
-        'ALL_STRATEGIES': ["T_min", "Konstant", "Hub"],  # ["T_min", "Konstant", "Hub"]
+        'ALL_STRATEGIES': ["T_min"],  # ["T_min", "Konstant", "Hub"]
         'STRATEGY': ["T_min"],  # ["T_min", "Konstant", "Hub"]
         'ladequote': 0.8,  # Charging quota as percentage
         'power': '100-100-100',  # Power scaling for NCS-HPC-MCS

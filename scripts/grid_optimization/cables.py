@@ -137,8 +137,13 @@ def calculate_cable_options(distance_m, additional_costs=0):
         list: List of dictionaries with cable options
     """
     options = []
+    # Add validation and logging for distance values
     if distance_m <= 0:
-        return options
+        print(f"Warning: Invalid distance value {distance_m}. Returning empty options.")
+        return []
+
+    # Log the distance and additional costs being used
+    print(f"Calculating cable options for distance: {distance_m} meters, additional costs: {additional_costs}")
         
     for size in aluminium_kabel["Nennquerschnitt"]:
         result = calculate_max_power(size, distance_m)
@@ -292,7 +297,7 @@ def calculate_internal_cable_costs(mcs_count=None, hpc_count=None, ncs_count=Non
     # Define function to calculate cable length based on position
     def get_cable_length(position):
         # Example: positions 0-1 at 4m, 2-3 at 8m, etc.
-        return charger_distance_increment * (position // 2 + 1)
+        return charger_distance_increment * (position // 4 + 1)
     
     # Process MCS chargers
     position = 0
