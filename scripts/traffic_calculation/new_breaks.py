@@ -295,7 +295,7 @@ def process_two_driver_breaks(
     return breaks_data
 
 
-def calculate_new_breaks(base_path=None, random_seed=None, export=True):
+def calculate_new_breaks(base_path=None, random_seed=42, export=True):
     """
     Calculate new breaks based on traffic patterns.
     

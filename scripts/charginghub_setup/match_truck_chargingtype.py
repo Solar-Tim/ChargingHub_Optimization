@@ -16,7 +16,7 @@ from pathlib import Path
 import logging
 
 
-np.random.seed(42)
+
 
 # ======================================================
 # Main Function
@@ -25,6 +25,7 @@ def main():
     """
     Main function to execute the truck simulation pipeline.
     """
+    np.random.seed(42)
     # Load configurations and data
     CONFIG = load_configurations()
     df_verteilungsfunktion, df_ladevorgaenge_daily = load_input_data(CONFIG['path'])
@@ -77,7 +78,7 @@ def load_configurations():
             'Schnelllader': 45,
             'Nachtlader': 540
         },
-        'leistung': {'HPC': 350, 'NCS': 100, 'MCS': 1000},
+        'leistung': {'HPC': 400, 'NCS': 100, 'MCS': 1000},
         'energie_pro_abschnitt': 80 * 4.5 * 1.26,
         'sicherheitspuffer': 0.1
     }
@@ -100,16 +101,17 @@ def load_input_data(path):
     
     try:
         # Load distribution function
-        if verteilungsfunktion_path.exists():
-            df_verteilungsfunktion = pd.read_csv(verteilungsfunktion_path, sep=',')
-        else:
-            logging.warning(f"File not found: {verteilungsfunktion_path}")
+        df_verteilungsfunktion = pd.read_csv(verteilungsfunktion_path, sep=',')
+        #*
+        # else:
+        #    logging.warning(f"File not found: {verteilungsfunktion_path}")
             # Create a dummy distribution function if the file doesn't exist
-            df_verteilungsfunktion = pd.DataFrame({
-                'Zeit': list(range(0, 1440, 15)),  # Time in minutes
-                'HPC': [1/96] * 96,  # Uniform distribution
-                'NCS': [1/96] * 96   # Uniform distribution
-            })
+        #    df_verteilungsfunktion = pd.DataFrame({
+        #        'Zeit': list(range(0, 1440, 15)),  # Time in minutes
+        #        'HPC': [1/96] * 96,  # Uniform distribution
+        #        'NCS': [1/96] * 96   # Uniform distribution
+        #    })
+    
         
         # Load traffic data
         if laden_mauttabelle_path.exists():

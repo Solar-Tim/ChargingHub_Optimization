@@ -70,7 +70,7 @@ existing_mv_connection_cost = 0  # Cost of existing MV connection (EUR) - Hier i
 
 # Manual distance values when not using distance calculation
 manual_distances = {
-    'distribution_distance': 25000,    # Distance to nearest distribution substation (m)
+    'distribution_distance': 10,    # Distance to nearest distribution substation (m)
     'transmission_distance': 9999999,   # Distance to nearest transmission substation (m)
     'powerline_distance': 9999999,      # Distance to nearest HV power line (m)
 }
@@ -127,19 +127,24 @@ basecost_transformer = 20000    # Base transformer cost 1000kW
 cost_transformer_perkW = 200    # Cost per kW for transformer
 
 # === Define discrete transformer options in structured dictionary format ===
+# Jede Preiszeile folgt der linearen Formel:
+# Kosten = 120_000 €  +  (Leistung [kW] − 1 000) × 100 €/kW
+# Dabei sind 120 000 € die Grundkosten für 1 000 kW.
+
 transformers = {
     "Kapazität": [
         1000, 1250, 1600, 2000, 2500, 3150
     ],
     "Kosten": [
-        220000,    # 1000 kW: 20000*1 + 200*1000 = 220000 €
-        273600,    # 1250 kW: 20000*1.18 + 200*1250 = 273600 €
-        338261,    # 1600 kW: 20000*1.44 + 200*1600 = 338261 €
-        407568,    # 2000 kW: 20000*1.68 + 200*2000 = 407568 €
-        493095,    # 2500 kW: 20000*1.97 + 200*2500 = 493095 €
-        600236,    # 3150 kW: 20000*2.33 + 200*3150 = 600236 €
+        120000,   # 1 000 kW: 120 000 €  (Grundkosten)
+        145000,   # 1 250 kW: 120 000 + (1 250‒1 000)*100 = 145 000 €
+        180000,   # 1 600 kW: 120 000 + (1 600‒1 000)*100 = 180 000 €
+        220000,   # 2 000 kW: 120 000 + (2 000‒1 000)*100 = 220 000 €
+        270000,   # 2 500 kW: 120 000 + (2 500‒1 000)*100 = 270 000 €
+        335000,   # 3 150 kW: 120 000 + (3 150‒1 000)*100 = 335 000 €
     ]
 }
+
 
 # For compatibility with existing code:
 transformer_capacities = np.array(transformers["Kapazität"])
@@ -159,6 +164,7 @@ lv_voltage = 400  # V
 lv_voltage_drop_percent = 2.0
 lv_power_factor = 0.95
 lv_conductivity = 56  # Copper
+number_dc_cables = 1  # Number of cables for DC connections (positive and negative)
 
 # Medium voltage cable parameters
 mv_voltage = 20000  # V
@@ -261,7 +267,7 @@ kupfer_kabel = {
         105.00,  # 240.0 mm²: ~105.00 €/m
         130.00,  # 300.0 mm²: ~130.00 €/m
         165.00,  # 400.0 mm²: ~165.00 €/m
-        500.00   # 9999.0 mm²: placeholder for larger sizes
+        165.00   # 9999.0 mm²: placeholder for larger sizes
     ]
 }
 

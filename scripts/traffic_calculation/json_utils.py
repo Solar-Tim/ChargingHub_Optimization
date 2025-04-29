@@ -27,7 +27,7 @@ def dataframe_to_json(df, output_path, metadata=None, structure_type='demand'):
         # Extract breaks data for all years
         breaks_data = {}
         for break_type in ["short", "long"]:
-            for yr in ["2030", "2035", "2040"]:
+            for yr in ["2030", "2035", "2040", "2045"]:
                 # Try year-specific column first
                 col_name = f"{break_type}_breaks_{yr}"
                 if col_name in df.columns:
@@ -43,7 +43,7 @@ def dataframe_to_json(df, output_path, metadata=None, structure_type='demand'):
         
         # Extract charging demand for all years
         charging_demand = {}
-        for yr in ["2030", "2035", "2040"]:
+        for yr in ["2030", "2035", "2040", "2045"]:
             hpc_col = f"HPC_{yr}"
             ncs_col = f"NCS_{yr}"
             if hpc_col in df.columns and ncs_col in df.columns:
@@ -64,7 +64,7 @@ def dataframe_to_json(df, output_path, metadata=None, structure_type='demand'):
                 }
                 
                 # Add HPC and NCS values for each year
-                for yr in ["2030", "2035", "2040"]:
+                for yr in ["2030", "2035", "2040", "2045"]:
                     # Try year-specific day columns first
                     hpc_day_col = f"{day}_HPC_{yr}"
                     ncs_day_col = f"{day}_NCS_{yr}"
@@ -217,7 +217,7 @@ def clean_json_structure(data_dict, structure_type='demand'):
         # Create new demand structure with all forecast years
         clean_data = {
             "metadata": {
-                "forecast_years": data_dict.get("metadata", {}).get("forecast_years", ["2030", "2035", "2040"]),
+                "forecast_years": data_dict.get("metadata", {}).get("forecast_years", ["2030", "2035", "2040", "2045"]),
                 "forecast_year": data_dict.get("metadata", {}).get("forecast_year", ""),
                 "base_year": data_dict.get("metadata", {}).get("base_year", ""),
                 "buffer_radius_m": data_dict.get("metadata", {}).get("buffer_radius_m", 0),
@@ -239,7 +239,7 @@ def clean_json_structure(data_dict, structure_type='demand'):
         # Add break data for all years
         breaks_data = data_dict.get("data", {}).get("breaks", {})
         for break_type in ["short", "long"]:
-            for year in ["2030", "2035", "2040"]:
+            for year in ["2030", "2035", "2040", "2045"]:
                 break_key = f"{break_type}_breaks_{year}"
                 
                 # Try to get the specific year's break data
@@ -255,7 +255,7 @@ def clean_json_structure(data_dict, structure_type='demand'):
         daily_demand = data_dict.get("data", {}).get("daily_demand", {})
         charging_demand = data_dict.get("data", {}).get("charging_demand", {})
         
-        for target_year in ["2030", "2035", "2040"]:
+        for target_year in ["2030", "2035", "2040", "2045"]:
             # Try to get from charging_demand structure
             if target_year in charging_demand:
                 clean_data["data"]["charging_demand"][target_year] = {
@@ -299,7 +299,7 @@ def clean_json_structure(data_dict, structure_type='demand'):
             }
             
             # Add charging demand for each day for all years
-            for target_year in ["2030", "2035", "2040"]:
+            for target_year in ["2030", "2035", "2040", "2045"]:
                 hpc_col = f"HPC_{target_year}"
                 ncs_col = f"NCS_{target_year}"
                 

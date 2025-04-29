@@ -16,6 +16,13 @@ class Config:
     
     # Year settings
     FORECAST_YEAR = '2030'  # Default forecast year
+
+        # Add this to your Config class or configuration section
+    RESULT_NAMING = {
+        'USE_CUSTOM_ID': True,  # Set to True to use custom ID instead of hash
+        'CUSTOM_ID': '999'  # The custom ID to use when USE_CUSTOM_ID is True
+    }
+    
     
     # Execution control flags - NEW SECTION
     EXECUTION_FLAGS = {
@@ -47,25 +54,20 @@ class Config:
 
     # Charging hub configuration
     CHARGING_CONFIG = {
-        'ALL_STRATEGIES': ["T_min", "Konstant", "Hub"],  # ["T_min", "Konstant", "Hub"]
+        'ALL_STRATEGIES': ["T_min"],  # ["T_min", "Konstant", "Hub"]
         'STRATEGY': ["T_min"],  # ["T_min", "Konstant", "Hub"]
         'ladequote': 0.8,  # Charging quota as percentage
         'power': '100-100-100',  # Power scaling for NCS-HPC-MCS
         'pause': '45-540'  # Kurze Pause - Lange Pause in minutes
     }
-
+ 
 
     DEFAULT_LOCATION = {
-        'LONGITUDE': 6.216436,
-        'LATITUDE': 50.816937
+        'LONGITUDE': 6.77880074559991,
+        'LATITUDE': 50.928641843666085
     }
 
-    # Add this to your Config class or configuration section
-    RESULT_NAMING = {
-        'USE_CUSTOM_ID': True,  # Set to True to use custom ID instead of hash
-        'CUSTOM_ID': '015'  # The custom ID to use when USE_CUSTOM_ID is True
-    }
-    
+
     # Spatial analysis settings
     SPATIAL = {
         'DEFAULT_CRS': 'EPSG:4326',
@@ -75,16 +77,18 @@ class Config:
     
     # BEV adoption scenarios
     SCENARIOS = {
-        'TARGET_YEARS': ['2030', '2035', '2040'],
+        'TARGET_YEARS': ['2030', '2035', '2040', '2045'],
         'R_BEV': {
-            '2030': 0.15,  # Updated from 0.05 to 0.15
-            '2035': 0.50,  # Updated from 0.20 to 0.50
-            '2040': 0.80,  # Updated from 0.40 to 0.80
+            '2030': 0.15,  #
+            '2035': 0.61,  #
+            '2040': 0.94,  #
+            '2045': 1.00   #
         },
         'R_TRAFFIC': {
-            '2030': 1.00,  # Updated from 1.0 to 1.00
-            '2035': 1.06,  # Updated from 1.05 to 1.06
-            '2040': 1.12,  # Updated from 1.10 to 1.12
+            '2030': 1.00,  #
+            '2035': 1.0462,  #
+            '2040': 1.0549,  #
+            '2045': 1.1672   #
         }
     }
     
@@ -92,7 +96,7 @@ class Config:
     BREAKS = {
         'DISTANCE_THRESHOLD': 360,  # km - Distance after which a break is required
         'MAX_DISTANCE_SINGLEDRIVER': 4320,  # km - Limit between single and double driver routes
-        'RANDOM_RANGE': (-50, 50),  # Random variation for break distances
+        'RANDOM_RANGE': (0,0),  # Random variation for break distances
         'TWO_DRIVER_SHORT_BREAKS_BEFORE_LONG': 2  # Number of short breaks before a long break for two drivers
     }
     
@@ -124,7 +128,7 @@ class Config:
     
     # Charging station types
     CHARGING_TYPES = {
-        'NCS': {'power_kw': 75, 'cost': 35000},
+        'NCS': {'power_kw': 100, 'cost': 35000},
         'HPC': {'power_kw': 400, 'cost': 110000},
         'MCS': {'power_kw': 1000, 'cost': 375000}
     }

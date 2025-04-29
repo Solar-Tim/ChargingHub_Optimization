@@ -35,7 +35,12 @@ from distance_scripts.distance_functions import *
 from distance_scripts.distance_lines import *
 
 
-strategy = all_strategies  # Default strategy for testing
+strategy = 'T_min'  # Default strategy for testing
+manual_distances = {
+    'distribution_distance': 1000,    # Distance to nearest distribution substation (m)
+    'transmission_distance': 9999999,   # Distance to nearest transmission substation (m)
+    'powerline_distance': 9999999,      # Distance to nearest HV power line (m)
+}
 #------------------------------------------------------------------------------
 # SECTION 2: DATA LOADING AND PREPROCESSING
 #------------------------------------------------------------------------------

@@ -2,8 +2,10 @@ import math
 from config_grid import (
     aluminium_kabel, mv_voltage, mv_voltage_drop_percent, mv_power_factor,
     mv_conductivity, number_cables, digging_cost, cable_hardware_connection_cost, lv_voltage, lv_voltage_drop_percent, lv_power_factor, lv_conductivity,
-    kupfer_kabel, MCS_count, HPC_count, NCS_count
+    kupfer_kabel, MCS_count, HPC_count, NCS_count, number_dc_cables
 )
+
+
 
 def get_aluminium_cable_cost(size):
     """Get the cost of aluminum cable for a given cross-section size."""
@@ -135,8 +137,13 @@ def calculate_cable_options(distance_m, additional_costs=0):
         list: List of dictionaries with cable options
     """
     options = []
+    # Add validation and logging for distance values
     if distance_m <= 0:
-        return options
+        print(f"Warning: Invalid distance value {distance_m}. Returning empty options.")
+        return []
+
+    # Log the distance and additional costs being used
+    print(f"Calculating cable options for distance: {distance_m} meters, additional costs: {additional_costs}")
         
     for size in aluminium_kabel["Nennquerschnitt"]:
         result = calculate_max_power(size, distance_m)
@@ -252,7 +259,8 @@ def calculate_internal_cable_costs(mcs_count=None, hpc_count=None, ncs_count=Non
                                   charger_distance_increment=4,
                                   mcs_power_kw=1000, 
                                   hpc_power_kw=400, 
-                                  ncs_power_kw=100):
+                                  ncs_power_kw=100,
+                                  number_dc_cables=number_dc_cables):
     """
     Calculate the internal LV cable costs for all chargers in the charging hub.
     
@@ -264,6 +272,7 @@ def calculate_internal_cable_costs(mcs_count=None, hpc_count=None, ncs_count=Non
         mcs_power_kw (float): Power rating of MCS chargers in kW
         hpc_power_kw (float): Power rating of HPC chargers in kW
         ncs_power_kw (float): Power rating of NCS chargers in kW
+        number_dc_cables (int): Number of DC cables per charger (typically 2: positive and negative)
         
     Returns:
         dict: Dictionary containing cable costs and details
@@ -288,7 +297,7 @@ def calculate_internal_cable_costs(mcs_count=None, hpc_count=None, ncs_count=Non
     # Define function to calculate cable length based on position
     def get_cable_length(position):
         # Example: positions 0-1 at 4m, 2-3 at 8m, etc.
-        return charger_distance_increment * (position // 2 + 1)
+        return charger_distance_increment * (position // 4 + 1)
     
     # Process MCS chargers
     position = 0
@@ -296,7 +305,8 @@ def calculate_internal_cable_costs(mcs_count=None, hpc_count=None, ncs_count=Non
         length_m = get_cable_length(position)
         cross_section = calculate_lv_cable_cross_section(mcs_power_kw, length_m)
         cable_size = get_copper_cable_size(cross_section)
-        cable_cost = get_copper_cable_cost(cable_size) * length_m
+        # Update cable cost calculation to include number_dc_cables
+        cable_cost = get_copper_cable_cost(cable_size) * length_m * number_dc_cables
         
         result["cables"].append({
             "type": "MCS",
@@ -305,7 +315,8 @@ def calculate_internal_cable_costs(mcs_count=None, hpc_count=None, ncs_count=Non
             "power_kw": mcs_power_kw,
             "required_cross_section": cross_section,
             "selected_cross_section": cable_size,
-            "cost": cable_cost
+            "cost": cable_cost,
+            "number_of_cables": number_dc_cables
         })
         
         result["mcs_cost"] += cable_cost
@@ -316,7 +327,8 @@ def calculate_internal_cable_costs(mcs_count=None, hpc_count=None, ncs_count=Non
         length_m = get_cable_length(position)
         cross_section = calculate_lv_cable_cross_section(hpc_power_kw, length_m)
         cable_size = get_copper_cable_size(cross_section)
-        cable_cost = get_copper_cable_cost(cable_size) * length_m
+        # Update cable cost calculation to include number_dc_cables
+        cable_cost = get_copper_cable_cost(cable_size) * length_m * number_dc_cables
         
         result["cables"].append({
             "type": "HPC",
@@ -325,7 +337,8 @@ def calculate_internal_cable_costs(mcs_count=None, hpc_count=None, ncs_count=Non
             "power_kw": hpc_power_kw,
             "required_cross_section": cross_section,
             "selected_cross_section": cable_size,
-            "cost": cable_cost
+            "cost": cable_cost,
+            "number_of_cables": number_dc_cables
         })
         
         result["hpc_cost"] += cable_cost
@@ -336,7 +349,8 @@ def calculate_internal_cable_costs(mcs_count=None, hpc_count=None, ncs_count=Non
         length_m = get_cable_length(position)
         cross_section = calculate_lv_cable_cross_section(ncs_power_kw, length_m)
         cable_size = get_copper_cable_size(cross_section)
-        cable_cost = get_copper_cable_cost(cable_size) * length_m
+        # Update cable cost calculation to include number_dc_cables
+        cable_cost = get_copper_cable_cost(cable_size) * length_m * number_dc_cables
         
         result["cables"].append({
             "type": "NCS",
@@ -345,7 +359,8 @@ def calculate_internal_cable_costs(mcs_count=None, hpc_count=None, ncs_count=Non
             "power_kw": ncs_power_kw,
             "required_cross_section": cross_section,
             "selected_cross_section": cable_size,
-            "cost": cable_cost
+            "cost": cable_cost,
+            "number_of_cables": number_dc_cables
         })
         
         result["ncs_cost"] += cable_cost
