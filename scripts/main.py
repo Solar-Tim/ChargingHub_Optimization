@@ -17,7 +17,7 @@ import logging
 import subprocess
 
 # Configure logging
-log_dir = Path("logs")
+log_dir = Path("../logs")
 log_dir.mkdir(exist_ok=True)
 logging.basicConfig(
     filename=log_dir/'charging_hub_optimization.log',
@@ -27,18 +27,58 @@ logging.basicConfig(
 )
 
 # Set up Python path properly
-base_dir = os.path.dirname(os.path.abspath(__file__))
-scripts_dir = os.path.join(base_dir, 'scripts')
+scripts_dir = os.path.dirname(os.path.abspath(__file__))  # Now points to scripts folder
+base_dir = os.path.dirname(scripts_dir)  # Project root is parent of scripts dir
 traffic_dir = os.path.join(scripts_dir, 'traffic_calculation')
 charginghub_dir = os.path.join(scripts_dir, 'charginghub_setup')
 
 # Add all necessary directories to path
+sys.path.append(base_dir)  # Add project root
 sys.path.append(scripts_dir)
 sys.path.append(traffic_dir)
 sys.path.append(charginghub_dir)
 
 # Import configuration
 from config import Config
+
+# Check for environment variables set by GUI
+def apply_environment_overrides():
+    """
+    Apply any environment variable overrides passed from the GUI
+    """
+    # Check for execution flags
+    if 'CHARGING_HUB_RUN_TRAFFIC_CALCULATION' in os.environ:
+        Config.EXECUTION_FLAGS['RUN_TRAFFIC_CALCULATION'] = os.environ['CHARGING_HUB_RUN_TRAFFIC_CALCULATION'] == '1'
+        logging.info(f"Environment override: RUN_TRAFFIC_CALCULATION = {Config.EXECUTION_FLAGS['RUN_TRAFFIC_CALCULATION']}")
+    
+    if 'CHARGING_HUB_RUN_CHARGING_HUB_SETUP' in os.environ:
+        Config.EXECUTION_FLAGS['RUN_CHARGING_HUB_SETUP'] = os.environ['CHARGING_HUB_RUN_CHARGING_HUB_SETUP'] == '1'
+        logging.info(f"Environment override: RUN_CHARGING_HUB_SETUP = {Config.EXECUTION_FLAGS['RUN_CHARGING_HUB_SETUP']}")
+    
+    if 'CHARGING_HUB_RUN_GRID_OPTIMIZATION' in os.environ:
+        Config.EXECUTION_FLAGS['RUN_GRID_OPTIMIZATION'] = os.environ['CHARGING_HUB_RUN_GRID_OPTIMIZATION'] == '1'
+        logging.info(f"Environment override: RUN_GRID_OPTIMIZATION = {Config.EXECUTION_FLAGS['RUN_GRID_OPTIMIZATION']}")
+    
+    # Check for other settings
+    if 'CHARGING_HUB_CUSTOM_ID' in os.environ:
+        custom_id = os.environ['CHARGING_HUB_CUSTOM_ID']
+        Config.RESULT_NAMING['USE_CUSTOM_ID'] = True
+        Config.RESULT_NAMING['CUSTOM_ID'] = custom_id
+        logging.info(f"Environment override: CUSTOM_ID = {custom_id}")
+    
+    if 'CHARGING_HUB_LONGITUDE' in os.environ and 'CHARGING_HUB_LATITUDE' in os.environ:
+        try:
+            longitude = float(os.environ['CHARGING_HUB_LONGITUDE'])
+            latitude = float(os.environ['CHARGING_HUB_LATITUDE'])
+            Config.DEFAULT_LOCATION['LONGITUDE'] = longitude
+            Config.DEFAULT_LOCATION['LATITUDE'] = latitude
+            logging.info(f"Environment override: DEFAULT_LOCATION = ({longitude}, {latitude})")
+        except ValueError:
+            logging.error("Invalid coordinates in environment variables")
+    
+    if 'CHARGING_HUB_INCLUDE_BATTERY' in os.environ:
+        Config.EXECUTION_FLAGS['INCLUDE_BATTERY'] = os.environ['CHARGING_HUB_INCLUDE_BATTERY'] == '1'
+        logging.info(f"Environment override: INCLUDE_BATTERY = {Config.EXECUTION_FLAGS['INCLUDE_BATTERY']}")
 
 
 def run_traffic_calculation():
@@ -221,6 +261,9 @@ def main(config=None):
     if config:
         global Config
         Config = config
+        
+    # Apply any environment variable overrides from the GUI
+    apply_environment_overrides()
 
     print("\n" + "="*80)
     print("CHARGING HUB OPTIMIZATION - MAIN CONTROL SCRIPT")

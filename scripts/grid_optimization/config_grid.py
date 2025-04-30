@@ -3,7 +3,8 @@ from math import inf
 import numpy as np
 import sys
 import os
-from data_loading import load_data
+# Change the relative import to absolute import
+from grid_optimization.data_loading import load_data
 # Add the project root to path to import from parent directory
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
@@ -19,8 +20,12 @@ DEFAULT_LOCATION = Config.DEFAULT_LOCATION
 current_strategy = Config.CHARGING_CONFIG['STRATEGY'][0]
 all_strategies = Config.CHARGING_CONFIG['ALL_STRATEGIES']
 
-# Load data
-load_profile, timestamps = load_data(current_strategy)
+# Load data - Make this conditional to avoid errors when importing as a module
+try:
+    load_profile, timestamps = load_data(current_strategy)
+except Exception as e:
+    print(f"Note: Could not load data profiles in config_grid.py module import: {e}")
+    load_profile, timestamps = [], []
 
 # Access grid optimization flags from EXECUTION_FLAGS dictionary
 debug_mode = Config.EXECUTION_FLAGS['DEBUG_MODE']  # Set to True to enable debug mode for detailed output

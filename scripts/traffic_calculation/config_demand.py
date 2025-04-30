@@ -5,8 +5,8 @@ This module imports configuration from the global Config class.
 
 import sys
 import os
-# Add the project root to path to import from parent directory
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+# Add the parent directory to path to import from parent directory
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from config import Config
 
@@ -29,12 +29,30 @@ TIME = Config.TIME
 CSV = Config.CSV
 
 # Set up file paths for backward compatibility
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
-INPUT_DIR = Config.TRAFFIC_PATHS['INPUT_DIR']
-OUTPUT_DIR = Config.TRAFFIC_PATHS['OUTPUT_DIR']
-FINAL_OUTPUT_DIR = Config.TRAFFIC_PATHS['FINAL_OUTPUT_DIR']
-FILES = Config.TRAFFIC_FILES
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # traffic_calculation folder
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..', '..'))  # Go up two levels to reach project root
+INPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "raw_data")
+OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "interim_results")
+FINAL_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "traffic", "final_traffic")
+
+# Create a mapping for traffic files with absolute paths
+FILES = {
+    # Input files
+    'MAUT_TABLE': os.path.join(INPUT_DIR, 'Mauttabelle.xlsx'),
+    'BEFAHRUNGEN': os.path.join(INPUT_DIR, 'Befahrungen_25_1Q.csv'),
+    'NUTS_DATA': os.path.join(INPUT_DIR, "DE_NUTS5000.gpkg"),
+        
+    # New breaks input files
+    'TRAFFIC_FLOW': os.path.join(INPUT_DIR, '01_Trucktrafficflow.csv'),
+    'EDGES': os.path.join(INPUT_DIR, '04_network-edges.csv'),
+    'NODES': os.path.join(INPUT_DIR, '03_network-nodes.csv'),
+        
+    # Output files
+    'BREAKS_OUTPUT': os.path.join(OUTPUT_DIR, 'breaks.json'),
+    'TOLL_MIDPOINTS_OUTPUT': os.path.join(OUTPUT_DIR, 'toll_midpoints.json'),
+    'CHARGING_DEMAND': os.path.join(OUTPUT_DIR, 'charging_demand.json'),
+    'FINAL_OUTPUT': os.path.join(FINAL_OUTPUT_DIR, 'laden_mauttabelle.json')
+}
 
 # Import utility functions for backward compatibility
 validate_year = Config.validate_year

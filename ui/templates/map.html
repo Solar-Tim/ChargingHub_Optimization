@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <h2>Map View</h2>
+        
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="map-select" class="form-select">
+                    <option value="combined">Combined Distance Map</option>
+                    <option value="power-line">Power Line Map</option>
+                    <option value="substation">Substation Map</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button id="refresh-map-btn" class="btn btn-primary">Load Selected Map</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body p-0">
+                <div id="map-container" style="height: 600px; width: 100%;">
+                    <div id="map-loading" class="d-flex justify-content-center align-items-center h-100">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading map data...</p>
+                        </div>
+                    </div>
+                    <iframe id="map-frame" style="height: 100%; width: 100%; border: none; display: none;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const mapSelect = document.getElementById('map-select');
+        const mapFrame = document.getElementById('map-frame');
+        const mapLoading = document.getElementById('map-loading');
+        const refreshMapBtn = document.getElementById('refresh-map-btn');
+        
+        // Get the most recent map files dynamically
+        async function getMostRecentMaps() {
+            try {
+                const response = await fetch('/api/maps/recent');
+                const data = await response.json();
+                return data.maps;
+            } catch (error) {
+                console.error('Error fetching map list:', error);
+                return {
+                    combined: null,
+                    powerLine: null,
+                    substation: null
+                };
+            }
+        }
+        
+        // Load the selected map
+        async function loadMap(mapType) {
+            // Show loading indicator
+            mapFrame.style.display = 'none';
+            mapLoading.style.display = 'flex';
+            
+            try {
+                const maps = await getMostRecentMaps();
+                let mapPath;
+                
+                switch(mapType) {
+                    case 'combined':
+                        mapPath = maps.combined;
+                        break;
+                    case 'power-line':
+                        mapPath = maps.powerLine;
+                        break;
+                    case 'substation':
+                        mapPath = maps.substation;
+                        break;
+                    default:
+                        mapPath = maps.combined;
+                }
+                
+                if (mapPath) {
+                    // For demo purposes, we'll use a placeholder until the API is implemented
+                    // In a real implementation, this would use the actual map path
+                    const mapUrl = `/static/maps/${mapPath}`;
+                    mapFrame.src = mapUrl;
+                    
+                    // Show the map once it's loaded
+                    mapFrame.onload = function() {
+                        mapLoading.style.display = 'none';
+                        mapFrame.style.display = 'block';
+                    };
+                } else {
+                    mapLoading.innerHTML = '<div class="text-center"><p>No map data available.</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading map:', error);
+                mapLoading.innerHTML = `<div class="text-center"><p>Error loading map: ${error.message}</p></div>`;
+            }
+        }
+        
+        // Handle initial map load (placeholder for now)
+        mapFrame.src = "https://www.openstreetmap.org/export/embed.html?bbox=6.707%2C50.898%2C6.847%2C50.958&layer=mapnik";
+        mapLoading.style.display = 'none';
+        mapFrame.style.display = 'block';
+        
+        // Handle map selection change
+        refreshMapBtn.addEventListener('click', function() {
+            loadMap(mapSelect.value);
+        });
+    });
+</script>
+{% endblock %}

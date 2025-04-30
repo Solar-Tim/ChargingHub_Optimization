@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <h2>Dashboard</h2>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Main Optimization Script</h4>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="status-indicator running me-2"></div>
+                        <span id="main-status">Running</span>
+                    </div>
+                    <button id="stop-main-btn" class="btn btn-danger">STOP</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h4>Subprocesses</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="status-indicator running me-2"></div>
+                        <span class="process-name">Process A</span>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="process-a-switch" checked>
+                    </div>
+                </div>
+
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="status-indicator running me-2"></div>
+                        <span class="process-name">Process B</span>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="process-b-switch" checked>
+                    </div>
+                </div>
+
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="status-indicator running me-2"></div>
+                        <span class="process-name">Process C</span>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="process-c-switch" checked>
+                    </div>
+                </div>
+
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="status-indicator running me-2"></div>
+                        <span class="process-name">Process D</span>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="process-d-switch" checked>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Socket.IO
+        const socket = io();
+        
+        // Handle stop button clicks
+        document.getElementById('stop-main-btn').addEventListener('click', function() {
+            fetch('/api/process/main/stop', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('main-status').textContent = 'Stopped';
+                    document.querySelector('.status-indicator.running').classList.remove('running');
+                    document.querySelector('.status-indicator').classList.add('stopped');
+                }
+            });
+        });
+        
+        // Handle process toggle switches
+        const switches = document.querySelectorAll('.form-check-input');
+        switches.forEach(function(switchEl) {
+            switchEl.addEventListener('change', function() {
+                const processId = this.id.replace('-switch', '');
+                const isEnabled = this.checked;
+                
+                // We would normally send this to the backend
+                console.log(`Process ${processId} is now ${isEnabled ? 'enabled' : 'disabled'}`);
+                
+                // For now, just update the UI
+                const statusIndicator = this.closest('.d-flex.justify-content-between')
+                    .querySelector('.status-indicator');
+                
+                if (isEnabled) {
+                    statusIndicator.classList.add('running');
+                    statusIndicator.classList.remove('stopped');
+                } else {
+                    statusIndicator.classList.remove('running');
+                    statusIndicator.classList.add('stopped');
+                }
+            });
+        });
+        
+        // Socket.IO event handlers for process status updates
+        socket.on('process_status', function(data) {
+            // Update process status indicators based on received data
+            console.log('Process status update:', data);
+        });
+    });
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-indicator {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    
+    .status-indicator.running {
+        background-color: #28a745;
+    }
+    
+    .status-indicator.stopped {
+        background-color: #dc3545;
+    }
+    
+    .status-indicator.warning {
+        background-color: #ffc107;
+    }
+    
+    .process-name {
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+    
+    .form-check-input {
+        width: 3rem;
+        height: 1.5rem;
+    }
+</style>
+{% endblock %}

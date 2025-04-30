@@ -13,26 +13,28 @@ import sys
 import json
 import time
 import numpy as np
-from pathlib import Path  # Add this import here
+from pathlib import Path
 from gurobipy import Model, GRB
 from shapely.geometry import Point
 from concurrent.futures import ProcessPoolExecutor
 
-# Add the parent directory (scripts) to the path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the project root and scripts directory to the path
+script_dir = os.path.dirname(os.path.abspath(__file__))
+scripts_dir = os.path.dirname(script_dir)
+project_root = os.path.dirname(scripts_dir)
+sys.path.insert(0, project_root)
+sys.path.insert(0, scripts_dir)
 
-from functions import * 
-# Import config_grid before other modules that might depend on it
+# Import modules with absolute imports
+from grid_optimization.functions import *
 from grid_optimization.config_grid import *
-from config_grid import generate_result_filename as grid_generate_result_filename
-from cables import *
+from grid_optimization.cables import *
 from grid_optimization.data_loading import load_data
 from grid_optimization.data_extraction import extract_charger_counts
 
 # Fix the import path for distance module
-# This line is already correctly handling the path for distance_scripts
-from distance_scripts.distance_functions import *
-from distance_scripts.distance_lines import *
+from scripts.distance_scripts.distance_functions import *
+from scripts.distance_scripts.distance_lines import *
 
 
 strategy = all_strategies  # Default strategy for testing
@@ -686,9 +688,6 @@ def main():
     end_time = time.time()
     print(f"\nTotal execution time: {end_time - start_time:.2f} seconds")
 
-
-def generate_result_filename(results, strategy, include_battery=True, custom_id=None):
-    return grid_generate_result_filename(results, strategy, include_battery, custom_id)
 
 
 def add_charging_sessions_data(results, strategy):

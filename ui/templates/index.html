@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2 text-center mt-5">
+        <h1>ChargingHub Optimization</h1>
+        <p class="lead">A tool for optimizing electric vehicle charging hub infrastructure</p>
+        
+        <div class="row mt-5">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Run Full Optimization</h5>
+                        <p class="card-text">Run the complete optimization pipeline including traffic calculation, charging hub setup, and grid optimization.</p>
+                        <button id="run-main-btn" class="btn btn-primary">Start Optimization</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Configure Parameters</h5>
+                        <p class="card-text">Modify charging capacity, number of charging points, distance parameters, and other settings.</p>
+                        <a href="/configuration" class="btn btn-secondary">Go to Configuration</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Traffic Calculation</h5>
+                        <p class="card-text">Run only the traffic calculation module to analyze traffic patterns.</p>
+                        <button id="run-traffic-btn" class="btn btn-outline-primary">Run Module</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Charging Hub Setup</h5>
+                        <p class="card-text">Run only the charging hub configuration module.</p>
+                        <button id="run-hub-btn" class="btn btn-outline-primary">Run Module</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Grid Optimization</h5>
+                        <p class="card-text">Run only the grid optimization module.</p>
+                        <button id="run-grid-btn" class="btn btn-outline-primary">Run Module</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="process-modal" tabindex="-1" aria-labelledby="processModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="processModalLabel">Process Running</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="process-output" class="bg-dark text-light p-3" style="height: 300px; overflow-y: auto;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" id="stop-process-btn" class="btn btn-danger">Stop Process</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const socket = io();
+        let currentProcessId = null;
+        const processOutput = document.getElementById('process-output');
+        const processModal = new bootstrap.Modal(document.getElementById('process-modal'));
+        
+        // Run main optimization
+        document.getElementById('run-main-btn').addEventListener('click', function() {
+            startProcess('main', '/api/run/main');
+        });
+        
+        // Run traffic calculation
+        document.getElementById('run-traffic-btn').addEventListener('click', function() {
+            startProcess('traffic', '/api/run/traffic_calculation');
+        });
+        
+        // Run charging hub setup
+        document.getElementById('run-hub-btn').addEventListener('click', function() {
+            startProcess('charging_hub', '/api/run/charging_hub_setup');
+        });
+        
+        // Run grid optimization
+        document.getElementById('run-grid-btn').addEventListener('click', function() {
+            startProcess('grid_opt', '/api/run/grid_optimization');
+        });
+        
+        // Stop current process
+        document.getElementById('stop-process-btn').addEventListener('click', function() {
+            if (currentProcessId) {
+                fetch(`/api/process/${currentProcessId}/stop`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        processOutput.innerHTML += '\n[Process stopped by user]';
+                    } else {
+                        console.error('Failed to stop process:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error stopping process:', error);
+                });
+            }
+        });
+        
+        // Socket.io event handlers
+        socket.on('process_started', function(data) {
+            if (data.id === currentProcessId) {
+                processOutput.innerHTML += '[Process started]\n';
+            }
+        });
+        
+        socket.on('process_output', function(data) {
+            if (data.id === currentProcessId) {
+                processOutput.innerHTML += data.output + '\n';
+                processOutput.scrollTop = processOutput.scrollHeight;
+            }
+        });
+        
+        socket.on('process_completed', function(data) {
+            if (data.id === currentProcessId) {
+                const status = data.success ? 'SUCCESS' : 'ERROR';
+                processOutput.innerHTML += `\n[Process completed with status: ${status}]`;
+                processOutput.scrollTop = processOutput.scrollHeight;
+            }
+        });
+        
+        function startProcess(processId, apiUrl) {
+            currentProcessId = processId;
+            processOutput.innerHTML = `[Starting ${processId}...]\n`;
+            processModal.show();
+            
+            fetch(apiUrl, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    processOutput.innerHTML += `Error: ${data.error}\n`;
+                }
+            })
+            .catch(error => {
+                processOutput.innerHTML += `Error: ${error}\n`;
+            });
+        }
+    });
+</script>
+{% endblock %}
