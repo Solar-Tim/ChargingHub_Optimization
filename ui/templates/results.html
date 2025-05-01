@@ -26,7 +26,7 @@
                     <div id="result-list" class="list-group">
                         {% if result_files %}
                             {% for result in result_files %}
-                                <a href="#{{ result.name }}" class="list-group-item list-group-item-action" 
+                                <a href="#" class="list-group-item list-group-item-action" 
                                    data-result-id="{{ result.id }}" 
                                    data-result-name="{{ result.name }}">
                                     <div class="d-flex justify-content-between">
@@ -35,7 +35,7 @@
                                             <small class="text-muted text-truncate">{{ result.name }}</small>
                                         </div>
                                         <small class="text-muted result-date">
-                                            {{ result.date|datetime|truncate(10, True, '') }}
+                                            {{ result.date_formatted }}
                                         </small>
                                     </div>
                                 </a>
@@ -301,6 +301,9 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>
 <script>
     $(document).ready(function() {
+        console.log('Results page script loaded');
+        // Base API URL
+        const apiBase = window.location.origin;
         // Global variables
         let currentResult = null;
         let resultData = null;
@@ -325,7 +328,7 @@
         function refreshResultsList() {
             console.log('Refreshing results list...');
             $.ajax({
-                url: '/api/results/list',
+                url: `${apiBase}/api/results/list`,
                 method: 'GET',
                 success: function(data) {
                     console.log('Results list loaded successfully:', data);
@@ -348,7 +351,7 @@
                             const formattedDate = resultDate.toISOString().split('T')[0];
                             
                             const listItem = $(`
-                                <a href="#${result.name}" class="list-group-item list-group-item-action" 
+                                <a href="#" class="list-group-item list-group-item-action" 
                                    data-result-id="${result.id}" 
                                    data-result-name="${result.name}">
                                     <div class="d-flex justify-content-between">
@@ -425,6 +428,7 @@
 
         // Enhance the click handler with better error capture
         $('#result-list').on('click', '.list-group-item', function(e) {
+            console.log('Result-list item click handler invoked for', $(this).data('result-name'));
             e.preventDefault();
             
             try {
@@ -532,9 +536,9 @@
             }
             
             // Fetch result data
-            console.log('Sending AJAX request to:', `/api/results/${resultName}`);
+            console.log('Sending AJAX request to:', `${apiBase}/api/results/${resultName}`);
             $.ajax({
-                url: `/api/results/${resultName}`,
+                url: `${apiBase}/api/results/${resultName}`,
                 method: 'GET',
                 dataType: 'json',
                 success: function(data) {
@@ -616,29 +620,9 @@
         function updateOverviewTab(data) {
             console.log('Updating overview tab with data:', data);
             
-            // Extract results and config
             const results = data.results || {};
-            const config = data.config || {};
-            
-            // Update configuration table
-            const configTable = $('#config-table');
-            configTable.empty();
-            
-            for (const key in config) {
-                let value = config[key];
-                
-                // Format the value based on type
-                if (typeof value === 'object') {
-                    value = JSON.stringify(value);
-                }
-                
-                configTable.append(`
-                    <tr>
-                        <th scope="row">${key}</th>
-                        <td>${value}</td>
-                    </tr>
-                `);
-            }
+            // No embedded config in JSON; clear config table
+            $('#config-table').empty();
             
             // Update summary table
             const summaryTable = $('#summary-table');
@@ -662,16 +646,8 @@
                 `);
             }
             
-            // Add location if available
-            if (config.location) {
-                summaryTable.append(`
-                    <tr>
-                        <th scope="row">Location</th>
-                        <td>${config.location.lat}, ${config.location.lon}</td>
-                    </tr>
-                `);
-            }
-            
+            // (Location not available in result JSON)
+
             // Add optimization type based on filename
             let optimType = "Unknown";
             if (currentResult.includes("withBat")) {
@@ -936,13 +912,13 @@
         // Download buttons
         $('#download-json-btn').on('click', function() {
             if (currentResult) {
-                window.location.href = `/api/results/download/${currentResult}?format=json`;
+                window.location.href = `${apiBase}/api/results/download/${currentResult}?format=json`;
             }
         });
         
         $('#download-csv-btn').on('click', function() {
             if (currentResult) {
-                window.location.href = `/api/results/download/${currentResult}?format=csv`;
+                window.location.href = `${apiBase}/api/results/download/${currentResult}?format=csv`;
             }
         });
         

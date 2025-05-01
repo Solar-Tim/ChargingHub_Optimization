@@ -13,7 +13,7 @@ import threading
 import time
 import re
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, Response, send_from_directory
 from flask_socketio import SocketIO, emit
 import subprocess
 import importlib
@@ -315,6 +315,69 @@ def logs():
     log_files.sort(key=lambda x: x['date'], reverse=True)
     
     return render_template('logs.html', log_files=log_files)
+
+# Route for the results page
+def results_page():
+    # Provide initial list of result files to template
+    files = get_result_files()
+    return render_template('results.html', result_files=files)
+app.add_url_rule('/results', 'results_page', results_page)
+
+# Helper function to list result files
+def get_result_files():
+    result_dir = Path(parent_dir) / 'results'
+    files = []
+    if result_dir.exists():
+        for file_path in result_dir.glob('optimization_*.json'):
+            file_name = file_path.name
+            base = file_name.replace('optimization_', '').replace('.json', '')
+            parts = base.split('_', 1)
+            id_part = parts[0]
+            type_part = parts[1] if len(parts) > 1 else ''
+            try:
+                date = file_path.stat().st_mtime
+            except:
+                date = 0
+            files.append({
+                'name': file_name,
+                'id': id_part,
+                'type': type_part,
+                'date': date,
+                'date_formatted': datetime.datetime.fromtimestamp(date).strftime('%Y-%m-%d')
+            })
+    return files
+
+# API endpoint to get list of result files
+@app.route('/api/results/list')
+def api_results_list():
+    results = get_result_files()
+    return jsonify({ 'success': True, 'results': results })
+
+# API endpoint to get content of a specific result file
+@app.route('/api/results/<result_name>')
+def api_results_content(result_name):
+    result_dir = Path(parent_dir) / 'results'
+    file_path = result_dir / result_name
+    if not file_path.exists() or not file_path.is_file():
+        return jsonify({ 'error': 'Result file not found' }), 404
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({ 'error': str(e) }), 500
+
+# API endpoint to download a result file
+def api_results_download(result_name):
+    result_dir = Path(parent_dir) / 'results'
+    file_path = result_dir / result_name
+    if not file_path.exists() or not file_path.is_file():
+        return jsonify({ 'error': 'Result file not found' }), 404
+    fmt = request.args.get('format', 'json')
+    if fmt != 'json':
+        return jsonify({ 'error': 'Unsupported format' }), 400
+    return send_from_directory(str(result_dir), result_name, as_attachment=True)
+app.add_url_rule('/api/results/download/<result_name>', 'api_results_download', api_results_download)
 
 # API route to get log content
 @app.route('/api/logs/<log_name>')
