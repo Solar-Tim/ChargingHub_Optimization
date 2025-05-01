@@ -1,0 +1,1063 @@
+{% extends "base.html" %}
+
+{% block title %}Optimization Results - ChargingHub Optimization{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Result Files</h5>
+                    <button id="refresh-results" class="btn btn-sm btn-light" title="Refresh results list">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="search-results" placeholder="Search results...">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" type="button" id="clear-search">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="result-list" class="list-group">
+                        {% if result_files %}
+                            {% for result in result_files %}
+                                <a href="#{{ result.name }}" class="list-group-item list-group-item-action" 
+                                   data-result-id="{{ result.id }}" 
+                                   data-result-name="{{ result.name }}">
+                                    <div class="d-flex justify-content-between">
+                                        <div class="result-info">
+                                            <strong>{{ result.id }}: {{ result.type }}</strong><br>
+                                            <small class="text-muted text-truncate">{{ result.name }}</small>
+                                        </div>
+                                        <small class="text-muted result-date">
+                                            {{ result.date|datetime|truncate(10, True, '') }}
+                                        </small>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center" id="no-results-message">
+                                <i class="fas fa-file-alt fa-2x mb-2 text-muted"></i><br>
+                                No result files found
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group w-100 mb-3">
+                        <button id="download-json-btn" class="btn btn-outline-primary" disabled>
+                            <i class="fas fa-download"></i> JSON
+                        </button>
+                        <button id="download-csv-btn" class="btn btn-outline-primary" disabled>
+                            <i class="fas fa-download"></i> CSV
+                        </button>
+                    </div>
+                    
+                    <button id="compare-btn" class="btn btn-outline-info btn-block mb-3" disabled>
+                        <i class="fas fa-balance-scale"></i> Compare Results
+                    </button>
+                    
+                    <button id="run-optimization-btn" class="btn btn-success btn-block">
+                        <i class="fas fa-play"></i> Run New Optimization
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0" id="result-title">Select a result file to view</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-light active" id="tab-overview">Overview</button>
+                        <button class="btn btn-sm btn-outline-light" id="tab-charts">Charts</button>
+                        <button class="btn btn-sm btn-outline-light" id="tab-data">Raw Data</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="result-content">
+                        <div id="placeholder-message" class="text-center py-5">
+                            <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+                            <p class="lead">Select a result file to view optimization details.</p>
+                            <p class="text-muted">Your optimization results will be displayed here.</p>
+                            <div class="mt-4">
+                                <button id="test-loading-btn" class="btn btn-outline-secondary">
+                                    <i class="fas fa-bug"></i> Test File Loading
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Loading Spinner -->
+                        <div id="loading-spinner" class="text-center py-5" style="display: none;">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading result data...</p>
+                        </div>
+                        
+                        <!-- Overview Tab -->
+                        <div id="overview-content" class="result-tab-content" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header">
+                                            <h6 class="card-title mb-0">Configuration</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <table class="table table-sm table-striped">
+                                                <tbody id="config-table">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header">
+                                            <h6 class="card-title mb-0">Summary</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <table class="table table-sm table-striped">
+                                                <tbody id="summary-table">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">Key Metrics</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-primary" id="metric-peak-power">-</h5>
+                                                    <p class="mb-0 text-muted">Peak Power</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-success" id="metric-total-energy">-</h5>
+                                                    <p class="mb-0 text-muted">Total Energy</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-danger" id="metric-total-cost">-</h5>
+                                                    <p class="mb-0 text-muted">Total Cost</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Battery status row - only shown when battery is included -->
+                                    <div class="row" id="battery-metrics-row" style="display: none;">
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-info" id="metric-battery-capacity">-</h5>
+                                                    <p class="mb-0 text-muted">Battery Capacity</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-info" id="metric-battery-peak-power">-</h5>
+                                                    <p class="mb-0 text-muted">Battery Peak Power</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-info" id="metric-battery-savings">-</h5>
+                                                    <p class="mb-0 text-muted">Cost Savings</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Charts Tab -->
+                        <div id="charts-content" class="result-tab-content" style="display: none;">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">Grid Energy</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="grid-energy-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4" id="battery-energy-container" style="display: none;">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">Battery Energy Level</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="battery-energy-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">Costs Breakdown</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="costs-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Raw Data Tab -->
+                        <div id="data-content" class="result-tab-content" style="display: none;">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="card-title mb-0">Raw JSON Data</h6>
+                                    <button id="copy-json-btn" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-copy"></i> Copy to Clipboard
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <pre id="json-display" class="json-viewer"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compare Modal -->
+<div class="modal fade" id="compareModal" tabindex="-1" role="dialog" aria-labelledby="compareModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="compareModalLabel">Compare Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Select the results you want to compare.
+                </div>
+                <div class="form-group">
+                    <label>Select Result Files to Compare:</label>
+                    <select id="compare-select" class="form-control" multiple size="5">
+                        <!-- Options will be added dynamically -->
+                    </select>
+                </div>
+                <div id="compare-results" style="display: none;">
+                    <h5 class="mt-4 mb-3">Comparison Results</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th id="compare-col-1">Result 1</th>
+                                    <th id="compare-col-2">Result 2</th>
+                                    <th>Difference</th>
+                                </tr>
+                            </thead>
+                            <tbody id="compare-table">
+                                <!-- Comparison data will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="do-compare">Compare</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>
+<script>
+    $(document).ready(function() {
+        // Global variables
+        let currentResult = null;
+        let resultData = null;
+        let charts = {};
+        let allResultsData = {};
+        
+        console.log('Results page initialized');
+        
+        // Initialize by checking for selected result in URL hash
+        const resultId = window.location.hash.substring(1);
+        console.log('Initial URL hash:', resultId);
+        if (resultId) {
+            // Find result with this ID and select it
+            const resultElement = $(`.list-group-item[data-result-id="${resultId}"]`);
+            console.log('Found result element:', resultElement.length > 0);
+            if (resultElement.length > 0) {
+                resultElement.click();
+            }
+        }
+        
+        // Refresh results list
+        function refreshResultsList() {
+            console.log('Refreshing results list...');
+            $.ajax({
+                url: '/api/results/list',
+                method: 'GET',
+                success: function(data) {
+                    console.log('Results list loaded successfully:', data);
+                    const resultList = $('#result-list');
+                    resultList.empty();
+                    
+                    if (data.results && data.results.length > 0) {
+                        $('#no-results-message').hide();
+                        
+                        // Sort results by date (newest first)
+                        data.results.sort((a, b) => b.date - a.date);
+                        
+                        // Update the select list for comparison
+                        $('#compare-select').empty();
+                        
+                        // Add each result to the list
+                        data.results.forEach(result => {
+                            // Format date to keep it short YYYY-MM-DD
+                            const resultDate = new Date(result.date * 1000);
+                            const formattedDate = resultDate.toISOString().split('T')[0];
+                            
+                            const listItem = $(`
+                                <a href="#${result.name}" class="list-group-item list-group-item-action" 
+                                   data-result-id="${result.id}" 
+                                   data-result-name="${result.name}">
+                                    <div class="d-flex justify-content-between">
+                                        <div class="result-info">
+                                            <strong>${result.id}: ${result.type}</strong><br>
+                                            <small class="text-muted text-truncate">${result.name}</small>
+                                        </div>
+                                        <small class="text-muted result-date">
+                                            ${formattedDate}
+                                        </small>
+                                    </div>
+                                </a>
+                            `);
+                            
+                            resultList.append(listItem);
+                            
+                            // Add to comparison select
+                            $('#compare-select').append(
+                                $('<option>', {
+                                    value: result.name,
+                                    text: `${result.id}: ${result.type} (${formattedDate})`
+                                })
+                            );
+                        });
+                        
+                        // If currentResult is set, reselect it
+                        if (currentResult) {
+                            $(`.list-group-item[data-result-name="${currentResult}"]`).addClass('active');
+                        }
+
+                        // Check if we have a hash in the URL and trigger a click on that result
+                        const urlHash = window.location.hash.substring(1);
+                        if (urlHash) {
+                            console.log('Found hash in URL, selecting result:', urlHash);
+                            const hashElement = $(`.list-group-item[data-result-name="${urlHash}"]`);
+                            if (hashElement.length > 0) {
+                                console.log('Triggering click on result with hash:', urlHash);
+                                hashElement.click();
+                            }
+                        }
+                    } else {
+                        resultList.html(`
+                            <div class="text-center" id="no-results-message">
+                                <i class="fas fa-file-alt fa-2x mb-2 text-muted"></i><br>
+                                No result files found
+                            </div>
+                        `);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error refreshing results list:', error, xhr);
+                    resultList.html(`
+                        <div class="text-center text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i><br>
+                            Error loading results: ${error}<br>
+                            <small>${xhr.responseText}</small>
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        // Refresh button click
+        $('#refresh-results').on('click', function() {
+            refreshResultsList();
+        });
+        
+        // Add this near the start of the script to enable more verbose logging
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                console.log('Starting AJAX request to:', settings.url);
+            }
+        });
+
+        // Enhance the click handler with better error capture
+        $('#result-list').on('click', '.list-group-item', function(e) {
+            e.preventDefault();
+            
+            try {
+                // Update UI
+                $('.list-group-item').removeClass('active');
+                $(this).addClass('active');
+                
+                // Get result info
+                const resultId = $(this).data('result-id');
+                const resultName = $(this).data('result-name');
+                
+                // Debug output
+                console.log('Result clicked:', { resultId, resultName });
+                
+                if (!resultName) {
+                    console.error('Result name is missing or undefined!');
+                    return;
+                }
+                
+                // Store current result name
+                currentResult = resultName;
+                
+                // Enable download buttons
+                $('#download-json-btn, #download-csv-btn, #compare-btn').prop('disabled', false);
+                
+                // Update title
+                $('#result-title').text(`Result: ${resultName}`);
+                
+                // Load result data
+                loadResultData(resultName);
+                
+                // Update hash for direct linking
+                window.location.hash = resultName;
+                console.log('Updated hash to:', window.location.hash);
+            } catch (error) {
+                console.error('Error in result click handler:', error);
+            }
+        });
+        
+        // Tab switching
+        $('#tab-overview, #tab-charts, #tab-data').on('click', function() {
+            // Update active tab button
+            $('.btn-group .btn').removeClass('active');
+            $(this).addClass('active');
+            
+            // Hide all content divs
+            $('.result-tab-content').hide();
+            
+            // Show the selected tab content
+            const tabId = $(this).attr('id').replace('tab-', '');
+            $(`#${tabId}-content`).show();
+            
+            // Refresh charts if showing the charts tab
+            if (tabId === 'charts' && resultData) {
+                setTimeout(() => {
+                    if (charts.gridEnergyChart) charts.gridEnergyChart.update();
+                    if (charts.batteryEnergyChart) charts.batteryEnergyChart.update();
+                    if (charts.costsChart) charts.costsChart.update();
+                }, 50);
+            }
+        });
+        
+        // Test loading button click handler
+        $('#test-loading-btn').on('click', function() {
+            console.log('Test Loading button clicked');
+            
+            // Find the first result file from the list
+            const firstResult = $('.list-group-item').first();
+            if (firstResult.length > 0) {
+                const resultName = firstResult.data('result-name');
+                console.log('Testing with the first result file:', resultName);
+                
+                // Select the first result
+                firstResult.click();
+            } else {
+                // If no result files, refresh the list to make sure
+                refreshResultsList();
+                
+                // Show message if still no results
+                setTimeout(() => {
+                    if ($('.list-group-item').length === 0) {
+                        alert('No result files found in the results directory. Please run an optimization first.');
+                    }
+                }, 500);
+            }
+        });
+        
+        // Function to load result data
+        function loadResultData(resultName) {
+            console.log('Loading result data for:', resultName);
+            
+            // Show loading state
+            $('#placeholder-message').hide();
+            $('#loading-spinner').show();
+            $('.result-tab-content').hide();
+            
+            // Reset result data
+            resultData = null;
+            
+            // Use cached data if available
+            if (allResultsData[resultName]) {
+                console.log('Using cached result data for:', resultName);
+                displayResultData(allResultsData[resultName]);
+                return;
+            }
+            
+            // Fetch result data
+            console.log('Sending AJAX request to:', `/api/results/${resultName}`);
+            $.ajax({
+                url: `/api/results/${resultName}`,
+                method: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    console.log('Result data loaded successfully:', data);
+                    // Cache the data
+                    allResultsData[resultName] = data;
+                    displayResultData(data);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading result data:', error);
+                    console.error('XHR status:', status);
+                    console.error('XHR responseText:', xhr.responseText);
+                    console.error('XHR object:', xhr);
+                    
+                    // Show error message
+                    $('#loading-spinner').hide();
+                    $('#placeholder-message').html(`
+                        <div class="text-center text-danger">
+                            <i class="fas fa-exclamation-triangle fa-4x mb-3"></i>
+                            <p class="lead">Error loading result data.</p>
+                            <p>${xhr.responseJSON?.error || error}</p>
+                            <p>Status: ${status}</p>
+                            <p>Response: ${xhr.responseText}</p>
+                        </div>
+                    `);
+                    $('#placeholder-message').show();
+                    $('.result-tab-content').hide();
+                }
+            });
+        }
+        
+        // Function to display loaded result data
+        function displayResultData(data) {
+            console.log('Displaying result data:', data);
+            
+            // Store data
+            resultData = data;
+            
+            // Hide loading spinner
+            $('#loading-spinner').hide();
+            
+            // Check for error
+            if (data.error) {
+                $('#placeholder-message').html(`
+                    <div class="text-center text-danger">
+                        <i class="fas fa-exclamation-triangle fa-4x mb-3"></i>
+                        <p class="lead">Error in result data</p>
+                        <p>${data.error}</p>
+                    </div>
+                `);
+                $('#placeholder-message').show();
+                return;
+            }
+            
+            try {
+                // Update UI with data
+                updateOverviewTab(data);
+                updateChartsTab(data);
+                updateDataTab(data);
+                
+                // Show the active tab
+                const activeTab = $('.btn-group .btn.active').attr('id').replace('tab-', '');
+                console.log('Active tab:', activeTab);
+                $(`#${activeTab}-content`).show();
+            } catch (error) {
+                console.error('Error displaying result data:', error);
+                $('#placeholder-message').html(`
+                    <div class="text-center text-danger">
+                        <i class="fas fa-exclamation-triangle fa-4x mb-3"></i>
+                        <p class="lead">Error displaying result data.</p>
+                        <p>${error.message || 'Unknown error'}</p>
+                    </div>
+                `);
+                $('#placeholder-message').show();
+            }
+        }
+        
+        // Function to update overview tab
+        function updateOverviewTab(data) {
+            console.log('Updating overview tab with data:', data);
+            
+            // Extract results and config
+            const results = data.results || {};
+            const config = data.config || {};
+            
+            // Update configuration table
+            const configTable = $('#config-table');
+            configTable.empty();
+            
+            for (const key in config) {
+                let value = config[key];
+                
+                // Format the value based on type
+                if (typeof value === 'object') {
+                    value = JSON.stringify(value);
+                }
+                
+                configTable.append(`
+                    <tr>
+                        <th scope="row">${key}</th>
+                        <td>${value}</td>
+                    </tr>
+                `);
+            }
+            
+            // Update summary table
+            const summaryTable = $('#summary-table');
+            summaryTable.empty();
+            
+            // Add scenario ID
+            summaryTable.append(`
+                <tr>
+                    <th scope="row">Scenario ID</th>
+                    <td>${data.scenario || 'Unknown'}</td>
+                </tr>
+            `);
+            
+            // Add timestamp if available
+            if (data.timestamp) {
+                summaryTable.append(`
+                    <tr>
+                        <th scope="row">Timestamp</th>
+                        <td>${data.timestamp}</td>
+                    </tr>
+                `);
+            }
+            
+            // Add location if available
+            if (config.location) {
+                summaryTable.append(`
+                    <tr>
+                        <th scope="row">Location</th>
+                        <td>${config.location.lat}, ${config.location.lon}</td>
+                    </tr>
+                `);
+            }
+            
+            // Add optimization type based on filename
+            let optimType = "Unknown";
+            if (currentResult.includes("withBat")) {
+                optimType = "With Battery Storage";
+            } else if (currentResult.includes("noBat")) {
+                optimType = "Without Battery Storage";
+            }
+            
+            summaryTable.append(`
+                <tr>
+                    <th scope="row">Optimization Type</th>
+                    <td>${optimType}</td>
+                </tr>
+            `);
+            
+            // Add charging strategy if available
+            if (results.charging_strategy) {
+                summaryTable.append(`
+                    <tr>
+                        <th scope="row">Charging Strategy</th>
+                        <td>${results.charging_strategy}</td>
+                    </tr>
+                `);
+            }
+            
+            // Update key metrics
+            updateKeyMetrics(results);
+        }
+        
+        // Function to update key metrics displays
+        function updateKeyMetrics(results) {
+            console.log('Updating key metrics with:', results);
+            
+            // Peak Power - Find max value in grid_energy array
+            let peakPower = 0;
+            if (results.grid_energy && results.grid_energy.length > 0) {
+                peakPower = Math.max(...results.grid_energy);
+            } else if (results.max_grid_load) {
+                peakPower = results.max_grid_load;
+            }
+            
+            // Total Energy - Sum of grid_energy array
+            let totalEnergy = 0;
+            if (results.grid_energy && results.grid_energy.length > 0) {
+                totalEnergy = results.grid_energy.reduce((sum, value) => sum + value, 0) / 12; // Divide by 12 to convert 5-min values to hours
+            }
+            
+            // Total Cost
+            let totalCost = results.total_cost || 0;
+            if (!totalCost && results.costs) {
+                // Try to get from the costs object
+                totalCost = results.costs.total_cost || 0;
+            }
+            
+            // Update the metric displays
+            $('#metric-peak-power').text(`${peakPower.toLocaleString()} kW`);
+            $('#metric-total-energy').text(`${Math.round(totalEnergy).toLocaleString()} kWh`);
+            $('#metric-total-cost').text(`€${totalCost.toLocaleString(undefined, {maximumFractionDigits: 0})}`);
+            
+            // Show/hide battery metrics
+            if (results.battery_capacity) {
+                // Show battery row
+                $('#battery-metrics-row').show();
+                
+                // Update battery metrics
+                $('#metric-battery-capacity').text(`${results.battery_capacity.toLocaleString()} kWh`);
+                
+                // Get battery peak power (max absolute value from charge and discharge arrays)
+                let batteryPeakPower = 0;
+                if (results.battery_charge && results.battery_discharge) {
+                    const maxCharge = Math.max(...results.battery_charge.map(v => Math.abs(v)));
+                    const maxDischarge = Math.max(...results.battery_discharge.map(v => Math.abs(v)));
+                    batteryPeakPower = Math.max(maxCharge, maxDischarge);
+                }
+                
+                $('#metric-battery-peak-power').text(`${batteryPeakPower.toLocaleString()} kW`);
+                
+                // Calculate cost savings (this is an estimate)
+                let batteryCost = results.battery_cost || 0;
+                $('#metric-battery-savings').text(`€${batteryCost.toLocaleString(undefined, {maximumFractionDigits: 0})}`);
+            } else {
+                // Hide battery row if no battery
+                $('#battery-metrics-row').hide();
+            }
+        }
+        
+        // Function to update charts tab
+        function updateChartsTab(data) {
+            console.log('Updating charts tab with data:', data);
+            
+            const results = data.results || {};
+            const timePeriods = data.time_periods || [];
+            
+            // Clean up any existing charts
+            if (charts.gridEnergyChart) {
+                charts.gridEnergyChart.destroy();
+            }
+            if (charts.batteryEnergyChart) {
+                charts.batteryEnergyChart.destroy();
+            }
+            if (charts.costsChart) {
+                charts.costsChart.destroy();
+            }
+            
+            // Create Grid Energy Chart
+            const gridCtx = document.getElementById('grid-energy-chart').getContext('2d');
+            const gridEnergy = results.grid_energy || [];
+            const gridLabels = timePeriods.length === gridEnergy.length ? 
+                timePeriods : Array.from({length: gridEnergy.length}, (_, i) => i * 5); // 5-minute intervals
+            
+            charts.gridEnergyChart = new Chart(gridCtx, {
+                type: 'line',
+                data: {
+                    labels: gridLabels,
+                    datasets: [{
+                        label: 'Grid Power (kW)',
+                        data: gridEnergy,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time (minutes)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Power (kW)'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Create Battery Energy Chart if battery data exists
+            if (results.battery_soc && results.battery_soc.length > 0) {
+                // Show the battery chart container
+                $('#battery-energy-container').show();
+                
+                const batteryCtx = document.getElementById('battery-energy-chart').getContext('2d');
+                const batterySoc = results.battery_soc || [];
+                const batteryLabels = timePeriods.length === batterySoc.length ? 
+                    timePeriods : Array.from({length: batterySoc.length}, (_, i) => i * 5); // 5-minute intervals
+                
+                charts.batteryEnergyChart = new Chart(batteryCtx, {
+                    type: 'line',
+                    data: {
+                        labels: batteryLabels,
+                        datasets: [{
+                            label: 'Battery State of Charge (kWh)',
+                            data: batterySoc,
+                            borderColor: 'rgb(153, 102, 255)',
+                            tension: 0.1,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time (minutes)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Energy (kWh)'
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Hide the battery chart container if no data
+                $('#battery-energy-container').hide();
+            }
+            
+            // Create Costs Chart
+            const costsCtx = document.getElementById('costs-chart').getContext('2d');
+            const costs = {};
+            
+            // Collect all cost fields from results
+            for (const key in results) {
+                if (key.toLowerCase().includes('cost') && typeof results[key] === 'number') {
+                    costs[key] = results[key];
+                }
+            }
+            
+            // Or use the costs object if it exists
+            if (results.costs) {
+                for (const key in results.costs) {
+                    costs[key] = results.costs[key];
+                }
+            }
+            
+            // Sort costs from highest to lowest
+            const sortedCosts = Object.entries(costs)
+                .filter(([key]) => key !== 'total_cost') // Remove total_cost from breakdown
+                .sort((a, b) => b[1] - a[1]);
+            
+            // Create chart with sorted costs
+            charts.costsChart = new Chart(costsCtx, {
+                type: 'bar',
+                data: {
+                    labels: sortedCosts.map(entry => entry[0].replace('_cost', '').replace('_', ' ').toUpperCase()),
+                    datasets: [{
+                        label: 'Cost (€)',
+                        data: sortedCosts.map(entry => entry[1]),
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)',
+                            'rgba(255, 159, 64, 0.7)',
+                            // More colors for additional costs
+                            'rgba(199, 199, 199, 0.7)',
+                            'rgba(83, 102, 255, 0.7)',
+                            'rgba(40, 159, 64, 0.7)',
+                            'rgba(210, 99, 132, 0.7)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Cost (€)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Function to update raw data tab
+        function updateDataTab(data) {
+            console.log('Updating data tab');
+            
+            // Format the data as pretty JSON
+            const prettyJson = JSON.stringify(data, null, 2);
+            
+            // Update the JSON display
+            $('#json-display').text(prettyJson);
+            
+            // Enable copy to clipboard button
+            $('#copy-json-btn').prop('disabled', false);
+        }
+        
+        // Download buttons
+        $('#download-json-btn').on('click', function() {
+            if (currentResult) {
+                window.location.href = `/api/results/download/${currentResult}?format=json`;
+            }
+        });
+        
+        $('#download-csv-btn').on('click', function() {
+            if (currentResult) {
+                window.location.href = `/api/results/download/${currentResult}?format=csv`;
+            }
+        });
+        
+        // Run Optimization button
+        $('#run-optimization-btn').on('click', function() {
+            window.location.href = '/dashboard';
+        });
+        
+        // Copy JSON to clipboard
+        $('#copy-json-btn').on('click', function() {
+            if (!resultData) return;
+            
+            // Create a temporary textarea to copy the JSON
+            const textarea = document.createElement('textarea');
+            textarea.value = JSON.stringify(resultData, null, 2);
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                // Execute copy command
+                document.execCommand('copy');
+                
+                // Show success feedback
+                const btn = $(this);
+                const originalText = btn.html();
+                btn.html('<i class="fas fa-check"></i> Copied!');
+                btn.removeClass('btn-outline-secondary').addClass('btn-success');
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    btn.html(originalText);
+                    btn.removeClass('btn-success').addClass('btn-outline-secondary');
+                }, 2000);
+                
+            } catch (err) {
+                console.error('Failed to copy JSON:', err);
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        });
+        
+        // Initial load
+        refreshResultsList();
+    });
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .json-viewer {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: 'Consolas', 'Courier New', monospace;
+        font-size: 0.9rem;
+        white-space: pre-wrap;
+        overflow-x: auto;
+        color: #333;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .json-key {
+        color: #2185d0;
+    }
+    
+    .json-string {
+        color: #21ba45;
+    }
+    
+    .json-boolean {
+        color: #db2828;
+    }
+    
+    .json-number {
+        color: #6435c9;
+    }
+    
+    .card {
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    #result-list {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    #compare-select {
+        height: 180px;
+    }
+    
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+    
+    /* Fix for result item layout */
+    .result-info {
+        max-width: 70%;
+        overflow: hidden;
+    }
+    
+    .result-date {
+        white-space: nowrap;
+        flex-shrink: 0;
+        margin-left: 8px;
+        align-self: center;
+    }
+    
+    .text-truncate {
+        max-width: 100%;
+        display: inline-block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>
+{% endblock %}

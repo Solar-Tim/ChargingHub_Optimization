@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+
+{% block title %}Terminal Monitor - ChargingHub Optimization{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Active Processes</h5>
+                </div>
+                <div class="card-body">
+                    <div id="process-list" class="list-group">
+                        <div class="text-center" id="no-processes-message">
+                            No active processes
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    <button id="stop-all-btn" class="btn btn-danger btn-block mb-2" disabled>
+                        <i class="fas fa-stop-circle"></i> Stop All Processes
+                    </button>
+                    <button id="clear-completed-btn" class="btn btn-secondary btn-block">
+                        <i class="fas fa-broom"></i> Clear Completed
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0" id="terminal-title">Terminal Output</h5>
+                    <div>
+                        <button id="clear-output-btn" class="btn btn-sm btn-outline-light mr-2" disabled>
+                            <i class="fas fa-eraser"></i> Clear
+                        </button>
+                        <button id="follow-output-btn" class="btn btn-sm btn-outline-light active" data-toggle="button" aria-pressed="true">
+                            <i class="fas fa-arrow-down"></i> Auto-scroll
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="terminal-output" class="terminal-container">
+                        <pre class="terminal-text">Select a process to view its output</pre>
+                    </div>
+                </div>
+                <div class="card-footer bg-dark text-white d-flex justify-content-between align-items-center">
+                    <div id="process-status">
+                        <span class="badge badge-secondary">No process selected</span>
+                    </div>
+                    <div>
+                        <button id="stop-process-btn" class="btn btn-sm btn-danger" disabled>
+                            <i class="fas fa-stop-circle"></i> Stop Process
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Socket.IO connection
+        const socket = io();
+        
+        // Global variables
+        let activeProcesses = {};
+        let currentProcess = null;
+        let autoscroll = true;
+        
+        // Connect to the Socket.IO server
+        socket.on('connect', function() {
+            console.log('Connected to server');
+            
+            // Request current process status
+            $.ajax({
+                url: '/api/processes/active',
+                method: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    // Initialize with active processes
+                    data.processes.forEach(process => {
+                        addProcess(process);
+                    });
+                    
+                    updateProcessList();
+                }
+            });
+        });
+        
+        // Event handlers for socket events
+        socket.on('process_started', function(data) {
+            console.log('Process started:', data);
+            
+            // Add process to the list
+            addProcess({
+                id: data.id,
+                status: 'running'
+            });
+            
+            updateProcessList();
+        });
+        
+        socket.on('process_output', function(data) {
+            console.log('Process output:', data);
+            
+            // Add output to the process
+            if (activeProcesses[data.id]) {
+                activeProcesses[data.id].output.push(data.output);
+                
+                // If this is the current process, update the terminal
+                if (currentProcess === data.id) {
+                    appendToTerminal(data.output);
+                }
+            }
+        });
+        
+        socket.on('process_completed', function(data) {
+            console.log('Process completed:', data);
+            
+            // Update process status
+            if (activeProcesses[data.id]) {
+                activeProcesses[data.id].status = data.success ? 'completed' : 'failed';
+                activeProcesses[data.id].exitCode = data.exitCode;
+                
+                // Update UI if this is the current process
+                if (currentProcess === data.id) {
+                    updateProcessStatus();
+                }
+                
+                updateProcessList();
+            }
+        });
+        
+        // Helper functions
+        function addProcess(process) {
+            if (!activeProcesses[process.id]) {
+                activeProcesses[process.id] = {
+                    id: process.id,
+                    status: process.status || 'running',
+                    output: [],
+                    exitCode: process.returnCode
+                };
+                
+                // Get process name from ID
+                switch (process.id) {
+                    case 'main':
+                        activeProcesses[process.id].name = 'Full Optimization';
+                        break;
+                    case 'traffic':
+                        activeProcesses[process.id].name = 'Traffic Calculation';
+                        break;
+                    case 'charging_hub':
+                        activeProcesses[process.id].name = 'Charging Hub Setup';
+                        break;
+                    case 'grid_opt':
+                        activeProcesses[process.id].name = 'Grid Optimization';
+                        break;
+                    default:
+                        activeProcesses[process.id].name = `Process ${process.id}`;
+                }
+                
+                // Request process output if we don't have it
+                $.ajax({
+                    url: `/api/process/${process.id}/status`,
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        if (data.logs) {
+                            activeProcesses[process.id].output = data.logs;
+                            
+                            // If this is the current process, update the terminal
+                            if (currentProcess === process.id) {
+                                updateTerminal();
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function updateProcessList() {
+            const processList = $('#process-list');
+            processList.empty();
+            
+            // Check if there are any processes
+            const processCount = Object.keys(activeProcesses).length;
+            if (processCount === 0) {
+                $('#no-processes-message').show();
+                $('#stop-all-btn').prop('disabled', true);
+            } else {
+                $('#no-processes-message').hide();
+                
+                // Check if there are any running processes
+                const runningProcesses = Object.values(activeProcesses).filter(p => p.status === 'running');
+                $('#stop-all-btn').prop('disabled', runningProcesses.length === 0);
+                
+                // Add processes to the list
+                Object.values(activeProcesses).forEach(process => {
+                    let statusClass = '';
+                    let statusBadge = '';
+                    
+                    switch (process.status) {
+                        case 'running':
+                            statusClass = 'list-group-item-info';
+                            statusBadge = '<span class="badge badge-info float-right">Running</span>';
+                            break;
+                        case 'completed':
+                            statusClass = 'list-group-item-success';
+                            statusBadge = '<span class="badge badge-success float-right">Completed</span>';
+                            break;
+                        case 'failed':
+                            statusClass = 'list-group-item-danger';
+                            statusBadge = `<span class="badge badge-danger float-right" title="Exit Code: ${process.exitCode || 'N/A'}">Failed</span>`;
+                            break;
+                    }
+                    
+                    const isActive = currentProcess === process.id ? 'active' : '';
+                    processList.append(`
+                        <a href="#" class="list-group-item list-group-item-action ${statusClass} ${isActive}" data-process-id="${process.id}">
+                            ${process.name || `Process ${process.id}`}
+                            ${statusBadge}
+                        </a>
+                    `);
+                });
+            }
+            
+            // Attach click handler for process selection
+            $('.list-group-item').off('click').on('click', function() {
+                const processId = $(this).data('process-id');
+                selectProcess(processId);
+            });
+        }
+        
+        function selectProcess(processId) {
+            // Update current process
+            currentProcess = processId;
+            
+            // Update UI
+            $('.list-group-item').removeClass('active');
+            $(`.list-group-item[data-process-id="${processId}"]`).addClass('active');
+            
+            // Update terminal title and status
+            $('#terminal-title').text(`Terminal Output: ${activeProcesses[processId].name || `Process ${processId}`}`);
+            
+            // Enable clear button
+            $('#clear-output-btn').prop('disabled', false);
+            
+            // Update stop button
+            updateProcessStatus();
+            
+            // Update terminal output
+            updateTerminal();
+        }
+        
+        function updateProcessStatus() {
+            if (!currentProcess || !activeProcesses[currentProcess]) {
+                $('#process-status').html('<span class="badge badge-secondary">No process selected</span>');
+                $('#stop-process-btn').prop('disabled', true);
+                return;
+            }
+            
+            const process = activeProcesses[currentProcess];
+            let statusBadge = '';
+            
+            switch (process.status) {
+                case 'running':
+                    statusBadge = '<span class="badge badge-info">Running</span>';
+                    $('#stop-process-btn').prop('disabled', false);
+                    break;
+                case 'completed':
+                    statusBadge = '<span class="badge badge-success">Completed</span>';
+                    $('#stop-process-btn').prop('disabled', true);
+                    break;
+                case 'failed':
+                    statusBadge = `<span class="badge badge-danger">Failed (Exit Code: ${process.exitCode || 'N/A'})</span>`;
+                    $('#stop-process-btn').prop('disabled', true);
+                    break;
+            }
+            
+            $('#process-status').html(statusBadge);
+        }
+        
+        function updateTerminal() {
+            if (!currentProcess || !activeProcesses[currentProcess]) {
+                $('#terminal-output').html('<pre class="terminal-text">Select a process to view its output</pre>');
+                return;
+            }
+            
+            const process = activeProcesses[currentProcess];
+            const output = process.output.join('\n');
+            
+            $('#terminal-output').html(`<pre class="terminal-text">${output}</pre>`);
+            
+            // Scroll to bottom if auto-scroll is enabled
+            if (autoscroll) {
+                scrollToBottom();
+            }
+        }
+        
+        function appendToTerminal(text) {
+            const terminalElem = $('#terminal-output');
+            const preElem = terminalElem.find('pre');
+            
+            if (preElem.length > 0) {
+                preElem.append('\n' + text);
+            } else {
+                terminalElem.html(`<pre class="terminal-text">${text}</pre>`);
+            }
+            
+            // Scroll to bottom if auto-scroll is enabled
+            if (autoscroll) {
+                scrollToBottom();
+            }
+        }
+        
+        function scrollToBottom() {
+            const terminalElem = $('#terminal-output');
+            terminalElem.scrollTop(terminalElem[0].scrollHeight);
+        }
+        
+        // Event handlers for buttons
+        $('#follow-output-btn').on('click', function() {
+            autoscroll = !autoscroll;
+            
+            if (autoscroll && currentProcess) {
+                scrollToBottom();
+            }
+        });
+        
+        $('#clear-output-btn').on('click', function() {
+            if (currentProcess && activeProcesses[currentProcess]) {
+                activeProcesses[currentProcess].output = [];
+                updateTerminal();
+            }
+        });
+        
+        $('#stop-process-btn').on('click', function() {
+            if (currentProcess && activeProcesses[currentProcess] && activeProcesses[currentProcess].status === 'running') {
+                // Disable button to prevent multiple clicks
+                $(this).prop('disabled', true);
+                
+                // Send stop request
+                $.ajax({
+                    url: `/api/process/${currentProcess}/stop`,
+                    method: 'POST',
+                    dataType: 'json',
+                    success: function(data) {
+                        console.log('Process stop response:', data);
+                        
+                        if (data.success) {
+                            // Update process status
+                            activeProcesses[currentProcess].status = 'stopped';
+                            
+                            // Update UI
+                            updateProcessStatus();
+                            updateProcessList();
+                        } else {
+                            // Re-enable button
+                            $('#stop-process-btn').prop('disabled', false);
+                            
+                            // Show error
+                            alert('Failed to stop process: ' + (data.error || 'Unknown error'));
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error stopping process:', error);
+                        
+                        // Re-enable button
+                        $('#stop-process-btn').prop('disabled', false);
+                        
+                        // Show error
+                        alert('Error stopping process: ' + error);
+                    }
+                });
+            }
+        });
+        
+        $('#stop-all-btn').on('click', function() {
+            // Confirm with the user
+            if (!confirm('Are you sure you want to stop all running processes?')) {
+                return;
+            }
+            
+            // Disable button to prevent multiple clicks
+            $(this).prop('disabled', true);
+            
+            // Send stop all request
+            $.ajax({
+                url: '/api/processes/stop_all',
+                method: 'POST',
+                dataType: 'json',
+                success: function(data) {
+                    console.log('Stop all response:', data);
+                    
+                    if (data.success) {
+                        // Update all running processes
+                        Object.keys(activeProcesses).forEach(processId => {
+                            if (activeProcesses[processId].status === 'running') {
+                                activeProcesses[processId].status = 'stopped';
+                            }
+                        });
+                        
+                        // Update UI
+                        updateProcessStatus();
+                        updateProcessList();
+                    } else {
+                        // Re-enable button if there are still running processes
+                        const runningProcesses = Object.values(activeProcesses).filter(p => p.status === 'running');
+                        $('#stop-all-btn').prop('disabled', runningProcesses.length === 0);
+                        
+                        // Show error
+                        alert('Failed to stop all processes: ' + (data.error || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error stopping all processes:', error);
+                    
+                    // Re-enable button if there are still running processes
+                    const runningProcesses = Object.values(activeProcesses).filter(p => p.status === 'running');
+                    $('#stop-all-btn').prop('disabled', runningProcesses.length === 0);
+                    
+                    // Show error
+                    alert('Error stopping all processes: ' + error);
+                }
+            });
+        });
+        
+        $('#clear-completed-btn').on('click', function() {
+            // Remove completed or failed processes
+            Object.keys(activeProcesses).forEach(processId => {
+                if (activeProcesses[processId].status === 'completed' || activeProcesses[processId].status === 'failed') {
+                    delete activeProcesses[processId];
+                }
+            });
+            
+            // Update UI
+            updateProcessList();
+            
+            // If current process was removed, clear terminal
+            if (currentProcess && !activeProcesses[currentProcess]) {
+                currentProcess = null;
+                $('#terminal-title').text('Terminal Output');
+                $('#terminal-output').html('<pre class="terminal-text">Select a process to view its output</pre>');
+                $('#process-status').html('<span class="badge badge-secondary">No process selected</span>');
+                $('#stop-process-btn').prop('disabled', true);
+                $('#clear-output-btn').prop('disabled', true);
+            }
+        });
+    });
+</script>
+
+<style>
+    .terminal-container {
+        background-color: #1e1e1e;
+        color: #f0f0f0;
+        min-height: 60vh;
+        max-height: 60vh;
+        overflow-y: auto;
+        padding: 10px;
+    }
+    
+    .terminal-text {
+        font-family: 'Consolas', 'Courier New', monospace;
+        color: #f0f0f0;
+        font-size: 0.9rem;
+        background-color: transparent;
+        border: none;
+        margin: 0;
+        white-space: pre-wrap;
+    }
+    
+    /* Custom scrollbar for better terminal appearance */
+    .terminal-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .terminal-container::-webkit-scrollbar-track {
+        background: #333;
+    }
+    
+    .terminal-container::-webkit-scrollbar-thumb {
+        background: #666;
+        border-radius: 4px;
+    }
+    
+    .terminal-container::-webkit-scrollbar-thumb:hover {
+        background: #888;
+    }
+</style>
+{% endblock %}
