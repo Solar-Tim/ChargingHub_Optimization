@@ -5,31 +5,46 @@
     <div class="col-md-10 offset-md-1">
         <h2>Map View</h2>
         
-        <div class="row mb-3">
-            <div class="col-md-3">
+        <div class="row mb-3 align-items-end">
+            <div class="col-md-8">
+                <label for="map-select" class="form-label">Select Map Type:</label>
                 <select id="map-select" class="form-select">
-                    <option value="combined">Combined Distance Map</option>
-                    <option value="power-line">Power Line Map</option>
-                    <option value="substation">Substation Map</option>
+                    {% if latest_maps.combined %}
+                    <option value="{{ latest_maps.combined }}">Latest Combined Map ({{ latest_maps.combined }})</option>
+                    {% endif %}
+                    {% if latest_maps.power_line %}
+                    <option value="{{ latest_maps.power_line }}">Latest Power Line Map ({{ latest_maps.power_line }})</option>
+                    {% endif %}
+                    {% if latest_maps.substation %}
+                    <option value="{{ latest_maps.substation }}">Latest Substation Map ({{ latest_maps.substation }})</option>
+                    {% endif %}
+                    {% for map in all_maps %}
+                    <option value="{{ map.name }}">{{ map.type }} ({{ map.date }}) - {{ map.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
-                <button id="refresh-map-btn" class="btn btn-primary">Load Selected Map</button>
+            <div class="col-md-4">
+                <button id="load-map-btn" class="btn btn-primary w-100">Load Map</button>
             </div>
         </div>
         
         <div class="card">
             <div class="card-body p-0">
-                <div id="map-container" style="height: 600px; width: 100%;">
-                    <div id="map-loading" class="d-flex justify-content-center align-items-center h-100">
+                <div id="map-container" style="height: 600px; width: 100%; position: relative;">
+                    <div id="map-loading" class="d-flex justify-content-center align-items-center h-100" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 15; background-color: white;">
                         <div class="text-center">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
-                            <p class="mt-2">Loading map data...</p>
+                            <p class="mt-2">Loading map...</p>
                         </div>
                     </div>
-                    <iframe id="map-frame" style="height: 100%; width: 100%; border: none; display: none;"></iframe>
+                    <iframe id="map-frame" style="height: 100%; width: 100%; border: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 5;"></iframe>
+                    <div id="no-map-message" class="d-flex justify-content-center align-items-center h-100" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10;">
+                        <div class="text-center">
+                            <p>No map files found. Run an optimization to generate maps.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -43,77 +58,73 @@
         const mapSelect = document.getElementById('map-select');
         const mapFrame = document.getElementById('map-frame');
         const mapLoading = document.getElementById('map-loading');
-        const refreshMapBtn = document.getElementById('refresh-map-btn');
+        const noMapMessage = document.getElementById('no-map-message');
+        const loadMapBtn = document.getElementById('load-map-btn');
         
-        // Get the most recent map files dynamically
-        async function getMostRecentMaps() {
-            try {
-                const response = await fetch('/api/maps/recent');
-                const data = await response.json();
-                return data.maps;
-            } catch (error) {
-                console.error('Error fetching map list:', error);
-                return {
-                    combined: null,
-                    powerLine: null,
-                    substation: null
-                };
-            }
-        }
-        
-        // Load the selected map
-        async function loadMap(mapType) {
+        function loadMap(mapName) {
             // Show loading indicator
-            mapFrame.style.display = 'none';
+            mapFrame.style.display = 'block';
+            noMapMessage.style.display = 'none';
             mapLoading.style.display = 'flex';
             
-            try {
-                const maps = await getMostRecentMaps();
-                let mapPath;
+            if (mapName) {
+                // Set the iframe source to the map file
+                const mapUrl = "{{ url_for('serve_map', map_name='') }}" + mapName;
                 
-                switch(mapType) {
-                    case 'combined':
-                        mapPath = maps.combined;
-                        break;
-                    case 'power-line':
-                        mapPath = maps.powerLine;
-                        break;
-                    case 'substation':
-                        mapPath = maps.substation;
-                        break;
-                    default:
-                        mapPath = maps.combined;
-                }
+                // Clear any previous src and handlers first
+                mapFrame.onload = null;
+                mapFrame.onerror = null;
+                mapFrame.src = '';
                 
-                if (mapPath) {
-                    // For demo purposes, we'll use a placeholder until the API is implemented
-                    // In a real implementation, this would use the actual map path
-                    const mapUrl = `/static/maps/${mapPath}`;
-                    mapFrame.src = mapUrl;
-                    
-                    // Show the map once it's loaded
-                    mapFrame.onload = function() {
-                        mapLoading.style.display = 'none';
-                        mapFrame.style.display = 'block';
-                    };
-                } else {
-                    mapLoading.innerHTML = '<div class="text-center"><p>No map data available.</p></div>';
-                }
-            } catch (error) {
-                console.error('Error loading map:', error);
-                mapLoading.innerHTML = `<div class="text-center"><p>Error loading map: ${error.message}</p></div>`;
+                // Set up new handlers
+                mapFrame.onload = function() {
+                    console.log("Map loaded successfully");
+                    // When map loads, hide loading overlay completely
+                    mapLoading.style.display = 'none';
+                    // Make sure iframe is visible and on top
+                    mapFrame.style.display = 'block';
+                    mapFrame.style.zIndex = '20';
+                };
+                
+                // Handle loading errors
+                mapFrame.onerror = function() {
+                    console.error("Error loading map");
+                    mapLoading.style.display = 'none';
+                    noMapMessage.style.display = 'flex';
+                    noMapMessage.innerHTML = '<div class="text-center"><p>Error loading map file.</p></div>';
+                };
+                
+                // Set the src after establishing handlers
+                mapFrame.src = mapUrl;
+                
+                // Add a more aggressive fallback timeout
+                setTimeout(function() {
+                    console.log("Timeout reached - forcing display of map");
+                    mapLoading.style.display = 'none';
+                    mapFrame.style.display = 'block';
+                    mapFrame.style.zIndex = '20';
+                }, 2000); // 2 second fallback
+            } else {
+                // No map selected
+                mapLoading.style.display = 'none';
+                noMapMessage.style.display = 'flex';
             }
         }
         
-        // Handle initial map load (placeholder for now)
-        mapFrame.src = "https://www.openstreetmap.org/export/embed.html?bbox=6.707%2C50.898%2C6.847%2C50.958&layer=mapnik";
-        mapLoading.style.display = 'none';
-        mapFrame.style.display = 'block';
-        
-        // Handle map selection change
-        refreshMapBtn.addEventListener('click', function() {
-            loadMap(mapSelect.value);
+        // Load map button click handler
+        loadMapBtn.addEventListener('click', function() {
+            const selectedMap = mapSelect.value;
+            loadMap(selectedMap);
         });
+        
+        // Initial load if we have maps
+        if (mapSelect.options.length > 0) {
+            const initialMap = mapSelect.value;
+            loadMap(initialMap);
+        } else {
+            mapLoading.style.display = 'none';
+            noMapMessage.style.display = 'flex';
+        }
     });
 </script>
 {% endblock %}

@@ -12,12 +12,12 @@ import logging
 import threading
 import time
 import re
+import datetime
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, redirect, url_for, Response, send_from_directory
+from flask import Flask, render_template, request, jsonify, redirect, url_for, Response, send_from_directory, send_file
 from flask_socketio import SocketIO, emit
 import subprocess
 import importlib
-import datetime
 
 # Add parent directory to path for imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -226,55 +226,76 @@ def dashboard():
 # Route for the map
 @app.route('/map')
 def map_page():
-    # Find the latest map files
+    # Find all map files
     map_dir = Path(parent_dir) / 'results' / 'maps'
-    combined_maps = list(map_dir.glob('*_combined_distance_map.html'))
-    combined_maps.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+    map_files = []
     
-    if combined_maps:
-        latest_map = combined_maps[0].name
+    if map_dir.exists():
+        # Get all HTML files in the maps directory
+        map_files = list(map_dir.glob('*.html'))
+        
+        # Categorize maps by type
+        combined_maps = [f for f in map_files if 'combined' in f.name.lower()]
+        power_line_maps = [f for f in map_files if 'power' in f.name.lower() or 'line' in f.name.lower()]
+        substation_maps = [f for f in map_files if 'substation' in f.name.lower()]
+        
+        # Sort each category by modification time (newest first)
+        for map_list in [combined_maps, power_line_maps, substation_maps]:
+            map_list.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        
+        # Create a dictionary with the most recent map of each type
+        latest_maps = {
+            'combined': combined_maps[0].name if combined_maps else None,
+            'power_line': power_line_maps[0].name if power_line_maps else None,
+            'substation': substation_maps[0].name if substation_maps else None
+        }
     else:
-        latest_map = None
-        
-    return render_template('map.html', latest_map=latest_map)
-
-# API route to get available maps
-@app.route('/api/maps')
-def get_maps():
-    try:
-        map_dir = Path(parent_dir) / 'results' / 'maps'
-        maps = []
-        
-        if map_dir.exists():
-            for map_file in map_dir.glob('*.html'):
-                maps.append({
-                    'name': map_file.name,
-                    'path': f'/maps/{map_file.name}',
-                    'date': map_file.stat().st_mtime
-                })
+        latest_maps = {
+            'combined': None,
+            'power_line': None,
+            'substation': None
+        }
+    
+    # Get all map files for the dropdown
+    all_maps = []
+    if map_dir.exists():
+        for map_file in map_dir.glob('*.html'):
+            map_type = None
+            if 'combined' in map_file.name.lower():
+                map_type = 'Combined Map'
+            elif 'power' in map_file.name.lower() or 'line' in map_file.name.lower():
+                map_type = 'Power Line Map'
+            elif 'substation' in map_file.name.lower():
+                map_type = 'Substation Map'
+            else:
+                map_type = 'Other Map'
                 
+            all_maps.append({
+                'name': map_file.name,
+                'type': map_type,
+                'date': datetime.datetime.fromtimestamp(map_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M')
+            })
+            
         # Sort by date (newest first)
-        maps.sort(key=lambda x: x['date'], reverse=True)
+        all_maps.sort(key=lambda x: x['date'], reverse=True)
         
-        return jsonify({
-            'success': True,
-            'maps': maps
-        })
-    except Exception as e:
-        logger.error(f"Error getting maps: {e}")
-        return jsonify({'error': str(e)}), 500
+    return render_template('map.html', latest_maps=latest_maps, all_maps=all_maps)
 
 # Route to serve map files
 @app.route('/maps/<map_name>')
 def serve_map(map_name):
-    map_path = os.path.join(parent_dir, 'results', 'maps', map_name)
-    if not os.path.exists(map_path):
+    map_dir = os.path.join(parent_dir, 'results', 'maps')
+    
+    # Validate the filename to prevent directory traversal attacks
+    if '..' in map_name or '/' in map_name:
+        return "Invalid map name", 400
+        
+    # Check if the file exists
+    if not os.path.exists(os.path.join(map_dir, map_name)):
         return "Map not found", 404
         
-    with open(map_path, 'r') as f:
-        map_content = f.read()
-        
-    return map_content
+    # Serve the file directly
+    return send_from_directory(map_dir, map_name)
 
 # Route for the configuration page
 @app.route('/configuration')
@@ -403,7 +424,7 @@ def save_config():
         # Update config.py file with the new settings
         success = update_config_file(data)
         
-        if success:
+        if (success):
             logger.info("Configuration updated successfully")
             return jsonify({'success': True})
         else:
