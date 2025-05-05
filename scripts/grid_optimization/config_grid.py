@@ -17,7 +17,7 @@ DEFAULT_LOCATION = Config.DEFAULT_LOCATION
 # STRATEGY = 'Konstant'  # Konstant: Möglichst konstante Ladeleistung - Minimierung der Netzanschlusslast - Lademanagement
 # STRATEGY = 'Hub'  # Hub: Minimierung der Hub-Lastspitzen - Globale Lastoptimierung - Hub-Level Lademanagement
 current_strategy = Config.CHARGING_CONFIG['STRATEGY'][0]
-all_strategies = Config.CHARGING_CONFIG['ALL_STRATEGIES']
+all_strategies = Config.CHARGING_CONFIG['STRATEGY']
 
 # Load data - Make this conditional to avoid errors when importing as a module
 try:

@@ -10,23 +10,26 @@
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="STRATEGY" class="form-label">Charging Strategy</label>
-                        <select class="form-select" id="STRATEGY" multiple>
-                            <option value="T_min" {% if "T_min" in charging_config.STRATEGY %}selected{% endif %}>T_min</option>
-                            <option value="Konstant" {% if "Konstant" in charging_config.STRATEGY %}selected{% endif %}>Konstant</option>
-                            <option value="Hub" {% if "Hub" in charging_config.STRATEGY %}selected{% endif %}>Hub</option>
-                        </select>
-                        <div class="form-text">Hold Ctrl/Cmd to select multiple strategies</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="ALL_STRATEGIES" class="form-label">All Available Strategies</label>
-                        <select class="form-select" id="ALL_STRATEGIES" multiple>
-                            <option value="T_min" {% if "T_min" in charging_config.ALL_STRATEGIES %}selected{% endif %}>T_min</option>
-                            <option value="Konstant" {% if "Konstant" in charging_config.ALL_STRATEGIES %}selected{% endif %}>Konstant</option>
-                            <option value="Hub" {% if "Hub" in charging_config.ALL_STRATEGIES %}selected{% endif %}>Hub</option>
-                        </select>
-                        <div class="form-text">Hold Ctrl/Cmd to select multiple strategies</div>
+                        <label class="form-label">Charging Strategies</label>
+                        <div class="form-text mb-2">Select which charging strategies to include in the optimization</div>
+                        
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="strategy_T_min" 
+                                {% if "T_min" in charging_config.STRATEGY %}checked{% endif %}>
+                            <label class="form-check-label" for="strategy_T_min">T_min</label>
+                        </div>
+                        
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="strategy_Konstant" 
+                                {% if "Konstant" in charging_config.STRATEGY %}checked{% endif %}>
+                            <label class="form-check-label" for="strategy_Konstant">Konstant</label>
+                        </div>
+                        
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="strategy_Hub" 
+                                {% if "Hub" in charging_config.STRATEGY %}checked{% endif %}>
+                            <label class="form-check-label" for="strategy_Hub">Hub</label>
+                        </div>
                     </div>
                 </div>
                 

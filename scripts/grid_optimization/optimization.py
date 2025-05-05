@@ -679,7 +679,7 @@ def process_strategy(strategy):
 def main():
     """Main function to run the optimization for all strategies"""
     start_time = time.time()
-    print(f"Starting optimization for {len(Config.CHARGING_CONFIG['ALL_STRATEGIES'])} strategies")
+    print(f"Starting optimization for {len(Config.CHARGING_CONFIG['STRATEGY'])} strategies")
 
     # Option 1: Sequential execution
     # all_results = []
@@ -688,10 +688,11 @@ def main():
     #    all_results.append(result)
 
     # Option 2: Parallel execution with ProcessPoolExecutor
-    with ProcessPoolExecutor(max_workers=min(len(Config.CHARGING_CONFIG['ALL_STRATEGIES']), os.cpu_count() or 1)) as executor:
+    # Change to:
+    with ProcessPoolExecutor(max_workers=min(len(Config.CHARGING_CONFIG['STRATEGY']), os.cpu_count() or 1)) as executor:
         # Submit all strategies for processing
         futures = {executor.submit(process_strategy, strategy): strategy 
-                   for strategy in Config.CHARGING_CONFIG['ALL_STRATEGIES']}
+                for strategy in Config.CHARGING_CONFIG['STRATEGY']}
         
         # Collect results as they complete
         all_results = []

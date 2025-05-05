@@ -21,15 +21,14 @@ class Config:
         'CREATE_PLOT': False, 'CREATE_DISTANCE_MAPS': True,
         'INCLUDE_BATTERY': True, 'USE_MANUAL_CHARGER_COUNT': False,
         'DEBUG_MODE': False}
-    CHARGING_CONFIG = {'ALL_STRATEGIES': ['T_min', 'Konstant', 'Hub'],
-        'STRATEGY': ['T_min', 'Konstant', 'Hub'], 'ladequote': 0.8, 'power':
+    CHARGING_CONFIG = {'STRATEGY': ['Hub'], 'ladequote': 0.8, 'power':
         '100-100-100', 'pause': '45-540'}
     MANUAL_CHARGER_COUNT = {'NCS': 4, 'HPC': 6, 'MCS': 2}
     MANUAL_DISTANCES = {'distribution_distance': 10,
         'transmission_distance': 9999999, 'powerline_distance': 9999999}
     DEFAULT_LOCATION = {'LONGITUDE': 6.60414, 'LATITUDE': 51.12994}
-    SPATIAL = {'DEFAULT_CRS': 'EPSG:4326', 'TARGET_CRS': 'EPSG:32632',
-        'BUFFER_RADIUS': 1}
+    SPATIAL = {'DEFAULT_CRS': 'EPSG:4326', 'TARGET_CRS': 'EPSG:3857',
+        'BUFFER_RADIUS': 10000}
     SCENARIOS = {'TARGET_YEARS': ['2030', '2035', '2040', '2045'], 'R_BEV':
         {'2030': 0.15, '2035': 0.61, '2040': 0.94, '2045': 1}, 'R_TRAFFIC':
         {'2030': 1, '2035': 1.0462, '2040': 1.0549, '2045': 1.1672}}

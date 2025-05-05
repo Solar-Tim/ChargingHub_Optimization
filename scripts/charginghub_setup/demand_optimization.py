@@ -702,9 +702,9 @@ def process_single_strategy(strategy, config):
 
 
 def main():
-    with ProcessPoolExecutor(max_workers=min(len(CONFIG['ALL_STRATEGIES']), os.cpu_count())) as executor:
+    with ProcessPoolExecutor(max_workers=min(len(CONFIG['STRATEGIES']), os.cpu_count())) as executor:
         futures = {executor.submit(process_single_strategy, strategy, CONFIG.copy()): strategy 
-                  for strategy in CONFIG['ALL_STRATEGIES']}
+                  for strategy in CONFIG['STRATEGIES']}
         # Handle results
 
 if __name__ == '__main__':

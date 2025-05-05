@@ -252,12 +252,16 @@
             
             // Charging config
             config.CHARGING_CONFIG = {
-                STRATEGY: $('#STRATEGY').val() || [],
-                ALL_STRATEGIES: $('#ALL_STRATEGIES').val() || [],
+                STRATEGY: [],
                 ladequote: parseFloat($('#ladequote').val()),
                 power: $('#power').val(),
                 pause: $('#pause').val()
             };
+
+            // Collect strategies from toggle switches
+            if ($('#strategy_T_min').is(':checked')) config.CHARGING_CONFIG.STRATEGY.push('T_min');
+            if ($('#strategy_Konstant').is(':checked')) config.CHARGING_CONFIG.STRATEGY.push('Konstant');
+            if ($('#strategy_Hub').is(':checked')) config.CHARGING_CONFIG.STRATEGY.push('Hub');
             
             // Charging Types
             config.CHARGING_TYPES = {
