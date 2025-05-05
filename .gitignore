@@ -6,8 +6,7 @@ results/*
 
 .vscode/*
 
-# Configuration files
-config.py
+
 
 # Python bytecode
 __pycache__/
