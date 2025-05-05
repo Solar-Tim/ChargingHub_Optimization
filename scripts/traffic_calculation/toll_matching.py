@@ -197,7 +197,11 @@ def scale_charging_demand(reference_point_id, df_befahrung):
         
     traffic_data = reference_data.iloc[0]
     total_traffic = sum(traffic_data[day] for day in GERMAN_DAYS)
-    scaling_factors = {day: traffic_data[day] / total_traffic for day in GERMAN_DAYS}
+    if total_traffic == 0:
+        logger.warning("No traffic data found, using equal distribution")
+        scaling_factors = {day: 0 for day in GERMAN_DAYS}
+    else:
+        scaling_factors = {day: traffic_data[day] / total_traffic for day in GERMAN_DAYS}
     result = pd.DataFrame({
         'Weekday': [DAY_MAPPING[day] for day in GERMAN_DAYS],
         'ScalingFactor': [scaling_factors[day] for day in GERMAN_DAYS]
@@ -215,7 +219,11 @@ def scale_charging_sessions(reference_point_id, annual_hpc_sessions, annual_ncs_
         
     traffic_data = reference_data.iloc[0]
     total_traffic = sum(traffic_data[day] for day in GERMAN_DAYS)
-    scaling_factors = {day: traffic_data[day] / total_traffic for day in GERMAN_DAYS}
+    if total_traffic == 0:
+        logger.warning("No traffic data found, using equal distribution")
+        scaling_factors = {day: 0 for day in GERMAN_DAYS}
+    else:
+        scaling_factors = {day: traffic_data[day] / total_traffic for day in GERMAN_DAYS}
     
     result = pd.DataFrame(index=list(DAY_MAPPING.values()))
     for german_day, english_day in DAY_MAPPING.items():

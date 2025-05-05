@@ -84,7 +84,7 @@ class Config:
     SPATIAL = {
         'DEFAULT_CRS': 'EPSG:4326',
         'TARGET_CRS': 'EPSG:32632',  # UTM Zone 32N for Central Europe
-        'BUFFER_RADIUS': 10000,  # meters - radius for location buffer
+        'BUFFER_RADIUS': 1,  # meters - radius for location buffer
     }
     
     # BEV adoption scenarios

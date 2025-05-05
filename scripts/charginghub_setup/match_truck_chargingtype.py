@@ -102,15 +102,7 @@ def load_input_data(path):
     try:
         # Load distribution function
         df_verteilungsfunktion = pd.read_csv(verteilungsfunktion_path, sep=',')
-        #*
-        # else:
-        #    logging.warning(f"File not found: {verteilungsfunktion_path}")
-            # Create a dummy distribution function if the file doesn't exist
-        #    df_verteilungsfunktion = pd.DataFrame({
-        #        'Zeit': list(range(0, 1440, 15)),  # Time in minutes
-        #        'HPC': [1/96] * 96,  # Uniform distribution
-        #        'NCS': [1/96] * 96   # Uniform distribution
-        #    })
+
     
         
         # Load traffic data
@@ -121,8 +113,8 @@ def load_input_data(path):
             logging.warning(f"File not found: {laden_mauttabelle_path}")
 
         
-        # Get the forecast year from metadata (default to 2035)
-        forecast_year = laden_data.get('metadata', {}).get('forecast_year', '2035')
+        # Get the forecast year from metadata (default to 2030)
+        forecast_year = laden_data.get('metadata', {}).get('forecast_year', '2030')
         
         # Extract traffic data per day from metadata
         traffic_data = laden_data['metadata']['toll_section']['traffic']
