@@ -68,7 +68,7 @@ class Config:
     }
 
     # Manual distance values when not using distance calculation
-    manual_distances = {
+    MANUAL_DISTANCES = {
         'distribution_distance': 10,    # Distance to nearest distribution substation (m)
         'transmission_distance': 9999999,   # Distance to nearest transmission substation (m)
         'powerline_distance': 9999999,      # Distance to nearest HV power line (m)
