@@ -1,544 +1,571 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuration - ChargingHub Optimization</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-2 sidebar">
-                <div class="sidebar-header">
-                    <h3>ChargingHub Optimization</h3>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Configuration</h1>
+            <div>
+                <button id="saveConfig" class="btn btn-primary me-2">
+                    <i class="fas fa-save me-1"></i> Save Configuration
+                </button>
+                <div class="btn-group">
+                    <button id="runOptimization" class="btn btn-success">
+                        <i class="fas fa-play me-1"></i> Run All
+                    </button>
+                    <button class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" id="runTraffic">Run Traffic Calculation</a></li>
+                        <li><a class="dropdown-item" href="#" id="runChargingHub">Run Charging Hub Setup</a></li>
+                        <li><a class="dropdown-item" href="#" id="runGridOpt">Run Grid Optimization</a></li>
+                    </ul>
                 </div>
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+            </div>
+        </div>
+        
+        <!-- Tabbed Configuration Interface -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="configTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="execution-tab" data-bs-toggle="tab" data-bs-target="#execution" type="button" role="tab" aria-controls="execution" aria-selected="true">
+                            <i class="fas fa-cogs me-1"></i> Execution
+                        </button>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="charging-tab" data-bs-toggle="tab" data-bs-target="#charging" type="button" role="tab" aria-controls="charging" aria-selected="false">
+                            <i class="fas fa-charging-station me-1"></i> Charging
+                        </button>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="{{ url_for('configuration') }}">Configuration</a>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="location-tab" data-bs-toggle="tab" data-bs-target="#location" type="button" role="tab" aria-controls="location" aria-selected="false">
+                            <i class="fas fa-map-marker-alt me-1"></i> Location
+                        </button>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('map_page') }}">Maps</a>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="battery-tab" data-bs-toggle="tab" data-bs-target="#battery" type="button" role="tab" aria-controls="battery" aria-selected="false">
+                            <i class="fas fa-battery-full me-1"></i> Battery
+                        </button>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('logs') }}">Logs</a>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="grid-tab" data-bs-toggle="tab" data-bs-target="#grid" type="button" role="tab" aria-controls="grid" aria-selected="false">
+                            <i class="fas fa-plug me-1"></i> Grid
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="cables-tab" data-bs-toggle="tab" data-bs-target="#cables" type="button" role="tab" aria-controls="cables" aria-selected="false">
+                            <i class="fas fa-network-wired me-1"></i> Cables
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="traffic-tab" data-bs-toggle="tab" data-bs-target="#traffic" type="button" role="tab" aria-controls="traffic" aria-selected="false">
+                            <i class="fas fa-truck me-1"></i> Traffic
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="results-tab" data-bs-toggle="tab" data-bs-target="#results" type="button" role="tab" aria-controls="results" aria-selected="false">
+                            <i class="fas fa-file-alt me-1"></i> Results
+                        </button>
                     </li>
                 </ul>
             </div>
             
-            <!-- Main content -->
-            <div class="col-md-10 main-content">
-                <div class="row mb-4">
-                    <div class="col">
-                        <h1>Configuration</h1>
-                        <p>Configure parameters for the charging hub optimization process.</p>
-                    </div>
-                    <div class="col text-end">
-                        <button id="saveConfig" class="btn btn-primary">Save Configuration</button>
-                        <div class="btn-group">
-                            <button id="runOptimization" class="btn btn-success">Run All</button>
-                            <button class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="visually-hidden">Toggle Dropdown</span>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" id="runTraffic">Run Traffic Calculation</a></li>
-                                <li><a class="dropdown-item" href="#" id="runChargingHub">Run Charging Hub Setup</a></li>
-                                <li><a class="dropdown-item" href="#" id="runGridOpt">Run Grid Optimization</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5>Configuration Settings</h5>
-                            </div>
-                            <div class="card-body">
-                                <!-- Configuration form with tabs -->
-                                <ul class="nav nav-tabs" id="configTabs" role="tablist">
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link active" id="execution-tab" data-bs-toggle="tab" data-bs-target="#execution" type="button" role="tab" aria-controls="execution" aria-selected="true">Execution</button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="charging-tab" data-bs-toggle="tab" data-bs-target="#charging" type="button" role="tab" aria-controls="charging" aria-selected="false">Charging</button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="location-tab" data-bs-toggle="tab" data-bs-target="#location" type="button" role="tab" aria-controls="location" aria-selected="false">Location</button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="battery-tab" data-bs-toggle="tab" data-bs-target="#battery" type="button" role="tab" aria-controls="battery" aria-selected="false">Battery</button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="results-tab" data-bs-toggle="tab" data-bs-target="#results" type="button" role="tab" aria-controls="results" aria-selected="false">Results</button>
-                                    </li>
-                                </ul>
-                                
-                                <div class="tab-content p-3" id="configTabContent">
-                                    <!-- Execution Flags Tab -->
-                                    <div class="tab-pane fade show active" id="execution" role="tabpanel" aria-labelledby="execution-tab">
-                                        <h4>Execution Flags</h4>
-                                        <p>Control which parts of the optimization process are executed.</p>
-                                        
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <h5>Main Process Flags</h5>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="RUN_TRAFFIC_CALCULATION" {% if execution_flags.RUN_TRAFFIC_CALCULATION %}checked{% endif %}>
-                                                    <label class="form-check-label" for="RUN_TRAFFIC_CALCULATION">Run Traffic Calculation</label>
-                                                </div>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="RUN_CHARGING_HUB_SETUP" {% if execution_flags.RUN_CHARGING_HUB_SETUP %}checked{% endif %}>
-                                                    <label class="form-check-label" for="RUN_CHARGING_HUB_SETUP">Run Charging Hub Setup</label>
-                                                </div>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="RUN_GRID_OPTIMIZATION" {% if execution_flags.RUN_GRID_OPTIMIZATION %}checked{% endif %}>
-                                                    <label class="form-check-label" for="RUN_GRID_OPTIMIZATION">Run Grid Optimization</label>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-md-6">
-                                                <h5>Traffic Calculation Flags</h5>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="RECALCULATE_BREAKS" {% if execution_flags.RECALCULATE_BREAKS %}checked{% endif %}>
-                                                    <label class="form-check-label" for="RECALCULATE_BREAKS">Recalculate Breaks</label>
-                                                </div>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="RECALCULATE_TOLL_MIDPOINTS" {% if execution_flags.RECALCULATE_TOLL_MIDPOINTS %}checked{% endif %}>
-                                                    <label class="form-check-label" for="RECALCULATE_TOLL_MIDPOINTS">Recalculate Toll Midpoints</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <h5>Charging Hub Setup Flags</h5>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="RUN_TRUCK_MATCHING" {% if execution_flags.RUN_TRUCK_MATCHING %}checked{% endif %}>
-                                                    <label class="form-check-label" for="RUN_TRUCK_MATCHING">Run Truck Matching</label>
-                                                </div>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="RUN_HUB_CONFIGURATION" {% if execution_flags.RUN_HUB_CONFIGURATION %}checked{% endif %}>
-                                                    <label class="form-check-label" for="RUN_HUB_CONFIGURATION">Run Hub Configuration</label>
-                                                </div>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="RUN_DEMAND_OPTIMIZATION" {% if execution_flags.RUN_DEMAND_OPTIMIZATION %}checked{% endif %}>
-                                                    <label class="form-check-label" for="RUN_DEMAND_OPTIMIZATION">Run Demand Optimization</label>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-md-6">
-                                                <h5>Grid Optimization Flags</h5>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="USE_DISTANCE_CALCULATION" {% if execution_flags.USE_DISTANCE_CALCULATION %}checked{% endif %}>
-                                                    <label class="form-check-label" for="USE_DISTANCE_CALCULATION">Use Distance Calculation</label>
-                                                </div>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="CREATE_PLOT" {% if execution_flags.CREATE_PLOT %}checked{% endif %}>
-                                                    <label class="form-check-label" for="CREATE_PLOT">Create Plot</label>
-                                                </div>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="CREATE_DISTANCE_MAPS" {% if execution_flags.CREATE_DISTANCE_MAPS %}checked{% endif %}>
-                                                    <label class="form-check-label" for="CREATE_DISTANCE_MAPS">Create Distance Maps</label>
-                                                </div>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="INCLUDE_BATTERY" {% if execution_flags.INCLUDE_BATTERY %}checked{% endif %}>
-                                                    <label class="form-check-label" for="INCLUDE_BATTERY">Include Battery</label>
-                                                </div>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="USE_MANUAL_CHARGER_COUNT" {% if execution_flags.USE_MANUAL_CHARGER_COUNT %}checked{% endif %}>
-                                                    <label class="form-check-label" for="USE_MANUAL_CHARGER_COUNT">Use Manual Charger Count</label>
-                                                </div>
-                                                <div class="form-check form-switch mb-2">
-                                                    <input class="form-check-input" type="checkbox" id="DEBUG_MODE" {% if execution_flags.DEBUG_MODE %}checked{% endif %}>
-                                                    <label class="form-check-label" for="DEBUG_MODE">Debug Mode</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Charging Configuration Tab -->
-                                    <div class="tab-pane fade" id="charging" role="tabpanel" aria-labelledby="charging-tab">
-                                        <h4>Charging Configuration</h4>
-                                        <p>Configure parameters for charging strategies and power settings.</p>
-                                        
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="STRATEGY" class="form-label">Charging Strategy</label>
-                                                    <select class="form-select" id="STRATEGY" multiple>
-                                                        <option value="T_min" {% if "T_min" in charging_config.STRATEGY %}selected{% endif %}>T_min</option>
-                                                        <option value="Konstant" {% if "Konstant" in charging_config.STRATEGY %}selected{% endif %}>Konstant</option>
-                                                        <option value="Hub" {% if "Hub" in charging_config.STRATEGY %}selected{% endif %}>Hub</option>
-                                                    </select>
-                                                    <div class="form-text">Hold Ctrl/Cmd to select multiple strategies</div>
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    <label for="ALL_STRATEGIES" class="form-label">All Available Strategies</label>
-                                                    <select class="form-select" id="ALL_STRATEGIES" multiple>
-                                                        <option value="T_min" {% if "T_min" in charging_config.ALL_STRATEGIES %}selected{% endif %}>T_min</option>
-                                                        <option value="Konstant" {% if "Konstant" in charging_config.ALL_STRATEGIES %}selected{% endif %}>Konstant</option>
-                                                        <option value="Hub" {% if "Hub" in charging_config.ALL_STRATEGIES %}selected{% endif %}>Hub</option>
-                                                    </select>
-                                                    <div class="form-text">Hold Ctrl/Cmd to select multiple strategies</div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="ladequote" class="form-label">Charging Quota (0-1)</label>
-                                                    <input type="number" class="form-control" id="ladequote" value="{{ charging_config.ladequote }}" min="0" max="1" step="0.01">
-                                                    <div class="form-text">Charging quota as percentage (0.8 = 80%)</div>
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    <label for="power" class="form-label">Power Scaling (NCS-HPC-MCS)</label>
-                                                    <input type="text" class="form-control" id="power" value="{{ charging_config.power }}">
-                                                    <div class="form-text">Format: NCS-HPC-MCS (Example: 100-100-100)</div>
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    <label for="pause" class="form-label">Pause Times (min)</label>
-                                                    <input type="text" class="form-control" id="pause" value="{{ charging_config.pause }}">
-                                                    <div class="form-text">Format: ShortPause-LongPause (Example: 45-540)</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Location Tab -->
-                                    <div class="tab-pane fade" id="location" role="tabpanel" aria-labelledby="location-tab">
-                                        <h4>Default Location</h4>
-                                        <p>Set the default coordinates for optimization.</p>
-                                        
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="LONGITUDE" class="form-label">Longitude</label>
-                                                    <input type="number" class="form-control" id="LONGITUDE" value="{{ default_location.LONGITUDE }}" step="0.000001">
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="LATITUDE" class="form-label">Latitude</label>
-                                                    <input type="number" class="form-control" id="LATITUDE" value="{{ default_location.LATITUDE }}" step="0.000001">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="row">
-                                            <div class="col">
-                                                <div id="location-map" style="width: 100%; height: 400px; border: 1px solid #ccc;">
-                                                    <p class="text-center p-5">Map will be shown here</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Battery Tab -->
-                                    <div class="tab-pane fade" id="battery" role="tabpanel" aria-labelledby="battery-tab">
-                                        <h4>Battery Configuration</h4>
-                                        <p>Configure parameters for battery storage.</p>
-                                        
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="COST_PER_KWH" class="form-label">Cost per kWh (€)</label>
-                                                    <input type="number" class="form-control" id="COST_PER_KWH" value="{{ battery_config.COST_PER_KWH }}" min="0" step="1">
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    <label for="COST_PER_KW" class="form-label">Cost per kW (€)</label>
-                                                    <input type="number" class="form-control" id="COST_PER_KW" value="{{ battery_config.COST_PER_KW }}" min="0" step="1">
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    <label for="MAX_CAPACITY" class="form-label">Maximum Capacity (kWh)</label>
-                                                    <input type="number" class="form-control" id="MAX_CAPACITY" value="{{ battery_config.MAX_CAPACITY }}" min="0" step="100">
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="EFFICIENCY" class="form-label">Round-trip Efficiency</label>
-                                                    <input type="number" class="form-control" id="EFFICIENCY" value="{{ battery_config.EFFICIENCY }}" min="0" max="1" step="0.01">
-                                                    <div class="form-text">Value between 0 and 1 (0.95 = 95%)</div>
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    <label for="MIN_SOC" class="form-label">Minimum State of Charge</label>
-                                                    <input type="number" class="form-control" id="MIN_SOC" value="{{ battery_config.MIN_SOC }}" min="0" max="1" step="0.01">
-                                                    <div class="form-text">Value between 0 and 1</div>
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    <label for="MAX_SOC" class="form-label">Maximum State of Charge</label>
-                                                    <input type="number" class="form-control" id="MAX_SOC" value="{{ battery_config.MAX_SOC }}" min="0" max="1" step="0.01">
-                                                    <div class="form-text">Value between 0 and 1</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Results Naming Tab -->
-                                    <div class="tab-pane fade" id="results" role="tabpanel" aria-labelledby="results-tab">
-                                        <h4>Results Configuration</h4>
-                                        <p>Configure how results are named and saved.</p>
-                                        
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <div class="form-check form-switch mb-3">
-                                                    <input class="form-check-input" type="checkbox" id="USE_CUSTOM_ID" {% if result_naming.USE_CUSTOM_ID %}checked{% endif %}>
-                                                    <label class="form-check-label" for="USE_CUSTOM_ID">Use Custom ID</label>
-                                                    <div class="form-text">If enabled, uses a custom ID instead of a hash for result files</div>
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    <label for="CUSTOM_ID" class="form-label">Custom ID</label>
-                                                    <input type="text" class="form-control" id="CUSTOM_ID" value="{{ result_naming.CUSTOM_ID }}" {% if not result_naming.USE_CUSTOM_ID %}disabled{% endif %}>
-                                                    <div class="form-text">Custom identifier for result files</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Process Output -->
-                <div class="row mt-4">
-                    <div class="col">
-                        <div class="card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5 id="process-title">Process Output</h5>
-                                <button id="stopProcess" class="btn btn-danger btn-sm" style="display: none;">Stop Process</button>
-                            </div>
-                            <div class="card-body">
-                                <pre id="process-output" class="process-output">No process running...</pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Tab content -->
+            <div class="tab-content" id="configTabContent">
+                <!-- Include all tab templates here -->
+                {% include 'config_tabs/execution.html' %}
+                {% include 'config_tabs/charging.html' %}
+                {% include 'config_tabs/location.html' %}
+                {% include 'config_tabs/battery.html' %}
+                {% include 'config_tabs/grid.html' %}
+                {% include 'config_tabs/cables.html' %}
+                {% include 'config_tabs/traffic.html' %}
+                {% include 'config_tabs/results.html' %}
+            </div>
+        </div>
+        
+        <!-- Process Output -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 id="process-title">Process Output</h5>
+                <button id="stopProcess" class="btn btn-danger btn-sm" style="display: none;">
+                    <i class="fas fa-stop me-1"></i> Stop Process
+                </button>
+            </div>
+            <div class="card-body">
+                <pre id="process-output" class="process-output">No process running...</pre>
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <!-- JavaScript -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
-    <script>
-        // Initialize Socket.IO
-        const socket = io();
-        let currentProcessId = null;
+{% block extra_js %}
+<script>
+    // Initialize Socket.IO
+    const socket = io();
+    let currentProcessId = null;
+    
+    // Connect to the server
+    socket.on('connect', () => {
+        console.log('Connected to server');
+    });
+    
+    // Process events
+    socket.on('process_started', (data) => {
+        console.log('Process started:', data);
+        currentProcessId = data.id;
+        $('#process-title').text(`Process Output (${data.id})`);
+        $('#process-output').text('');
+        $('#stopProcess').show();
+    });
+    
+    socket.on('process_output', (data) => {
+        console.log('Process output:', data);
+        if (data.id === currentProcessId) {
+            const output = $('#process-output');
+            output.append(data.output + '\n');
+            output.scrollTop(output[0].scrollHeight);
+        }
+    });
+    
+    socket.on('process_completed', (data) => {
+        console.log('Process completed:', data);
+        if (data.id === currentProcessId) {
+            $('#process-output').append('\n' + (data.success ? 'Process completed successfully!' : 'Process completed with errors.') + '\n');
+            $('#stopProcess').hide();
+        }
+    });
+    
+    // Document ready
+    $(document).ready(function() {
+        // Make the Execution tab active by default
+        $('#execution-tab').tab('show');
         
-        // Connect to the server
-        socket.on('connect', () => {
-            console.log('Connected to server');
-        });
-        
-        // Process events
-        socket.on('process_started', (data) => {
-            console.log('Process started:', data);
-            currentProcessId = data.id;
-            $('#process-title').text(`Process Output (${data.id})`);
-            $('#process-output').text('');
-            $('#stopProcess').show();
-        });
-        
-        socket.on('process_output', (data) => {
-            console.log('Process output:', data);
-            if (data.id === currentProcessId) {
-                const output = $('#process-output');
-                output.append(data.output + '\n');
-                output.scrollTop(output[0].scrollHeight);
+        // Toggle custom ID input based on checkbox
+        $('#USE_CUSTOM_ID').change(function() {
+            if($(this).is(':checked')) {
+                $('#CUSTOM_ID').prop('disabled', false);
+            } else {
+                $('#CUSTOM_ID').prop('disabled', true);
             }
         });
         
-        socket.on('process_completed', (data) => {
-            console.log('Process completed:', data);
-            if (data.id === currentProcessId) {
-                $('#process-output').append('\n' + (data.success ? 'Process completed successfully!' : 'Process completed with errors.') + '\n');
-                $('#stopProcess').hide();
+        // Dynamic table row handling
+        function addTableRow(tableId, rowTemplate) {
+            const table = document.getElementById(tableId);
+            const newRow = table.insertRow();
+            newRow.innerHTML = rowTemplate;
+        }
+        
+        function removeTableRow(tableId) {
+            const table = document.getElementById(tableId);
+            if (table.rows.length > 1) {
+                table.deleteRow(table.rows.length - 1);
             }
+        }
+        
+        // Add event listeners for dynamic tables
+        $('#addTransformerRow').click(() => {
+            const rowCount = $('#transformerTable tr').length;
+            const template = `
+                <td><input type="number" class="form-control transformer-capacity" id="TRANSFORMER_CAPACITY_${rowCount}" value="0" min="0"></td>
+                <td><input type="number" class="form-control transformer-cost" id="TRANSFORMER_COST_${rowCount}" value="0" min="0"></td>
+            `;
+            addTableRow('transformerTable', template);
         });
         
-        // Document ready
-        $(document).ready(function() {
-            // Toggle custom ID input based on checkbox
-            $('#USE_CUSTOM_ID').change(function() {
-                if($(this).is(':checked')) {
-                    $('#CUSTOM_ID').prop('disabled', false);
-                } else {
-                    $('#CUSTOM_ID').prop('disabled', true);
-                }
+        $('#removeTransformerRow').click(() => {
+            removeTableRow('transformerTable');
+        });
+        
+        $('#addAluminiumRow').click(() => {
+            const rowCount = $('#aluminiumTable tr').length;
+            const template = `
+                <td><input type="number" class="form-control" id="AL_CROSS_SECTION_${rowCount}" value="0" min="0" step="0.1"></td>
+                <td><input type="number" class="form-control" id="AL_LOAD_CAPACITY_${rowCount}" value="0" min="0"></td>
+                <td><input type="number" class="form-control" id="AL_COST_${rowCount}" value="0" min="0" step="0.01"></td>
+            `;
+            addTableRow('aluminiumTable', template);
+        });
+        
+        $('#removeAluminiumRow').click(() => {
+            removeTableRow('aluminiumTable');
+        });
+        
+        $('#addCopperRow').click(() => {
+            const rowCount = $('#copperTable tr').length;
+            const template = `
+                <td><input type="number" class="form-control" id="CU_CROSS_SECTION_${rowCount}" value="0" min="0" step="0.1"></td>
+                <td><input type="number" class="form-control" id="CU_COST_${rowCount}" value="0" min="0" step="0.01"></td>
+            `;
+            addTableRow('copperTable', template);
+        });
+        
+        $('#removeCopperRow').click(() => {
+            removeTableRow('copperTable');
+        });
+        
+        // Save configuration
+        $('#saveConfig').click(function() {
+            console.log("Save button clicked!");
+            
+            // Show loading spinner
+            $(this).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Saving...');
+            
+            // Collect data from all tabs
+            const config = {
+                EXECUTION_FLAGS: {},
+                CHARGING_CONFIG: {},
+                DEFAULT_LOCATION: {},
+                SPATIAL: {},
+                MANUAL_DISTANCES: {},
+                BATTERY_CONFIG: {},
+                RESULT_NAMING: {},
+                FORECAST_YEAR: '',
+                SCENARIOS: {
+                    TARGET_YEARS: [],
+                    R_BEV: {},
+                    R_TRAFFIC: {}
+                },
+                BREAKS: {},
+                TIME: {},
+                CSV: {},
+                PATHS: {},
+                TRAFFIC_PATHS: {},
+                GRID_CAPACITIES: {},
+                CAPACITY_FEES: {},
+                SUBSTATION_CONFIG: {},
+                TRANSFORMER_CONFIG: {},
+                CABLE_CONFIG: {},
+                CHARGING_TYPES: {},
+                MANUAL_CHARGER_COUNT: {},
+                DAY_MAPPING: {}
+            };
+            
+            // Execution flags
+            $('#execution input[type="checkbox"]').each(function() {
+                config.EXECUTION_FLAGS[this.id] = this.checked;
             });
             
-            // Save configuration
-            $('#saveConfig').click(function() {
-                // Collect data from form
-                const config = {
-                    EXECUTION_FLAGS: {},
-                    CHARGING_CONFIG: {},
-                    DEFAULT_LOCATION: {},
-                    BATTERY_CONFIG: {},
-                    RESULT_NAMING: {}
-                };
-                
-                // Execution flags
-                $('#execution input[type="checkbox"]').each(function() {
-                    config.EXECUTION_FLAGS[this.id] = this.checked;
-                });
-                
-                // Charging config
-                config.CHARGING_CONFIG = {
-                    STRATEGY: $('#STRATEGY').val(),
-                    ALL_STRATEGIES: $('#ALL_STRATEGIES').val(),
-                    ladequote: parseFloat($('#ladequote').val()),
-                    power: $('#power').val(),
-                    pause: $('#pause').val()
-                };
-                
-                // Location
-                config.DEFAULT_LOCATION = {
-                    LONGITUDE: parseFloat($('#LONGITUDE').val()),
-                    LATITUDE: parseFloat($('#LATITUDE').val())
-                };
-                
-                // Battery config
-                config.BATTERY_CONFIG = {
-                    COST_PER_KWH: parseFloat($('#COST_PER_KWH').val()),
-                    COST_PER_KW: parseFloat($('#COST_PER_KW').val()),
-                    MAX_CAPACITY: parseFloat($('#MAX_CAPACITY').val()),
-                    EFFICIENCY: parseFloat($('#EFFICIENCY').val()),
-                    MIN_SOC: parseFloat($('#MIN_SOC').val()),
-                    MAX_SOC: parseFloat($('#MAX_SOC').val())
-                };
-                
-                // Result naming
-                config.RESULT_NAMING = {
-                    USE_CUSTOM_ID: $('#USE_CUSTOM_ID').is(':checked'),
-                    CUSTOM_ID: $('#CUSTOM_ID').val()
-                };
-                
-                // Send to server
+            // Charging config
+            config.CHARGING_CONFIG = {
+                STRATEGY: $('#STRATEGY').val() || [],
+                ALL_STRATEGIES: $('#ALL_STRATEGIES').val() || [],
+                ladequote: parseFloat($('#ladequote').val()),
+                power: $('#power').val(),
+                pause: $('#pause').val()
+            };
+            
+            // Charging Types
+            config.CHARGING_TYPES = {
+                NCS: {
+                    power_kw: parseFloat($('#NCS_POWER').val()),
+                    cost: parseFloat($('#NCS_COST').val())
+                },
+                HPC: {
+                    power_kw: parseFloat($('#HPC_POWER').val()),
+                    cost: parseFloat($('#HPC_COST').val())
+                },
+                MCS: {
+                    power_kw: parseFloat($('#MCS_POWER').val()),
+                    cost: parseFloat($('#MCS_COST').val())
+                }
+            };
+            
+            // Manual Charger Count
+            config.MANUAL_CHARGER_COUNT = {
+                NCS: parseInt($('#MANUAL_NCS').val()),
+                HPC: parseInt($('#MANUAL_HPC').val()),
+                MCS: parseInt($('#MANUAL_MCS').val())
+            };
+            
+            // Location
+            config.DEFAULT_LOCATION = {
+                LONGITUDE: parseFloat($('#LONGITUDE').val()),
+                LATITUDE: parseFloat($('#LATITUDE').val())
+            };
+            
+            // Spatial Analysis
+            config.SPATIAL = {
+                DEFAULT_CRS: $('#DEFAULT_CRS').val(),
+                TARGET_CRS: $('#TARGET_CRS').val(),
+                BUFFER_RADIUS: parseFloat($('#BUFFER_RADIUS').val())
+            };
+            
+            // Manual Distances
+            config.MANUAL_DISTANCES = {
+                distribution_distance: parseFloat($('#MANUAL_DISTRIBUTION_DISTANCE').val()),
+                transmission_distance: parseFloat($('#MANUAL_TRANSMISSION_DISTANCE').val()),
+                powerline_distance: parseFloat($('#MANUAL_POWERLINE_DISTANCE').val())
+            };
+            
+            // Battery config
+            config.BATTERY_CONFIG = {
+                COST_PER_KWH: parseFloat($('#COST_PER_KWH').val()),
+                COST_PER_KW: parseFloat($('#COST_PER_KW').val()),
+                MAX_CAPACITY: parseFloat($('#MAX_CAPACITY').val()),
+                MAX_POWER: parseFloat($('#MAX_POWER').val()),
+                EFFICIENCY: parseFloat($('#EFFICIENCY').val()),
+                MIN_SOC: parseFloat($('#MIN_SOC').val()),
+                MAX_SOC: parseFloat($('#MAX_SOC').val())
+            };
+            
+            // Result naming
+            config.RESULT_NAMING = {
+                USE_CUSTOM_ID: $('#USE_CUSTOM_ID').is(':checked'),
+                CUSTOM_ID: $('#CUSTOM_ID').val()
+            };
+            
+            // Forecast Year
+            config.FORECAST_YEAR = $('#FORECAST_YEAR').val();
+            
+            // Grid capacities
+            config.GRID_CAPACITIES = {
+                EXISTING_MV: parseFloat($('#EXISTING_MV').val()),
+                DISTRIBUTION: parseFloat($('#DISTRIBUTION').val()),
+                TRANSMISSION: parseFloat($('#TRANSMISSION').val()),
+                HV_LINE: parseFloat($('#HV_LINE').val())
+            };
+            
+            // Capacity fees
+            config.CAPACITY_FEES = {
+                HV: parseFloat($('#HV_FEE').val()),
+                MV: parseFloat($('#MV_FEE').val())
+            };
+            
+            // Substation config
+            config.SUBSTATION_CONFIG = {
+                DISTRIBUTION: {
+                    EXISTING_CAPACITY: parseFloat($('#DIST_EXISTING_CAPACITY').val()),
+                    MAX_EXPANSION: parseFloat($('#DIST_MAX_EXPANSION').val()),
+                    EXPANSION_FIXED_COST: parseFloat($('#DIST_EXPANSION_FIXED_COST').val())
+                },
+                TRANSMISSION: {
+                    EXISTING_CAPACITY: parseFloat($('#TRANS_EXISTING_CAPACITY').val()),
+                    MAX_EXPANSION: parseFloat($('#TRANS_MAX_EXPANSION').val()),
+                    EXPANSION_FIXED_COST: parseFloat($('#TRANS_EXPANSION_FIXED_COST').val())
+                },
+                HV_SUBSTATION_COST: parseFloat($('#HV_SUBSTATION_COST').val())
+            };
+            
+            // Transformer config
+            config.TRANSFORMER_CONFIG = {
+                CAPACITIES: [],
+                COSTS: []
+            };
+            $('.transformer-capacity').each(function() {
+                config.TRANSFORMER_CONFIG.CAPACITIES.push(parseFloat($(this).val()));
+            });
+            $('.transformer-cost').each(function() {
+                config.TRANSFORMER_CONFIG.COSTS.push(parseFloat($(this).val()));
+            });
+            
+            // Cable config
+            config.CABLE_CONFIG = {
+                LV: {
+                    VOLTAGE: parseFloat($('#LV_VOLTAGE').val()),
+                    VOLTAGE_DROP_PERCENT: parseFloat($('#LV_VOLTAGE_DROP_PERCENT').val()),
+                    POWER_FACTOR: parseFloat($('#LV_POWER_FACTOR').val()),
+                    CONDUCTIVITY: parseFloat($('#LV_CONDUCTIVITY').val()),
+                    NUM_DC_CABLES: parseInt($('#LV_NUM_DC_CABLES').val())
+                },
+                MV: {
+                    VOLTAGE: parseFloat($('#MV_VOLTAGE').val()),
+                    VOLTAGE_DROP_PERCENT: parseFloat($('#MV_VOLTAGE_DROP_PERCENT').val()),
+                    POWER_FACTOR: parseFloat($('#MV_POWER_FACTOR').val()),
+                    CONDUCTIVITY: parseFloat($('#MV_CONDUCTIVITY').val()),
+                    NUM_CABLES: parseInt($('#MV_NUM_CABLES').val())
+                },
+                CONSTRUCTION: {
+                    DIGGING_COST: parseFloat($('#DIGGING_COST').val()),
+                    HARDWARE_CONNECTION_COST: parseFloat($('#HARDWARE_CONNECTION_COST').val())
+                }
+            };
+            
+            // Aluminium cables
+            config.aluminium_kabel = {
+                Nennquerschnitt: [],
+                Belastbarkeit: [],
+                Kosten: []
+            };
+            for (let i = 0; $('#AL_CROSS_SECTION_' + i).length; i++) {
+                config.aluminium_kabel.Nennquerschnitt.push(parseFloat($('#AL_CROSS_SECTION_' + i).val()));
+                config.aluminium_kabel.Belastbarkeit.push(parseFloat($('#AL_LOAD_CAPACITY_' + i).val()));
+                config.aluminium_kabel.Kosten.push(parseFloat($('#AL_COST_' + i).val()));
+            }
+            
+            // Copper cables
+            config.kupfer_kabel = {
+                Nennquerschnitt: [],
+                Kosten: []
+            };
+            for (let i = 0; $('#CU_CROSS_SECTION_' + i).length; i++) {
+                config.kupfer_kabel.Nennquerschnitt.push(parseFloat($('#CU_CROSS_SECTION_' + i).val()));
+                config.kupfer_kabel.Kosten.push(parseFloat($('#CU_COST_' + i).val()));
+            }
+            
+            // Breaks config
+            config.BREAKS = {
+                DISTANCE_THRESHOLD: parseFloat($('#DISTANCE_THRESHOLD').val()),
+                MAX_DISTANCE_SINGLEDRIVER: parseFloat($('#MAX_DISTANCE_SINGLEDRIVER').val()),
+                RANDOM_RANGE: [
+                    parseFloat($('#RANDOM_RANGE_MIN').val()),
+                    parseFloat($('#RANDOM_RANGE_MAX').val())
+                ],
+                TWO_DRIVER_SHORT_BREAKS_BEFORE_LONG: parseInt($('#TWO_DRIVER_SHORT_BREAKS').val())
+            };
+            
+            // Day mapping
+            config.DAY_MAPPING = {};
+            for (const german of ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']) {
+                config.DAY_MAPPING[german] = $('#DAY_' + german).val();
+            }
+            // Replace the entire Scenarios section (around line 425-465) with this simplified version
+            // Scenarios
+            config.SCENARIOS = {
+                R_BEV: {
+                    '2030': 0.15,
+                    '2035': 0.61,
+                    '2040': 0.94,
+                    '2045': 1.00
+                },
+                R_TRAFFIC: {
+                    '2030': 1.00,
+                    '2035': 1.0462,
+                    '2040': 1.0549,
+                    '2045': 1.1672
+                },
+                TARGET_YEARS: ['2030', '2035', '2040', '2045']
+            };
+            
+            // Time constants
+            config.TIME = {
+                WEEKS_PER_YEAR: parseInt($('#WEEKS_PER_YEAR').val()),
+                RESOLUTION_MINUTES: parseInt($('#RESOLUTION_MINUTES').val()),
+                SIMULATION_HOURS: parseInt($('#SIMULATION_HOURS').val()),
+                WEEK_MINUTES: parseInt($('#WEEK_MINUTES').val()),
+                TIMESTEPS_PER_DAY: parseInt($('#TIMESTEPS_PER_DAY').val()),
+                TIMESTEPS_PER_WEEK: parseInt($('#TIMESTEPS_PER_WEEK').val())
+            };
+            
+            // CSV settings
+            config.CSV = {
+                DEFAULT_SEPARATOR: $('#DEFAULT_SEPARATOR').val(),
+                DEFAULT_DECIMAL: $('#DEFAULT_DECIMAL').val()
+            };
+            
+            // Directory paths
+            config.PATHS = {
+                DATA: $('#DATA_PATH').val(),
+                RESULTS: $('#RESULTS_PATH').val(),
+                LOGS: $('#LOGS_PATH').val()
+            };
+            
+            // Traffic data paths
+            config.TRAFFIC_PATHS = {
+                INPUT_DIR: $('#INPUT_DIR').val(),
+                OUTPUT_DIR: $('#OUTPUT_DIR').val(),
+                FINAL_OUTPUT_DIR: $('#FINAL_OUTPUT_DIR').val()
+            };
+            
+            console.log("Sending configuration data:", config);
+            
+            // Send to server
+            $.ajax({
+                url: '/api/config/save',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(config),
+                success: function(response) {
+                    console.log("Configuration saved successfully:", response);
+                    // Reset button text
+                    $('#saveConfig').html('<i class="fas fa-save me-1"></i> Save Configuration');
+                    
+                    // Show success message
+                    const alertHtml = `
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-1"></i> Configuration saved successfully!
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    `;
+                    $('#configTabContent').prepend(alertHtml);
+                    
+                    // Auto-dismiss alert after 5 seconds
+                    setTimeout(() => {
+                        $('.alert').alert('close');
+                    }, 5000);
+                },
+                error: function(error) {
+                    console.error("Error saving configuration:", error);
+                    // Reset button text
+                    $('#saveConfig').html('<i class="fas fa-save me-1"></i> Save Configuration');
+                    
+                    console.error('Error saving configuration:', error);
+                    
+                    // Show error message
+                    const alertHtml = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-1"></i> Error saving configuration: ${error.responseJSON?.error || 'Unknown error'}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    `;
+                    $('#configTabContent').prepend(alertHtml);
+                }
+            });
+        });
+        
+        // Run optimization processes
+        $('#runOptimization').click(function() {
+            runProcess('/api/run/main');
+        });
+        
+        $('#runTraffic').click(function() {
+            runProcess('/api/run/traffic_calculation');
+        });
+        
+        $('#runChargingHub').click(function() {
+            runProcess('/api/run/charging_hub_setup');
+        });
+        
+        $('#runGridOpt').click(function() {
+            runProcess('/api/run/grid_optimization');
+        });
+        
+        // Stop running process
+        $('#stopProcess').click(function() {
+            if (currentProcessId) {
                 $.ajax({
-                    url: '/api/config/save',
+                    url: `/api/process/${currentProcessId}/stop`,
                     type: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify(config),
+                    data: JSON.stringify({}),  // Send empty JSON object
                     success: function(response) {
-                        alert('Configuration saved successfully!');
+                        $('#process-output').append('\nProcess stopped by user.\n');
+                        $('#stopProcess').hide();
                     },
                     error: function(error) {
-                        console.error('Error saving configuration:', error);
-                        alert('Error saving configuration: ' + (error.responseJSON?.error || 'Unknown error'));
+                        console.error('Error stopping process:', error);
+                        alert('Error stopping process: ' + (error.responseJSON?.error || 'Unknown error'));
                     }
                 });
-            });
+            }
+        });
+        
+        // Helper function to run a process
+        function runProcess(url) {
+            // Save config first
+            $('#saveConfig').click();
             
-            // Run optimization processes
-            $('#runOptimization').click(function() {
-                runProcess('/api/run/main');
-            });
-            
-            $('#runTraffic').click(function() {
-                runProcess('/api/run/traffic_calculation');
-            });
-            
-            $('#runChargingHub').click(function() {
-                runProcess('/api/run/charging_hub_setup');
-            });
-            
-            $('#runGridOpt').click(function() {
-                runProcess('/api/run/grid_optimization');
-            });
-            
-            // Stop running process
-            $('#stopProcess').click(function() {
-                if (currentProcessId) {
-                    $.ajax({
-                        url: `/api/process/${currentProcessId}/stop`,
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify({}),  // Send empty JSON object
-                        success: function(response) {
-                            $('#process-output').append('\nProcess stopped by user.\n');
-                            $('#stopProcess').hide();
-                        },
-                        error: function(error) {
-                            console.error('Error stopping process:', error);
-                            alert('Error stopping process: ' + (error.responseJSON?.error || 'Unknown error'));
-                        }
-                    });
-                }
-            });
-            
-            // Helper function to run a process
-            function runProcess(url) {
-                // Save config first
-                const config = {
-                    EXECUTION_FLAGS: {},
-                    CHARGING_CONFIG: {},
-                    DEFAULT_LOCATION: {},
-                    BATTERY_CONFIG: {},
-                    RESULT_NAMING: {}
-                };
-                
-                // Execution flags
-                $('#execution input[type="checkbox"]').each(function() {
-                    config.EXECUTION_FLAGS[this.id] = this.checked;
-                });
-                
-                // Charging config
-                config.CHARGING_CONFIG = {
-                    STRATEGY: $('#STRATEGY').val(),
-                    ALL_STRATEGIES: $('#ALL_STRATEGIES').val(),
-                    ladequote: parseFloat($('#ladequote').val()),
-                    power: $('#power').val(),
-                    pause: $('#pause').val()
-                };
-                
-                // Location
-                config.DEFAULT_LOCATION = {
-                    LONGITUDE: parseFloat($('#LONGITUDE').val()),
-                    LATITUDE: parseFloat($('#LATITUDE').val())
-                };
-                
-                // Battery config
-                config.BATTERY_CONFIG = {
-                    COST_PER_KWH: parseFloat($('#COST_PER_KWH').val()),
-                    COST_PER_KW: parseFloat($('#COST_PER_KW').val()),
-                    MAX_CAPACITY: parseFloat($('#MAX_CAPACITY').val()),
-                    EFFICIENCY: parseFloat($('#EFFICIENCY').val()),
-                    MIN_SOC: parseFloat($('#MIN_SOC').val()),
-                    MAX_SOC: parseFloat($('#MAX_SOC').val())
-                };
-                
-                // Result naming
-                config.RESULT_NAMING = {
-                    USE_CUSTOM_ID: $('#USE_CUSTOM_ID').is(':checked'),
-                    CUSTOM_ID: $('#CUSTOM_ID').val()
-                };
-                
+            // Wait a bit to ensure config is saved
+            setTimeout(() => {
                 $.ajax({
                     url: url,
                     type: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ config: config }),
+                    data: JSON.stringify({ useCurrentConfig: true }),
                     success: function(response) {
                         console.log('Process started:', response);
                         currentProcessId = response.processId;
@@ -548,54 +575,63 @@
                     },
                     error: function(error) {
                         console.error('Error starting process:', error);
-                        alert('Error starting process: ' + (error.responseJSON?.error || 'Unknown error'));
+                        
+                        // Show error message
+                        const alertHtml = `
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="fas fa-exclamation-circle me-1"></i> Error starting process: ${error.responseJSON?.error || 'Unknown error'}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        `;
+                        $('#configTabContent').prepend(alertHtml);
                     }
                 });
-            }
-        });
-    </script>
+            }, 1000);
+        }
+    });
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .process-output {
+        background-color: #212529;
+        color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        height: 300px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 0.9rem;
+    }
     
-    <style>
-        .sidebar {
-            background-color: #343a40;
-            color: white;
-            min-height: 100vh;
-            padding-top: 20px;
-        }
-        
-        .sidebar-header {
-            padding: 10px 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 20px;
-        }
-        
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.75);
-            padding: 10px 15px;
-        }
-        
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            color: white;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .main-content {
-            padding: 30px;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-        }
-        
-        .process-output {
-            background-color: #212529;
-            color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            height: 300px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 0.9rem;
-        }
-    </style>
-</body>
-</html>
+    .nav-tabs .nav-link {
+        color: #495057;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #007bff;
+        font-weight: 500;
+    }
+    
+    .tab-pane {
+        padding: 1rem 0;
+    }
+    
+    .card-header h4 {
+        margin-bottom: 0;
+    }
+    
+    .form-check-input {
+        cursor: pointer;
+    }
+    
+    .form-text {
+        font-size: 0.8rem;
+    }
+    
+    .table th {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}

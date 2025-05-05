@@ -1,0 +1,143 @@
+<!-- Charging Configuration Tab -->
+<div class="tab-pane fade" id="charging" role="tabpanel" aria-labelledby="charging-tab">
+    <div class="card">
+        <div class="card-header">
+            <h4>Charging Configuration</h4>
+        </div>
+        <div class="card-body">
+            <p class="card-text">Configure parameters for charging strategies and power settings.</p>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="STRATEGY" class="form-label">Charging Strategy</label>
+                        <select class="form-select" id="STRATEGY" multiple>
+                            <option value="T_min" {% if "T_min" in charging_config.STRATEGY %}selected{% endif %}>T_min</option>
+                            <option value="Konstant" {% if "Konstant" in charging_config.STRATEGY %}selected{% endif %}>Konstant</option>
+                            <option value="Hub" {% if "Hub" in charging_config.STRATEGY %}selected{% endif %}>Hub</option>
+                        </select>
+                        <div class="form-text">Hold Ctrl/Cmd to select multiple strategies</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="ALL_STRATEGIES" class="form-label">All Available Strategies</label>
+                        <select class="form-select" id="ALL_STRATEGIES" multiple>
+                            <option value="T_min" {% if "T_min" in charging_config.ALL_STRATEGIES %}selected{% endif %}>T_min</option>
+                            <option value="Konstant" {% if "Konstant" in charging_config.ALL_STRATEGIES %}selected{% endif %}>Konstant</option>
+                            <option value="Hub" {% if "Hub" in charging_config.ALL_STRATEGIES %}selected{% endif %}>Hub</option>
+                        </select>
+                        <div class="form-text">Hold Ctrl/Cmd to select multiple strategies</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="ladequote" class="form-label">Charging Quota (0-1)</label>
+                        <input type="number" class="form-control" id="ladequote" value="{{ charging_config.ladequote }}" min="0" max="1" step="0.01">
+                        <div class="form-text">Charging quota as percentage (0.8 = 80%)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="power" class="form-label">Power Scaling (NCS-HPC-MCS)</label>
+                        <input type="text" class="form-control" id="power" value="{{ charging_config.power }}">
+                        <div class="form-text">Format: NCS-HPC-MCS (Example: 100-100-100)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="pause" class="form-label">Pause Times (min)</label>
+                        <input type="text" class="form-control" id="pause" value="{{ charging_config.pause }}">
+                        <div class="form-text">Format: ShortPause-LongPause (Example: 45-540)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <h5>Charging Station Types</h5>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">NCS Charger</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="NCS_POWER" class="form-label">Power (kW)</label>
+                                <input type="number" class="form-control" id="NCS_POWER" value="{{ charging_types.NCS.power_kw }}" min="0">
+                            </div>
+                            <div class="mb-3">
+                                <label for="NCS_COST" class="form-label">Cost (€)</label>
+                                <input type="number" class="form-control" id="NCS_COST" value="{{ charging_types.NCS.cost }}" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">HPC Charger</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="HPC_POWER" class="form-label">Power (kW)</label>
+                                <input type="number" class="form-control" id="HPC_POWER" value="{{ charging_types.HPC.power_kw }}" min="0">
+                            </div>
+                            <div class="mb-3">
+                                <label for="HPC_COST" class="form-label">Cost (€)</label>
+                                <input type="number" class="form-control" id="HPC_COST" value="{{ charging_types.HPC.cost }}" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">MCS Charger</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="MCS_POWER" class="form-label">Power (kW)</label>
+                                <input type="number" class="form-control" id="MCS_POWER" value="{{ charging_types.MCS.power_kw }}" min="0">
+                            </div>
+                            <div class="mb-3">
+                                <label for="MCS_COST" class="form-label">Cost (€)</label>
+                                <input type="number" class="form-control" id="MCS_COST" value="{{ charging_types.MCS.cost }}" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" id="manualChargerCountSection">
+                <div class="col-md-12">
+                    <h5>Manual Charger Count</h5>
+                    <p class="text-muted">These values are used when "Use Manual Charger Count" is enabled</p>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="MANUAL_NCS" class="form-label">NCS Chargers</label>
+                                <input type="number" class="form-control" id="MANUAL_NCS" value="{{ manual_charger_count.NCS }}" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="MANUAL_HPC" class="form-label">HPC Chargers</label>
+                                <input type="number" class="form-control" id="MANUAL_HPC" value="{{ manual_charger_count.HPC }}" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="MANUAL_MCS" class="form-label">MCS Chargers</label>
+                                <input type="number" class="form-control" id="MANUAL_MCS" value="{{ manual_charger_count.MCS }}" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

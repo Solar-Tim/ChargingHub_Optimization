@@ -18,6 +18,8 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, R
 from flask_socketio import SocketIO, emit
 import subprocess
 import importlib
+import logging
+
 
 # Add parent directory to path for imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -102,7 +104,7 @@ def update_config_file(settings):
         bool: True if successful, False otherwise
     """
     logger.info(f"Updating config.py with settings: {settings}")
-    
+
     try:
         # Read the current config file
         with open(config_module_path, 'r') as f:
@@ -112,10 +114,28 @@ def update_config_file(settings):
         for section, values in settings.items():
             if section == 'EXECUTION_FLAGS':
                 for flag_name, flag_value in values.items():
-                    # Find the current value in the config file 
-                    pattern = rf"'{flag_name}':\s*(True|False)"
-                    replacement = f"'{flag_name}': {str(flag_value)}"
-                    config_content = re.sub(pattern, replacement, config_content)
+                    # More flexible pattern to match the flag regardless of formatting
+                    # This will match the flag name and its value, capturing any comments
+                    pattern = rf"'{flag_name}':\s*(True|False)(\s*#[^\n]*)?"
+                    
+                    # If there was a comment, preserve it in the replacement
+                    def replace_func(match):
+                        comment = match.group(2) or ''
+                        return f"'{flag_name}': {str(flag_value)}{comment}"
+                    
+                    # Use the replacement function
+                    new_content = re.sub(pattern, replace_func, config_content)
+                    
+                    # Check if replacement actually happened
+                    if new_content == config_content:
+                        # Log warning if no replacement was made
+                        logger.warning(f"No replacement made for '{flag_name}': {flag_value}. Pattern may not match.")
+                        
+                        # Try a more aggressive pattern as fallback
+                        alt_pattern = rf"'{flag_name}':\s*[^,\n]+"
+                        new_content = re.sub(alt_pattern, f"'{flag_name}': {str(flag_value)}", config_content)
+                    
+                    config_content = new_content
             
             elif section == 'CHARGING_CONFIG':
                 for param, value in values.items():
@@ -134,30 +154,202 @@ def update_config_file(settings):
                         pattern = rf"'{param}':\s*(?:(?:'[^']*')|(?:\d+(?:\.\d+)?))"
                         replacement = f"'{param}': {str_value}"
                     
-                    config_content = re.sub(pattern, replacement, config_content)
+                    # Apply replacement and check if it worked
+                    new_content = re.sub(pattern, replacement, config_content)
+                    if new_content == config_content:
+                        logger.warning(f"No replacement made for '{param}': {value} in CHARGING_CONFIG")
+                    config_content = new_content
             
+            # Rest of the function remains the same
             elif section == 'DEFAULT_LOCATION':
                 for coord_name, coord_value in values.items():
                     pattern = rf"'{coord_name}':\s*[\d\.]+"
                     replacement = f"'{coord_name}': {float(coord_value)}"
                     config_content = re.sub(pattern, replacement, config_content)
+            
+            elif section == 'MANUAL_DISTANCES':
+                for distance_name, distance_value in values.items():
+                    pattern = rf"'{distance_name}':\s*[\d\.]+"
+                    replacement = f"'{distance_name}': {float(distance_value)}"
+                    config_content = re.sub(pattern, replacement, config_content)
 
             elif section == 'RESULT_NAMING':
                 for param, value in values.items():
                     if param == 'USE_CUSTOM_ID':
-                        pattern = rf"'USE_CUSTOM_ID':\s*(True|False)"
-                        replacement = f"'USE_CUSTOM_ID': {str(value)}"
+                        pattern = rf"'USE_CUSTOM_ID':\s*(True|False)(\s*#[^\n]*)?"
+                        def replace_func(match):
+                            comment = match.group(2) or ''
+                            return f"'USE_CUSTOM_ID': {str(value)}{comment}"
+                        config_content = re.sub(pattern, replace_func, config_content)
                     elif param == 'CUSTOM_ID':
                         pattern = rf"'CUSTOM_ID':\s*'[^']*'"
                         replacement = f"'CUSTOM_ID': '{value}'"
-                    config_content = re.sub(pattern, replacement, config_content)
-                    
+                        config_content = re.sub(pattern, replacement, config_content)
+            
             elif section == 'BATTERY_CONFIG':
                 for param, value in values.items():
                     pattern = rf"'{param}':\s*[\d\.]+"
                     replacement = f"'{param}': {float(value)}"
                     config_content = re.sub(pattern, replacement, config_content)
-        
+                    
+            elif section == 'GRID_CAPACITIES':
+                for param, value in values.items():
+                    pattern = rf"'{param}':\s*[\d\.]+"
+                    replacement = f"'{param}': {float(value)}"
+                    config_content = re.sub(pattern, replacement, config_content)
+                    
+            elif section == 'SPATIAL':
+                for param, value in values.items():
+                    if isinstance(value, str):
+                        pattern = rf"'{param}':\s*'[^']*'"
+                        replacement = f"'{param}': '{value}'"
+                    else:
+                        pattern = rf"'{param}':\s*[\d\.]+"
+                        replacement = f"'{param}': {float(value)}"
+                    config_content = re.sub(pattern, replacement, config_content)
+            
+            # NEW SECTIONS BELOW
+            
+            elif section == 'FORECAST_YEAR':
+                # Update the forecast year
+                pattern = r"FORECAST_YEAR\s*=\s*'[^']*'"
+                replacement = f"FORECAST_YEAR = '{values}'"
+                config_content = re.sub(pattern, replacement, config_content)
+            
+            elif section == 'SCENARIOS':
+                # Handle TARGET_YEARS list
+                if 'TARGET_YEARS' in values:
+                    target_years = values['TARGET_YEARS']
+                    str_value = json.dumps(target_years) if isinstance(target_years, list) else f"['{target_years}']"
+                    pattern = r"'TARGET_YEARS':\s*\[.*?\]"
+                    replacement = f"'TARGET_YEARS': {str_value}"
+                    config_content = re.sub(pattern, replacement, config_content)
+                
+                # Handle R_BEV and R_TRAFFIC dictionaries
+                for scenario_type in ['R_BEV', 'R_TRAFFIC']:
+                    if scenario_type in values:
+                        for year, value in values[scenario_type].items():
+                            pattern = rf"'{year}':\s*[\d\.]+\s*(?:#.*)?"  # Match year and value, including optional comment
+                            replacement = f"'{year}': {float(value)}  #"  # Keep comment format
+                            # Look for pattern within the specific scenario section
+                            scenario_pattern = rf"'{scenario_type}':\s*{{.*?{pattern}.*?}}"
+                            if re.search(scenario_pattern, config_content, re.DOTALL):
+                                config_content = re.sub(pattern, replacement, config_content)
+            
+            elif section == 'CAPACITY_FEES':
+                for fee_type, fee_value in values.items():
+                    pattern = rf"'{fee_type}':\s*[\d\.]+"
+                    replacement = f"'{fee_type}': {float(fee_value)}"
+                    config_content = re.sub(pattern, replacement, config_content)
+            
+            elif section == 'CHARGING_TYPES':
+                for charger_type, charger_config in values.items():
+                    for param, value in charger_config.items():
+                        pattern = rf"'{charger_type}':\s*{{.*?'({param})':\s*([\d\.]+).*?}}"
+                        # We need to preserve the structure, so we'll use a function for replacement
+                        config_content = re.sub(
+                            pattern,
+                            lambda m: m.group(0).replace(f"'{param}': {m.group(2)}", f"'{param}': {float(value)}"),
+                            config_content,
+                            flags=re.DOTALL
+                        )
+            
+            elif section == 'MANUAL_CHARGER_COUNT':
+                for charger_type, count in values.items():
+                    pattern = rf"'{charger_type}':\s*[\d]+"
+                    replacement = f"'{charger_type}': {int(count)}"
+                    config_content = re.sub(pattern, replacement, config_content)
+            
+            elif section == 'SUBSTATION_CONFIG':
+                # Handle the nested dictionaries for DISTRIBUTION and TRANSMISSION
+                for substation_type in ['DISTRIBUTION', 'TRANSMISSION']:
+                    if substation_type in values:
+                        for param, value in values[substation_type].items():
+                            pattern = rf"'{substation_type}':\s*{{.*?'({param})':\s*([\d\.]+).*?}}"
+                            config_content = re.sub(
+                                pattern,
+                                lambda m: m.group(0).replace(f"'{param}': {m.group(2)}", f"'{param}': {float(value)}"),
+                                config_content,
+                                flags=re.DOTALL
+                            )
+                
+                # Handle HV_SUBSTATION_COST
+                if 'HV_SUBSTATION_COST' in values:
+                    pattern = r"'HV_SUBSTATION_COST':\s*[\d\.]+"
+                    replacement = f"'HV_SUBSTATION_COST': {float(values['HV_SUBSTATION_COST'])}"
+                    config_content = re.sub(pattern, replacement, config_content)
+            
+            elif section == 'TRANSFORMER_CONFIG':
+                if 'CAPACITIES' in values:
+                    capacities = values['CAPACITIES']
+                    str_value = f"[{', '.join(str(c) for c in capacities)}]"
+                    pattern = r"\"CAPACITIES\":\s*\[.*?\]"
+                    replacement = f"\"CAPACITIES\": {str_value}"
+                    config_content = re.sub(pattern, replacement, config_content)
+                
+                if 'COSTS' in values:
+                    costs = values['COSTS']
+                    str_value = f"[{', '.join(str(c) for c in costs)}]"
+                    pattern = r"\"COSTS\":\s*\[.*?\]"
+                    replacement = f"\"COSTS\": {str_value}"
+                    config_content = re.sub(pattern, replacement, config_content)
+            
+            elif section == 'CABLE_CONFIG':
+                # Handle nested structure for LV, MV, and CONSTRUCTION sections
+                for cable_section in ['LV', 'MV', 'CONSTRUCTION']:
+                    if cable_section in values:
+                        for param, value in values[cable_section].items():
+                            pattern = rf"'{cable_section}':\s*{{.*?'({param})':\s*([\d\.]+).*?}}"
+                            config_content = re.sub(
+                                pattern,
+                                lambda m: m.group(0).replace(f"'{param}': {m.group(2)}", f"'{param}': {float(value)}"),
+                                config_content,
+                                flags=re.DOTALL
+                            )
+            
+            elif section == 'BREAKS':
+                for param, value in values.items():
+                    if param == 'RANDOM_RANGE':
+                        # Special handling for tuple
+                        if isinstance(value, list) and len(value) == 2:
+                            pattern = r"'RANDOM_RANGE':\s*\([\d\.]*,\s*[\d\.]*\)"
+                            replacement = f"'RANDOM_RANGE': ({value[0]},{value[1]})"
+                            config_content = re.sub(pattern, replacement, config_content)
+                    else:
+                        pattern = rf"'{param}':\s*[\d\.]+"
+                        replacement = f"'{param}': {float(value)}"
+                        config_content = re.sub(pattern, replacement, config_content)
+            
+            elif section == 'TIME':
+                for param, value in values.items():
+                    pattern = rf"'{param}':\s*[\d]+"
+                    replacement = f"'{param}': {int(value)}"
+                    config_content = re.sub(pattern, replacement, config_content)
+            
+            elif section == 'CSV':
+                for param, value in values.items():
+                    pattern = rf"'{param}':\s*'[^']*'"
+                    replacement = f"'{param}': '{value}'"
+                    config_content = re.sub(pattern, replacement, config_content)
+            
+            elif section == 'PATHS' or section == 'TRAFFIC_PATHS':
+                for path_name, path_value in values.items():
+                    # Need to be careful with path separators in regex
+                    path_value_escaped = path_value.replace('\\', '\\\\')
+                    pattern = rf"'{path_name}':\s*os\.path\.join\(.*?\)"
+                    replacement = f"'{path_name}': '{path_value_escaped}'"
+                    config_content = re.sub(pattern, replacement, config_content)
+            
+            elif section == 'aluminium_kabel' or section == 'kupfer_kabel':
+                for prop, values_list in values.items():
+                    # Convert list to string representation
+                    values_str = f"[{', '.join([str(val) for val in values_list])}]"
+                    pattern = rf'"{prop}":\s*\[.*?\]'
+                    replacement = f'"{prop}": {values_str}'
+                    config_content = re.sub(pattern, replacement, config_content, flags=re.DOTALL)
+            
+            # Add any other sections as needed
+                    
         # Write the updated config back to file
         with open(config_module_path, 'w') as f:
             f.write(config_content)
@@ -168,6 +360,7 @@ def update_config_file(settings):
         return True
     except Exception as e:
         logger.error(f"Error updating config file: {e}")
+        logger.exception("Detailed traceback:")
         return False
 
 # Helper function to run a command and stream output to client
@@ -310,13 +503,55 @@ def configuration():
     default_location = Config.DEFAULT_LOCATION
     battery_config = Config.BATTERY_CONFIG
     
+    # Add missing configuration data needed by templates
+    charging_types = Config.CHARGING_TYPES
+    manual_charger_count = Config.MANUAL_CHARGER_COUNT
+    spatial = Config.SPATIAL
+    manual_distances = Config.MANUAL_DISTANCES
+    grid_capacities = Config.GRID_CAPACITIES
+    capacity_fees = Config.CAPACITY_FEES
+    substation_config = Config.SUBSTATION_CONFIG
+    transformer_config = Config.TRANSFORMER_CONFIG
+    cable_config = Config.CABLE_CONFIG
+    breaks = Config.BREAKS
+    day_mapping = Config.DAY_MAPPING
+    scenarios = Config.SCENARIOS
+    time_config = Config.TIME
+    csv_config = Config.CSV
+    paths = Config.PATHS
+    traffic_paths = Config.TRAFFIC_PATHS
+    forecast_year = Config.FORECAST_YEAR
+    
+    # Add aluminum and copper cable data
+    aluminium_kabel = Config.aluminium_kabel
+    kupfer_kabel = Config.kupfer_kabel
+    
     return render_template(
         'configuration.html',
         charging_config=charging_config,
         execution_flags=execution_flags,
         result_naming=result_naming,
         default_location=default_location,
-        battery_config=battery_config
+        battery_config=battery_config,
+        charging_types=charging_types,
+        manual_charger_count=manual_charger_count,
+        spatial=spatial,
+        manual_distances=manual_distances,
+        grid_capacities=grid_capacities,
+        capacity_fees=capacity_fees,
+        substation_config=substation_config,
+        transformer_config=transformer_config,
+        cable_config=cable_config,
+        breaks=breaks,
+        day_mapping=day_mapping,
+        scenarios=scenarios,
+        time=time_config,
+        csv=csv_config,
+        paths=paths,
+        traffic_paths=traffic_paths,
+        forecast_year=forecast_year,
+        aluminium_kabel=aluminium_kabel,
+        kupfer_kabel=kupfer_kabel
     )
 
 # Route for the logs page
@@ -424,15 +659,29 @@ def save_config():
         # Update config.py file with the new settings
         success = update_config_file(data)
         
-        if (success):
+        if success:
             logger.info("Configuration updated successfully")
-            return jsonify({'success': True})
+            resp = jsonify({'success': True})
+            # Add no-cache headers
+            resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
+            return resp
         else:
-            logger.error("Failed to update configuration")
-            return jsonify({'error': 'Failed to update configuration'}), 500
+            error_msg = "Failed to update configuration"
+            logger.error(error_msg)
+            return jsonify({'error': error_msg, 'details': 'Check server logs for more information'}), 500
     except Exception as e:
-        logger.error(f"Error saving configuration: {e}")
-        return jsonify({'error': str(e)}), 500
+        error_msg = f"Error saving configuration: {str(e)}"
+        logger.error(error_msg)
+        logger.exception("Detailed traceback:")  # Add full traceback
+        
+        # Return a more detailed error response
+        return jsonify({
+            'error': error_msg,
+            'details': 'An exception occurred during configuration update',
+            'exception_type': type(e).__name__
+        }), 500
 
 # API route to get current configuration
 @app.route('/api/config')

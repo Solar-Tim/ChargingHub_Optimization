@@ -1,0 +1,91 @@
+<!-- Execution Flags Tab -->
+<div class="tab-pane fade" id="execution" role="tabpanel" aria-labelledby="execution-tab">
+    <div class="card">
+        <div class="card-header">
+            <h4>Execution Configuration</h4>
+        </div>
+        <div class="card-body">
+            <p class="card-text">Control which parts of the optimization process are executed.</p>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h5>Main Process Flags</h5>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="RUN_TRAFFIC_CALCULATION" {% if execution_flags.RUN_TRAFFIC_CALCULATION %}checked{% endif %}>
+                        <label class="form-check-label" for="RUN_TRAFFIC_CALCULATION">Run Traffic Calculation</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="RUN_CHARGING_HUB_SETUP" {% if execution_flags.RUN_CHARGING_HUB_SETUP %}checked{% endif %}>
+                        <label class="form-check-label" for="RUN_CHARGING_HUB_SETUP">Run Charging Hub Setup</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="RUN_GRID_OPTIMIZATION" {% if execution_flags.RUN_GRID_OPTIMIZATION %}checked{% endif %}>
+                        <label class="form-check-label" for="RUN_GRID_OPTIMIZATION">Run Grid Optimization</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="CONTINUE_ON_ERROR" {% if config.CONTINUE_ON_ERROR %}checked{% endif %}>
+                        <label class="form-check-label" for="CONTINUE_ON_ERROR">Continue on Error</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5>Traffic Calculation Flags</h5>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="RECALCULATE_BREAKS" {% if execution_flags.RECALCULATE_BREAKS %}checked{% endif %}>
+                        <label class="form-check-label" for="RECALCULATE_BREAKS">Recalculate Breaks</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="RECALCULATE_TOLL_MIDPOINTS" {% if execution_flags.RECALCULATE_TOLL_MIDPOINTS %}checked{% endif %}>
+                        <label class="form-check-label" for="RECALCULATE_TOLL_MIDPOINTS">Recalculate Toll Midpoints</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h5>Charging Hub Setup Flags</h5>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="RUN_TRUCK_MATCHING" {% if execution_flags.RUN_TRUCK_MATCHING %}checked{% endif %}>
+                        <label class="form-check-label" for="RUN_TRUCK_MATCHING">Run Truck Matching</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="RUN_HUB_CONFIGURATION" {% if execution_flags.RUN_HUB_CONFIGURATION %}checked{% endif %}>
+                        <label class="form-check-label" for="RUN_HUB_CONFIGURATION">Run Hub Configuration</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="RUN_DEMAND_OPTIMIZATION" {% if execution_flags.RUN_DEMAND_OPTIMIZATION %}checked{% endif %}>
+                        <label class="form-check-label" for="RUN_DEMAND_OPTIMIZATION">Run Demand Optimization</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5>Grid Optimization Flags</h5>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="USE_DISTANCE_CALCULATION" {% if execution_flags.USE_DISTANCE_CALCULATION %}checked{% endif %}>
+                        <label class="form-check-label" for="USE_DISTANCE_CALCULATION">Use Distance Calculation</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="CREATE_PLOT" {% if execution_flags.CREATE_PLOT %}checked{% endif %}>
+                        <label class="form-check-label" for="CREATE_PLOT">Create Plot</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="CREATE_DISTANCE_MAPS" {% if execution_flags.CREATE_DISTANCE_MAPS %}checked{% endif %}>
+                        <label class="form-check-label" for="CREATE_DISTANCE_MAPS">Create Distance Maps</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="INCLUDE_BATTERY" {% if execution_flags.INCLUDE_BATTERY %}checked{% endif %}>
+                        <label class="form-check-label" for="INCLUDE_BATTERY">Include Battery</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="USE_MANUAL_CHARGER_COUNT" {% if execution_flags.USE_MANUAL_CHARGER_COUNT %}checked{% endif %}>
+                        <label class="form-check-label" for="USE_MANUAL_CHARGER_COUNT">Use Manual Charger Count</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="DEBUG_MODE" {% if execution_flags.DEBUG_MODE %}checked{% endif %}>
+                        <label class="form-check-label" for="DEBUG_MODE">Debug Mode</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
