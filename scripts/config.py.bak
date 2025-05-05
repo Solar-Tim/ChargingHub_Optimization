@@ -29,7 +29,7 @@ class Config:
         'transmission_distance': 9999999, 'powerline_distance': 9999999}
     DEFAULT_LOCATION = {'LONGITUDE': 6.60414, 'LATITUDE': 51.12994}
     SPATIAL = {'DEFAULT_CRS': 'EPSG:4326', 'TARGET_CRS': 'EPSG:32632',
-        'BUFFER_RADIUS': 10000}
+        'BUFFER_RADIUS': 1}
     SCENARIOS = {'TARGET_YEARS': ['2030', '2035', '2040', '2045'], 'R_BEV':
         {'2030': 0.15, '2035': 0.61, '2040': 0.94, '2045': 1}, 'R_TRAFFIC':
         {'2030': 1, '2035': 1.0462, '2040': 1.0549, '2045': 1.1672}}

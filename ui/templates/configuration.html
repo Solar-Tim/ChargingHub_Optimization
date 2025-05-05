@@ -290,8 +290,8 @@
             
             // Spatial Analysis
             config.SPATIAL = {
-                DEFAULT_CRS: $('#DEFAULT_CRS').val(),
-                TARGET_CRS: $('#TARGET_CRS').val(),
+                DEFAULT_CRS: "EPSG:4326",  // Default value since field was removed
+                TARGET_CRS: "EPSG:3857",   // Default value since field was removed
                 BUFFER_RADIUS: parseFloat($('#BUFFER_RADIUS').val())
             };
             
@@ -426,20 +426,24 @@
             // Replace the entire Scenarios section (around line 425-465) with this simplified version
             // Scenarios
             config.SCENARIOS = {
-                R_BEV: {
-                    '2030': 0.15,
-                    '2035': 0.61,
-                    '2040': 0.94,
-                    '2045': 1.00
-                },
-                R_TRAFFIC: {
-                    '2030': 1.00,
-                    '2035': 1.0462,
-                    '2040': 1.0549,
-                    '2045': 1.1672
-                },
+                R_BEV: {},
+                R_TRAFFIC: {},
                 TARGET_YEARS: ['2030', '2035', '2040', '2045']
             };
+
+            // Get values from form inputs
+            ['2030', '2035', '2040', '2045'].forEach(year => {
+                const bevValue = parseFloat($(`#R_BEV_${year}`).val());
+                const trafficValue = parseFloat($(`#R_TRAFFIC_${year}`).val());
+                
+                if (!isNaN(bevValue)) {
+                    config.SCENARIOS.R_BEV[year] = bevValue;
+                }
+                
+                if (!isNaN(trafficValue)) {
+                    config.SCENARIOS.R_TRAFFIC[year] = trafficValue;
+                }
+            });
             
             // Time constants
             config.TIME = {

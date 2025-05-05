@@ -29,7 +29,7 @@ def open_browser():
     """
     Wait a bit and then open the browser to the UI URL
     """
-    time.sleep(1.5)
+    time.sleep(1.0)
     webbrowser.open_new('http://localhost:5000/')
 
 if __name__ == '__main__':

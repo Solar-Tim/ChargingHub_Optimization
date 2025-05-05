@@ -19,6 +19,8 @@ from flask_socketio import SocketIO, emit
 import subprocess
 import importlib
 import logging
+import astor
+import ast
 
 
 # Add parent directory to path for imports
@@ -92,10 +94,9 @@ def reload_config():
         logger.error(f"Error reloading config module: {e}")
         return False
 
-# Helper function to update configuration file
 def update_config_file(settings):
     """
-    Update the config.py file with new settings
+    Update the config.py file with new settings using AST (Abstract Syntax Tree)
     
     Args:
         settings (dict): Dictionary containing the new settings
@@ -104,264 +105,217 @@ def update_config_file(settings):
         bool: True if successful, False otherwise
     """
     logger.info(f"Updating config.py with settings: {settings}")
-
+    
     try:
-        # Read the current config file
+        # Create a backup of the config file
+        backup_path = f"{config_module_path}.bak"
         with open(config_module_path, 'r') as f:
-            config_content = f.read()
+            original_content = f.read()
+            
+        # Save backup
+        with open(backup_path, 'w') as f:
+            f.write(original_content)
         
-        # Process each setting and update the file
+        # Apply the changes to the in-memory configuration
+        changes_made = False
         for section, values in settings.items():
-            if section == 'EXECUTION_FLAGS':
-                for flag_name, flag_value in values.items():
-                    # More flexible pattern to match the flag regardless of formatting
-                    # This will match the flag name and its value, capturing any comments
-                    pattern = rf"'{flag_name}':\s*(True|False)(\s*#[^\n]*)?"
-                    
-                    # If there was a comment, preserve it in the replacement
-                    def replace_func(match):
-                        comment = match.group(2) or ''
-                        return f"'{flag_name}': {str(flag_value)}{comment}"
-                    
-                    # Use the replacement function
-                    new_content = re.sub(pattern, replace_func, config_content)
-                    
-                    # Check if replacement actually happened
-                    if new_content == config_content:
-                        # Log warning if no replacement was made
-                        logger.warning(f"No replacement made for '{flag_name}': {flag_value}. Pattern may not match.")
-                        
-                        # Try a more aggressive pattern as fallback
-                        alt_pattern = rf"'{flag_name}':\s*[^,\n]+"
-                        new_content = re.sub(alt_pattern, f"'{flag_name}': {str(flag_value)}", config_content)
-                    
-                    config_content = new_content
+            if hasattr(Config, section):
+                section_obj = getattr(Config, section)
+                
+                if isinstance(section_obj, dict):
+                    for key, value in values.items():
+                        if key in section_obj:
+                            old_value = section_obj[key]
+                            # Convert string representations of booleans
+                            if isinstance(old_value, bool) and isinstance(value, str):
+                                if value.lower() == 'true':
+                                    value = True
+                                elif value.lower() == 'false':
+                                    value = False
+                            section_obj[key] = value
+                            logger.info(f"Updated {section}.{key}: {old_value} -> {value}")
+                            changes_made = True
+        
+        # If changes were made, we need to update the file
+        if changes_made:
             
-            elif section == 'CHARGING_CONFIG':
-                for param, value in values.items():
-                    # Format depends on the parameter type
-                    if param == 'STRATEGY' or param == 'ALL_STRATEGIES':
-                        # These are lists of strings
-                        str_value = json.dumps(value) if isinstance(value, list) else f'["{value}"]'
-                        pattern = rf"'{param}':\s*\[.*?\]"
-                        replacement = f"'{param}': {str_value}"
-                    else:
-                        # Other parameters could be strings, floats, etc.
-                        if isinstance(value, str):
-                            str_value = f"'{value}'"
+            # Parse the original code into an AST
+            tree = ast.parse(original_content)
+            
+            # Define a transformer to modify the AST
+            class ConfigTransformer(ast.NodeTransformer):
+                def visit_ClassDef(self, node):
+                    # Only process the Config class
+                    if node.name == 'Config':
+                        # Process class body
+                        for i, item in enumerate(node.body):
+                            # Look for assignments
+                            if isinstance(item, ast.Assign):
+                                # Check if this is a section we want to modify
+                                if len(item.targets) == 1 and isinstance(item.targets[0], ast.Name):
+                                    section_name = item.targets[0].id
+                                    if section_name in settings:
+                                        # Update the value based on its type
+                                        item.value = self.transform_value(item.value, settings[section_name], 
+                                                                         path=[section_name])
+                    return node
+                
+                def transform_value(self, node, new_value, path=None):
+                    """
+                    Recursively transform an AST node based on new_value.
+                    
+                    Args:
+                        node: The existing AST node
+                        new_value: The new value to apply
+                        path: List representing the current path in the config hierarchy
+                    
+                    Returns:
+                        Updated AST node
+                    """
+                    path = path or []
+                    current_path = '.'.join(path)
+                    
+                    # Handle dictionaries recursively
+                    if isinstance(node, ast.Dict) and isinstance(new_value, dict):
+                        # Process each key-value pair in the dict
+                        for j, (key, value) in enumerate(zip(node.keys, node.values)):
+                            if isinstance(key, ast.Str) and key.s in new_value:
+                                node_path = path + [key.s]
+                                node.values[j] = self.transform_value(value, new_value[key.s], node_path)
+                        return node
+                    
+                    # Handle lists recursively
+                    elif isinstance(node, ast.List) and isinstance(new_value, list):
+                        # If the list has the same length, update each element
+                        if len(node.elts) == len(new_value):
+                            for j, (elt, new_elt) in enumerate(zip(node.elts, new_value)):
+                                node_path = path + [f"[{j}]"]
+                                node.elts[j] = self.create_node_for_value(new_elt, node_path)
                         else:
-                            str_value = str(value)
-                        pattern = rf"'{param}':\s*(?:(?:'[^']*')|(?:\d+(?:\.\d+)?))"
-                        replacement = f"'{param}': {str_value}"
+                            # If lengths differ, create a new list
+                            return self.create_node_for_value(new_value, path)
+                        return node
                     
-                    # Apply replacement and check if it worked
-                    new_content = re.sub(pattern, replacement, config_content)
-                    if new_content == config_content:
-                        logger.warning(f"No replacement made for '{param}': {value} in CHARGING_CONFIG")
-                    config_content = new_content
-            
-            # Rest of the function remains the same
-            elif section == 'DEFAULT_LOCATION':
-                for coord_name, coord_value in values.items():
-                    pattern = rf"'{coord_name}':\s*[\d\.]+"
-                    replacement = f"'{coord_name}': {float(coord_value)}"
-                    config_content = re.sub(pattern, replacement, config_content)
-            
-            elif section == 'MANUAL_DISTANCES':
-                for distance_name, distance_value in values.items():
-                    pattern = rf"'{distance_name}':\s*[\d\.]+"
-                    replacement = f"'{distance_name}': {float(distance_value)}"
-                    config_content = re.sub(pattern, replacement, config_content)
-
-            elif section == 'RESULT_NAMING':
-                for param, value in values.items():
-                    if param == 'USE_CUSTOM_ID':
-                        pattern = rf"'USE_CUSTOM_ID':\s*(True|False)(\s*#[^\n]*)?"
-                        def replace_func(match):
-                            comment = match.group(2) or ''
-                            return f"'USE_CUSTOM_ID': {str(value)}{comment}"
-                        config_content = re.sub(pattern, replace_func, config_content)
-                    elif param == 'CUSTOM_ID':
-                        pattern = rf"'CUSTOM_ID':\s*'[^']*'"
-                        replacement = f"'CUSTOM_ID': '{value}'"
-                        config_content = re.sub(pattern, replacement, config_content)
-            
-            elif section == 'BATTERY_CONFIG':
-                for param, value in values.items():
-                    pattern = rf"'{param}':\s*[\d\.]+"
-                    replacement = f"'{param}': {float(value)}"
-                    config_content = re.sub(pattern, replacement, config_content)
+                    # Handle tuples recursively
+                    elif isinstance(node, ast.Tuple) and isinstance(new_value, (list, tuple)):
+                        # Convert tuple to the right size
+                        if len(node.elts) == len(new_value):
+                            for j, (elt, new_elt) in enumerate(zip(node.elts, new_value)):
+                                node_path = path + [f"[{j}]"]
+                                node.elts[j] = self.create_node_for_value(new_elt, node_path)
+                        else:
+                            # If lengths differ, create a new tuple
+                            return self.create_node_for_value(new_value, path)
+                        return node
                     
-            elif section == 'GRID_CAPACITIES':
-                for param, value in values.items():
-                    pattern = rf"'{param}':\s*[\d\.]+"
-                    replacement = f"'{param}': {float(value)}"
-                    config_content = re.sub(pattern, replacement, config_content)
+                    # Handle special case: os.path.join() for TRAFFIC_PATHS
+                    elif (isinstance(node, ast.Call) and 
+                          current_path.startswith('TRAFFIC_PATHS') and
+                          isinstance(node.func, ast.Attribute) and 
+                          node.func.attr == 'join' and 
+                          hasattr(node.func.value, 'attr') and 
+                          node.func.value.attr == 'path'):
+                        
+                        # For path joins, update the last argument while preserving the structure
+                        if isinstance(new_value, str) and len(node.args) > 0:
+                            # Split the new path and update the last component
+                            path_parts = new_value.split('/')
+                            if len(path_parts) > 0:
+                                last_part = path_parts[-1]
+                                # Keep the original path structure but update the final folder
+                                if isinstance(node.args[-1], ast.Str):
+                                    node.args[-1] = ast.Str(s=last_part)
+                        return node
                     
-            elif section == 'SPATIAL':
-                for param, value in values.items():
-                    if isinstance(value, str):
-                        pattern = rf"'{param}':\s*'[^']*'"
-                        replacement = f"'{param}': '{value}'"
+                    # For all other nodes, create an appropriate AST node based on the new value
+                    return self.create_node_for_value(new_value, path)
+                
+                def create_node_for_value(self, value, path=None):
+                    """
+                    Create an appropriate AST node for a given value.
+                    
+                    Args:
+                        value: The value to convert to an AST node
+                        path: List representing the current path in the config hierarchy
+                    
+                    Returns:
+                        AST node representing the value
+                    """
+                    path = path or []
+                    current_path = '.'.join(path)
+                    
+                    # Handle different value types
+                    if isinstance(value, bool):
+                        return ast.NameConstant(value=value)
+                    elif isinstance(value, int):
+                        return ast.Num(n=value)
+                    elif isinstance(value, float):
+                        return ast.Num(n=value)
+                    elif isinstance(value, str):
+                        return ast.Str(s=value)
+                    elif isinstance(value, dict):
+                        # Create a new dictionary node
+                        keys = []
+                        values = []
+                        for k, v in value.items():
+                            keys.append(ast.Str(s=k))
+                            node_path = path + [k]
+                            values.append(self.create_node_for_value(v, node_path))
+                        return ast.Dict(keys=keys, values=values)
+                    elif isinstance(value, list):
+                        # Create a new list node
+                        elts = []
+                        for i, item in enumerate(value):
+                            node_path = path + [f"[{i}]"]
+                            elts.append(self.create_node_for_value(item, node_path))
+                        return ast.List(elts=elts, ctx=ast.Load())
+                    elif isinstance(value, tuple):
+                        # Create a new tuple node
+                        elts = []
+                        for i, item in enumerate(value):
+                            node_path = path + [f"[{i}]"]
+                            elts.append(self.create_node_for_value(item, node_path))
+                        return ast.Tuple(elts=elts, ctx=ast.Load())
+                    elif value is None:
+                        return ast.NameConstant(value=None)
                     else:
-                        pattern = rf"'{param}':\s*[\d\.]+"
-                        replacement = f"'{param}': {float(value)}"
-                    config_content = re.sub(pattern, replacement, config_content)
+                        # For unsupported types, convert to string
+                        return ast.Str(s=str(value))
             
-            # NEW SECTIONS BELOW
+            # Apply our transformer
+            new_tree = ConfigTransformer().visit(tree)
+            ast.fix_missing_locations(new_tree)
             
-            elif section == 'FORECAST_YEAR':
-                # Update the forecast year
-                pattern = r"FORECAST_YEAR\s*=\s*'[^']*'"
-                replacement = f"FORECAST_YEAR = '{values}'"
-                config_content = re.sub(pattern, replacement, config_content)
+            # Convert the modified AST back to code
+            new_code = astor.to_source(new_tree)
             
-            elif section == 'SCENARIOS':
-                # Handle TARGET_YEARS list
-                if 'TARGET_YEARS' in values:
-                    target_years = values['TARGET_YEARS']
-                    str_value = json.dumps(target_years) if isinstance(target_years, list) else f"['{target_years}']"
-                    pattern = r"'TARGET_YEARS':\s*\[.*?\]"
-                    replacement = f"'TARGET_YEARS': {str_value}"
-                    config_content = re.sub(pattern, replacement, config_content)
-                
-                # Handle R_BEV and R_TRAFFIC dictionaries
-                for scenario_type in ['R_BEV', 'R_TRAFFIC']:
-                    if scenario_type in values:
-                        for year, value in values[scenario_type].items():
-                            pattern = rf"'{year}':\s*[\d\.]+\s*(?:#.*)?"  # Match year and value, including optional comment
-                            replacement = f"'{year}': {float(value)}  #"  # Keep comment format
-                            # Look for pattern within the specific scenario section
-                            scenario_pattern = rf"'{scenario_type}':\s*{{.*?{pattern}.*?}}"
-                            if re.search(scenario_pattern, config_content, re.DOTALL):
-                                config_content = re.sub(pattern, replacement, config_content)
+            # Write the modified code back to the file
+            with open(config_module_path, 'w') as f:
+                f.write(new_code)
             
-            elif section == 'CAPACITY_FEES':
-                for fee_type, fee_value in values.items():
-                    pattern = rf"'{fee_type}':\s*[\d\.]+"
-                    replacement = f"'{fee_type}': {float(fee_value)}"
-                    config_content = re.sub(pattern, replacement, config_content)
+            # Reload the config module to apply changes
+            reload_config()
+            logger.info("Configuration file updated successfully")
+            return True
+        else:
+            logger.warning("No changes were made to the configuration")
+            return False
             
-            elif section == 'CHARGING_TYPES':
-                for charger_type, charger_config in values.items():
-                    for param, value in charger_config.items():
-                        pattern = rf"'{charger_type}':\s*{{.*?'({param})':\s*([\d\.]+).*?}}"
-                        # We need to preserve the structure, so we'll use a function for replacement
-                        config_content = re.sub(
-                            pattern,
-                            lambda m: m.group(0).replace(f"'{param}': {m.group(2)}", f"'{param}': {float(value)}"),
-                            config_content,
-                            flags=re.DOTALL
-                        )
-            
-            elif section == 'MANUAL_CHARGER_COUNT':
-                for charger_type, count in values.items():
-                    pattern = rf"'{charger_type}':\s*[\d]+"
-                    replacement = f"'{charger_type}': {int(count)}"
-                    config_content = re.sub(pattern, replacement, config_content)
-            
-            elif section == 'SUBSTATION_CONFIG':
-                # Handle the nested dictionaries for DISTRIBUTION and TRANSMISSION
-                for substation_type in ['DISTRIBUTION', 'TRANSMISSION']:
-                    if substation_type in values:
-                        for param, value in values[substation_type].items():
-                            pattern = rf"'{substation_type}':\s*{{.*?'({param})':\s*([\d\.]+).*?}}"
-                            config_content = re.sub(
-                                pattern,
-                                lambda m: m.group(0).replace(f"'{param}': {m.group(2)}", f"'{param}': {float(value)}"),
-                                config_content,
-                                flags=re.DOTALL
-                            )
-                
-                # Handle HV_SUBSTATION_COST
-                if 'HV_SUBSTATION_COST' in values:
-                    pattern = r"'HV_SUBSTATION_COST':\s*[\d\.]+"
-                    replacement = f"'HV_SUBSTATION_COST': {float(values['HV_SUBSTATION_COST'])}"
-                    config_content = re.sub(pattern, replacement, config_content)
-            
-            elif section == 'TRANSFORMER_CONFIG':
-                if 'CAPACITIES' in values:
-                    capacities = values['CAPACITIES']
-                    str_value = f"[{', '.join(str(c) for c in capacities)}]"
-                    pattern = r"\"CAPACITIES\":\s*\[.*?\]"
-                    replacement = f"\"CAPACITIES\": {str_value}"
-                    config_content = re.sub(pattern, replacement, config_content)
-                
-                if 'COSTS' in values:
-                    costs = values['COSTS']
-                    str_value = f"[{', '.join(str(c) for c in costs)}]"
-                    pattern = r"\"COSTS\":\s*\[.*?\]"
-                    replacement = f"\"COSTS\": {str_value}"
-                    config_content = re.sub(pattern, replacement, config_content)
-            
-            elif section == 'CABLE_CONFIG':
-                # Handle nested structure for LV, MV, and CONSTRUCTION sections
-                for cable_section in ['LV', 'MV', 'CONSTRUCTION']:
-                    if cable_section in values:
-                        for param, value in values[cable_section].items():
-                            pattern = rf"'{cable_section}':\s*{{.*?'({param})':\s*([\d\.]+).*?}}"
-                            config_content = re.sub(
-                                pattern,
-                                lambda m: m.group(0).replace(f"'{param}': {m.group(2)}", f"'{param}': {float(value)}"),
-                                config_content,
-                                flags=re.DOTALL
-                            )
-            
-            elif section == 'BREAKS':
-                for param, value in values.items():
-                    if param == 'RANDOM_RANGE':
-                        # Special handling for tuple
-                        if isinstance(value, list) and len(value) == 2:
-                            pattern = r"'RANDOM_RANGE':\s*\([\d\.]*,\s*[\d\.]*\)"
-                            replacement = f"'RANDOM_RANGE': ({value[0]},{value[1]})"
-                            config_content = re.sub(pattern, replacement, config_content)
-                    else:
-                        pattern = rf"'{param}':\s*[\d\.]+"
-                        replacement = f"'{param}': {float(value)}"
-                        config_content = re.sub(pattern, replacement, config_content)
-            
-            elif section == 'TIME':
-                for param, value in values.items():
-                    pattern = rf"'{param}':\s*[\d]+"
-                    replacement = f"'{param}': {int(value)}"
-                    config_content = re.sub(pattern, replacement, config_content)
-            
-            elif section == 'CSV':
-                for param, value in values.items():
-                    pattern = rf"'{param}':\s*'[^']*'"
-                    replacement = f"'{param}': '{value}'"
-                    config_content = re.sub(pattern, replacement, config_content)
-            
-            elif section == 'PATHS' or section == 'TRAFFIC_PATHS':
-                for path_name, path_value in values.items():
-                    # Need to be careful with path separators in regex
-                    path_value_escaped = path_value.replace('\\', '\\\\')
-                    pattern = rf"'{path_name}':\s*os\.path\.join\(.*?\)"
-                    replacement = f"'{path_name}': '{path_value_escaped}'"
-                    config_content = re.sub(pattern, replacement, config_content)
-            
-            elif section == 'aluminium_kabel' or section == 'kupfer_kabel':
-                for prop, values_list in values.items():
-                    # Convert list to string representation
-                    values_str = f"[{', '.join([str(val) for val in values_list])}]"
-                    pattern = rf'"{prop}":\s*\[.*?\]'
-                    replacement = f'"{prop}": {values_str}'
-                    config_content = re.sub(pattern, replacement, config_content, flags=re.DOTALL)
-            
-            # Add any other sections as needed
-                    
-        # Write the updated config back to file
-        with open(config_module_path, 'w') as f:
-            f.write(config_content)
-        
-        # Reload the config module to apply changes
-        reload_config()
-        
-        return True
     except Exception as e:
         logger.error(f"Error updating config file: {e}")
         logger.exception("Detailed traceback:")
+        # Try to restore from backup if it exists
+        try:
+            if os.path.exists(backup_path):
+                with open(backup_path, 'r') as f:
+                    backup_content = f.read()
+                with open(config_module_path, 'w') as f:
+                    f.write(backup_content)
+                logger.info("Restored config file from backup after error")
+        except Exception as restore_error:
+            logger.error(f"Failed to restore config from backup: {restore_error}")
         return False
+
 
 # Helper function to run a command and stream output to client
 def run_command_with_output(process_id, cmd, cwd=None, env=None):
@@ -514,12 +468,7 @@ def configuration():
     transformer_config = Config.TRANSFORMER_CONFIG
     cable_config = Config.CABLE_CONFIG
     breaks = Config.BREAKS
-    day_mapping = Config.DAY_MAPPING
     scenarios = Config.SCENARIOS
-    time_config = Config.TIME
-    csv_config = Config.CSV
-    paths = Config.PATHS
-    traffic_paths = Config.TRAFFIC_PATHS
     forecast_year = Config.FORECAST_YEAR
     
     # Add aluminum and copper cable data
@@ -543,12 +492,7 @@ def configuration():
         transformer_config=transformer_config,
         cable_config=cable_config,
         breaks=breaks,
-        day_mapping=day_mapping,
         scenarios=scenarios,
-        time=time_config,
-        csv=csv_config,
-        paths=paths,
-        traffic_paths=traffic_paths,
         forecast_year=forecast_year,
         aluminium_kabel=aluminium_kabel,
         kupfer_kabel=kupfer_kabel
