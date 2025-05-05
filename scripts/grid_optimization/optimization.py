@@ -477,28 +477,65 @@ def run_optimization_for_strategy(strategy):
                                             for i, count in transformer_selections.items()])
         
         results = {
+            # Cost-related items
             'total_cost': float(model.objVal),
+            'expansion_cost': float(expansion_cost_value.X),
+            'connection_cost': float(connection_cost_value.X),
+            'capacity_cost': float(capacity_cost_value.X),
+            'transformer_cost': float(transformer_cost_value.X),
+            'battery_cost': float(battery_cost_value.X),
+            'total_charginghub_cost': float(charginghub_cost_value.X),
+            'charger_cost': float(charger_cost_value.X),
+            'internal_cable_cost': float(internal_cable_cost_value.X),
+
+            # Energy throughput calculations - adjusted for 5-minute time resolution
+            'energy_throughput_weekly_kwh': float(sum(load_profile) * (5/60)),  # Convert kW to kWh (5/60 hours per timestep)
+            'energy_throughput_annual_gwh': float(sum(load_profile) * (5/60) * 52 / 1000000),  # To GWh and annual
+            
+            # Configuration parameters
+            'buffer_radius': Config.SPATIAL['BUFFER_RADIUS'],  # Buffer radius from config
+            'forecast_year': Config.FORECAST_YEAR,  # Add forecast year from config
+            
+            # Non-time-dependent values
+            'charging_strategy': strategy,
             'max_grid_load': float(max_grid_load.X),
-            'battery_capacity': float(battery_capacity.X),
+            'peak_load': float(max(load_profile)),
+            'capacity_limit': float(cap_limit.X),
             'use_hv': float(use_hv_line.X),
             'use_transmission': float(use_transmission_substation.X),
             'use_distribution': float(use_distribution_substation.X),
             'use_existing_mv': float(use_existing_mv_line.X),
-            'charging_strategy': strategy,
             'distribution_expansion': float(distribution_expansion.X),
             'transmission_expansion': float(transmission_expansion.X),
             'expand_distribution': float(expand_distribution.X),
             'expand_transmission': float(expand_transmission.X),
-            'expansion_cost': float(expansion_cost_value.X),
-            'grid_energy': [float(grid_energy[t].X) for t in range(time_periods)],
-            'battery_soc': [float(battery_soc[t].X) for t in range(time_periods)],
-            'battery_charge': [float(battery_charge[t].X) for t in range(time_periods)],
-            'battery_discharge': [float(battery_discharge[t].X) for t in range(time_periods)],
-            'connection_cost': float(connection_cost_value.X),
-            'capacity_cost': float(capacity_cost_value.X),
-            'battery_cost': float(battery_cost_value.X),
-            'transformer_cost': float(transformer_cost_value.X),
+            'battery_capacity': float(battery_capacity.X),
+            'battery_peak_power': float(battery_peak_power.X),
+            
+            # Battery utilization
+            'battery_cycles_weekly': float(sum(battery_discharge[t].X for t in range(time_periods)) * (5/60) / battery_capacity.X) if battery_capacity.X > 0 else 0.0,
+            'battery_cycles_annual': float(sum(battery_discharge[t].X for t in range(time_periods)) * (5/60) * 52 / battery_capacity.X) if battery_capacity.X > 0 else 0.0,
+            
+            # Distance values
+            'distribution_distance': float(distribution_substation_distance),
+            'transmission_distance': float(transmission_substation_distance),
+            'powerline_distance': float(hvline_distance),
+
+            # Non-time-dependent values
+            'charging_strategy': strategy,
+            'max_grid_load': float(max_grid_load.X),
+            'peak_load': float(max(load_profile)),
             'capacity_limit': float(cap_limit.X),
+            'use_hv': float(use_hv_line.X),
+            'use_transmission': float(use_transmission_substation.X),
+            'use_distribution': float(use_distribution_substation.X),
+            'use_existing_mv': float(use_existing_mv_line.X),
+            'distribution_expansion': float(distribution_expansion.X),
+            'transmission_expansion': float(transmission_expansion.X),
+            'expand_distribution': float(expand_distribution.X),
+            'expand_transmission': float(expand_transmission.X),
+            'battery_capacity': float(battery_capacity.X),
+            'battery_peak_power': float(battery_peak_power.X),
             'distribution_distance': float(distribution_substation_distance),
             'transmission_distance': float(transmission_substation_distance),
             'powerline_distance': float(hvline_distance),
@@ -512,12 +549,15 @@ def run_optimization_for_strategy(strategy):
             'transformer_cost': total_transformer_cost,
             'transformer_selections': transformer_selections,
             'transformer_description': transformer_description,
-            'internal_cable_cost': float(internal_cable_cost_value.X),
-            'charger_cost': float(charger_cost_value.X),
-            'total_charginghub_cost': float(charginghub_cost_value.X),
             'MCS_count': int(MCS_count),
             'HPC_count': int(HPC_count),
-            'NCS_count': int(NCS_count)
+            'NCS_count': int(NCS_count),
+            
+            # Time-dependent values
+            'grid_energy': [float(grid_energy[t].X) for t in range(time_periods)],
+            'battery_soc': [float(battery_soc[t].X) for t in range(time_periods)],
+            'battery_charge': [float(battery_charge[t].X) for t in range(time_periods)],
+            'battery_discharge': [float(battery_discharge[t].X) for t in range(time_periods)]
         }
         
         # Add charging sessions data
