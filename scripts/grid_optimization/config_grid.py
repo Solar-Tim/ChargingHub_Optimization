@@ -1,5 +1,4 @@
 ############## Input Parameters for the Optimization ##############
-from math import inf
 import numpy as np
 import sys
 import os

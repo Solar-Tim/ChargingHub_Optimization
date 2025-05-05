@@ -45,7 +45,7 @@ class Config:
         
         # Grid optimization sub-process flags
         'USE_DISTANCE_CALCULATION': True,    # Whether to use distance calculation for optimization
-        'CREATE_PLOT': True,                # Whether to generate plot of optimization results
+        'CREATE_PLOT': False,                # Whether to generate plot of optimization results
         'CREATE_DISTANCE_MAPS': True,       # Whether to generate maps of distance calculations
         'INCLUDE_BATTERY': True,             # Whether to include battery in optimization
         'USE_MANUAL_CHARGER_COUNT': False,   # Whether to use manual charger count instead of optimizing
@@ -129,6 +129,9 @@ class Config:
         'WEEKS_PER_YEAR': 52,
         'RESOLUTION_MINUTES': 5,     # Time resolution in minutes
         'SIMULATION_HOURS': 8760,    # Hours in a year for simulation
+        'WEEK_MINUTES': 10080,       # 7 days * 24 hours * 60 minutes
+        'TIMESTEPS_PER_DAY': 288,    # 24 hours * 60 minutes / 5 minutes
+        'TIMESTEPS_PER_WEEK': 2016,  # 288 timesteps per day * 7 days
     }
     
     # CSV file settings

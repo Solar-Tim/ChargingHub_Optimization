@@ -1,15 +1,25 @@
+import sys
+import os
 from gurobipy import Model, GRB, quicksum
 import pandas as pd
 import time
-import os
 import json
 import logging
 from datetime import datetime
-from config_setup import CONFIG as ORIGINAL_CONFIG, leistung_ladetyp
 from concurrent.futures import ProcessPoolExecutor
 
+# Add the project root and scripts directory to the path first
+scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+project_root = os.path.abspath(os.path.join(scripts_dir, '..'))
+sys.path.insert(0, project_root)
+sys.path.insert(0, scripts_dir)
+sys.path.insert(0, os.path.dirname(__file__))
+
+# Now import from config_setup
+from scripts.charginghub_setup.config_setup import *
+
 # Create a working copy of the config that can be modified
-CONFIG = ORIGINAL_CONFIG.copy()
+CONFIG = CHARGING_CONFIG.copy()
 
 logging.basicConfig(filename='logs.log', level=logging.DEBUG, format='%(asctime)s; %(levelname)s; %(message)s')
 
@@ -101,15 +111,7 @@ def modellierung():
     except Exception as e:
         logging.error(f"Error loading charging hub config: {e}")
         print(f"ERROR loading charging hub data: {e}")
-        # Create default configuration on error
-        charging_config = {
-            "charging_stations": {
-                "NCS": {"count": 4},
-                "HPC": {"count": 2},
-                "MCS": {"count": 1}
-            }
-        }
-        truck_data_from_config = None
+
     
     # ------------------------------
     # Only load truck data from separate file if not found in charging_config_base.json
@@ -180,14 +182,14 @@ def modellierung():
     # -------------------------------------
     # Vorbereitung: Lastgang-Arrays
     # -------------------------------------
-    WEEK_MINUTES = 10080  # 7 days * 24 hours * 60 minutes
-    TIMESTEP = 5
-    N = WEEK_MINUTES // TIMESTEP  # 10080 / 5 = 2016 timesteps for one week
+    WEEK_MINUTES = TIME_CONFIG['WEEK_MINUTES']  # 7 days * 24 hours * 60 minutes
+    TIMESTEP = TIME_CONFIG['TIMESTEP']          # 5 minutes per timestep
+    N = WEEK_MINUTES // TIMESTEP                # 10080 / 5 = 2016 timesteps for one week
     
     # -------------------------------------
     # Eine Woche = 7 Tage = 2016 Zeitstufen (7*24*60/5)
     # -------------------------------------
-    T_7 = 288 * 7  # Timesteps in a week (288 per day * 7 days)
+    T_7 = TIME_CONFIG['TIMESTEPS_PER_WEEK']     # Timesteps in a week (288 per day * 7 days)
     
     Delta_t = TIMESTEP / 60.0
 
@@ -330,6 +332,7 @@ def modellierung():
                 model.addConstr(P[(i,t_step)] == Pplus[(i,t_step)] - Pminus[(i,t_step)])
             for t_step in range(t_in[i], t_out[i]):
                 model.addConstr(z[(i, t_step+1)] >= z[(i, t_step)])
+                
 
         # -------------------------------------
         # Zielfunktion
@@ -338,7 +341,7 @@ def modellierung():
         if strategie == "T_min":
             obj_expr = quicksum(((1/(t+1)) * (Pplus[(i, t)])) - (t * Pminus[(i, t)]) 
                                 for i in range(I) 
-                                for t in range(t_in[i], t_out[i] + 1))
+                                for t in range(t_in[i], t_out[i]+1))
 
         elif strategie == "Konstant":
             # Hilfsvariablen für Leistungsänderungen zwischen Zeitschritten
@@ -422,6 +425,11 @@ def modellierung():
                     list_volladungen.append(0)
             ladequote_week = sum(list_volladungen) / len(list_volladungen)
             
+            # Check if charging quota is below target due to charger constraints
+            target_quota = float(CONFIG['ladequote'])
+            if EXECUTION_FLAGS.get('USE_MANUAL_CHARGER_COUNT', False) and ladequote_week < target_quota:
+                logging.warning(f"Strategy {strategie}: Achieved charging quota ({ladequote_week:.3f}) is below target ({target_quota:.3f}) due to charger count constraints.")
+                print(f"WARNING: Strategy {strategie}: Achieved charging quota ({ladequote_week:.3f}) is below target ({target_quota:.3f}) due to charger count constraints.")
             # Gesamtkosten
             if strategie == 'T_min':
                 print(f"[Strategie={strategie}] Lösung OK. Ladequote: {ladequote_week:.3f}, Anzahl LKW: {len(df_lkw)}")
@@ -548,7 +556,10 @@ def modellierung():
                 "MCS": {"count": max_saeulen['MCS'], "power_kw": ladeleistung['MCS']}
             },
             "generated_at": datetime.now().isoformat(),
-            "data_source": "charging_config_base.json" if truck_data_from_config else "eingehende_lkws_ladesaeule.json"
+            "data_source": "charging_config_base.json" if truck_data_from_config else "eingehende_lkws_ladesaeule.json",
+            "manual_charger_count": EXECUTION_FLAGS.get('USE_MANUAL_CHARGER_COUNT', False),
+            "target_charging_quota": float(CONFIG['ladequote']),
+            "achieved_charging_quota": ladequote_week
         }
     }
 
@@ -588,7 +599,7 @@ def modellierung():
         # Initialize with zeros
         csv_df = pd.DataFrame({
             'time (5min steps)': range(0, 10080, 5),  # 0, 5, 10, ..., 10075
-            'Last': [0.0] * 2016  # Initialize all values with 0
+            'Last': [0.0] * T_7  # Initialize all values with 0
         })
         
         # Create a dictionary to store load values by timestep
@@ -635,10 +646,10 @@ def modellierung():
         # Initialize with zeros
         detailed_csv_df = pd.DataFrame({
             'time (5min steps)': range(0, 10080, 5),  # 0, 5, 10, ..., 10075
-            'Last': [0.0] * 2016,               # Total load
-            'Last_NCS': [0.0] * 2016,           # NCS charger load
-            'Last_HPC': [0.0] * 2016,           # HPC charger load
-            'Last_MCS': [0.0] * 2016            # MCS charger load
+            'Last': [0.0] * T_7,               # Total load
+            'Last_NCS': [0.0] * T_7,           # NCS charger load
+            'Last_HPC': [0.0] * T_7,           # HPC charger load
+            'Last_MCS': [0.0] * T_7            # MCS charger load
         })
         
         # Update the load values in our detailed DataFrame

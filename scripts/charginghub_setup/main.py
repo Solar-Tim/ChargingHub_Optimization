@@ -23,8 +23,16 @@ logging.basicConfig(
     format='%(asctime)s; %(levelname)s; %(message)s'
 )
 
+# Replace the current path setup
 # Add root directory to Python path for configuration access
-sys.path.append(str(Path(__file__).parent.parent.parent))
+scripts_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # scripts folder
+base_dir = os.path.dirname(scripts_dir)  # Project root
+sys.path.insert(0, base_dir)  # Add project root first
+sys.path.insert(0, scripts_dir)  # Add scripts directory
+
+# Debug line to help troubleshoot path issues
+print(f"Python path: {sys.path}")
+print(f"Looking for config.py in: {scripts_dir}")
 
 # Import configuration
 from config import Config
@@ -34,7 +42,7 @@ try:
     import match_truck_chargingtype
     import charginghub_configuration
     import demand_optimization
-    from config_setup import CONFIG
+    from config_setup import CHARGING_CONFIG
 except ImportError as e:
     logging.error(f"Error importing required modules: {e}")
     print(f"Error: {e}. Make sure all required modules are in the same directory.")
@@ -127,10 +135,10 @@ def run_demand_optimization():
 def display_config():
     """Display the current configuration settings."""
     print("\nCurrent Configuration:")
-    print(f"  Charging Strategies: {CONFIG['STRATEGIES']}")
-    print(f"  Target Charge Quota: {CONFIG['ladequote']}")
-    print(f"  Power Setting: {CONFIG['power']} (NCS-HPC-MCS)")
-    print(f"  Pause Times: {CONFIG['pause']} (short-long break minutes)\n")
+    print(f"  Charging Strategies: {CHARGING_CONFIG['STRATEGIES']}")
+    print(f"  Target Charge Quota: {CHARGING_CONFIG['ladequote']}")
+    print(f"  Power Setting: {CHARGING_CONFIG['power']} (NCS-HPC-MCS)")
+    print(f"  Pause Times: {CHARGING_CONFIG['pause']} (short-long break minutes)\n")
 
 def display_execution_flags():
     """Display the execution flags for sub-processes."""

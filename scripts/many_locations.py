@@ -76,9 +76,10 @@ def run_for_location(location_id, longitude, latitude):
 
 def main():
     """Main function to iterate through locations and run the optimization."""
-    # Get absolute path to locations file relative to script location
+    # Get absolute path to locations file in data folder
     script_dir = Path(__file__).parent.absolute()
-    locations_file = script_dir / "locations_all.csv"
+    data_dir = script_dir.parent / "data"  # Go up one level to project root, then into data folder
+    locations_file = data_dir / "locations_all.csv"
     
     try:
         # Read CSV with explicit path and error handling
@@ -127,13 +128,13 @@ def main():
                 logging.error(f"Error preparing row: {row.to_dict()}. Error: {e}", exc_info=True)
                 print(f"Error preparing row: {row.to_dict()}. Error: {e}")
         
-        # Determine number of workers (adjust based on your system's capabilities)
-        max_workers = min(os.cpu_count() or 1, len(location_data_list))
-        print(f"Processing {len(location_data_list)} locations with {max_workers} parallel workers")
+        # Process locations sequentially instead of in parallel
+        print(f"Processing {len(location_data_list)} locations sequentially")
         
-        # Process locations in parallel
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            results = list(executor.map(process_single_location, location_data_list))
+        results = []
+        for location_data in location_data_list:
+            result = process_single_location(location_data)
+            results.append(result)
         
         # Log results
         for result in results:
