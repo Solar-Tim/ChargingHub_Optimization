@@ -601,6 +601,10 @@
 {% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+      crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 <style>
     .process-output {
         background-color: #212529;
@@ -641,5 +645,234 @@
     .table th {
         background-color: #f8f9fa;
     }
+    
+    /* Leaflet Map Styling */
+    .leaflet-container {
+        z-index: 1;
+    }
+    
+    .search-results {
+        max-height: 200px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        position: absolute;
+        width: 100%;
+        z-index: 1000;
+        display: none;
+    }
+    
+    .search-results .result-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .search-results .result-item:hover {
+        background-color: #f0f0f0;
+    }
+    
+    .buffer-legend {
+        padding: 6px 8px;
+        background: white;
+        background: rgba(255,255,255,0.8);
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        border-radius: 5px;
+        line-height: 1.5;
+    }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+<!-- Location map script -->
+<script>
+    $(document).ready(function() {
+        // Initialize map only when location tab is shown
+        $('#location-tab').on('shown.bs.tab', function (e) {
+            initLocationMap();
+        });
+        
+        let map = null;
+        let marker = null;
+        let bufferCircle = null;
+        
+        function initLocationMap() {
+            // Skip if map is already initialized
+            if (map !== null) {
+                // Just resize the map if it already exists
+                map.invalidateSize();
+                return;
+            }
+            
+            // Get initial coordinates from input fields
+            const initialLat = parseFloat($('#LATITUDE').val());
+            const initialLng = parseFloat($('#LONGITUDE').val());
+            const bufferRadius = parseFloat($('#BUFFER_RADIUS').val());
+            
+            // Create map centered at initial coordinates
+            map = L.map('location-map').setView([initialLat, initialLng], 13);
+            
+            // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Create marker at initial position
+            marker = L.marker([initialLat, initialLng], {
+                draggable: true,
+                title: "Charging Hub Location"
+            }).addTo(map);
+            
+            // Create buffer circle
+            bufferCircle = L.circle([initialLat, initialLng], {
+                radius: bufferRadius,
+                color: '#3388ff',
+                fillColor: '#3388ff',
+                fillOpacity: 0.2
+            }).addTo(map);
+            
+            // Add a legend to explain the buffer
+            const legend = L.control({position: 'bottomright'});
+            legend.onAdd = function(map) {
+                const div = L.DomUtil.create('div', 'buffer-legend');
+                div.innerHTML = `
+                    <strong>Buffer Radius:</strong> <span id="buffer-radius-display">${bufferRadius}</span>m<br>
+                    <small>This area represents the search radius for infrastructure elements</small>
+                `;
+                return div;
+            };
+            legend.addTo(map);
+            
+            // Add geocoder control for searching
+            const geocoder = L.Control.geocoder({
+                defaultMarkGeocode: false,
+                placeholder: "Search for a location...",
+                errorMessage: "Nothing found. Try a different search.",
+                showResultIcons: true
+            }).on('markgeocode', function(e) {
+                const latlng = e.geocode.center;
+                updateMarkerPosition(latlng.lat, latlng.lng);
+                map.fitBounds(e.geocode.bbox);
+            }).addTo(map);
+            
+            // Event handlers for marker drag
+            marker.on('dragend', function(e) {
+                const position = marker.getLatLng();
+                updateLatLngInputs(position.lat, position.lng);
+                bufferCircle.setLatLng(position);
+            });
+            
+            // Map click event
+            map.on('click', function(e) {
+                updateMarkerPosition(e.latlng.lat, e.latlng.lng);
+            });
+            
+            // Update marker position and related elements
+            function updateMarkerPosition(lat, lng) {
+                marker.setLatLng([lat, lng]);
+                bufferCircle.setLatLng([lat, lng]);
+                updateLatLngInputs(lat, lng);
+            }
+            
+            // Update latitude and longitude input fields
+            function updateLatLngInputs(lat, lng) {
+                $('#LATITUDE').val(lat.toFixed(6));
+                $('#LONGITUDE').val(lng.toFixed(6));
+            }
+            
+            // Search box functionality (manual implementation)
+            function performSearch(query) {
+                // Show a loading indicator
+                $('#search-btn').html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+                
+                // Use Nominatim API for geocoding
+                $.ajax({
+                    url: 'https://nominatim.openstreetmap.org/search',
+                    type: 'GET',
+                    data: {
+                        q: query,
+                        format: 'json',
+                        limit: 5
+                    },
+                    success: function(data) {
+                        // Reset button
+                        $('#search-btn').html('<i class="fas fa-search"></i> Search');
+                        
+                        if (data && data.length > 0) {
+                            // Use the first result
+                            const result = data[0];
+                            updateMarkerPosition(parseFloat(result.lat), parseFloat(result.lon));
+                            map.setView([result.lat, result.lon], 13);
+                            
+                            // Show notification
+                            window.showNotification(`Location found: ${result.display_name}`, 'success');
+                        } else {
+                            window.showNotification('No locations found for your search', 'warning');
+                        }
+                    },
+                    error: function() {
+                        // Reset button
+                        $('#search-btn').html('<i class="fas fa-search"></i> Search');
+                        window.showNotification('Error performing search. Please try again.', 'danger');
+                    }
+                });
+            }
+            
+            // Bind events for search
+            $('#search-btn').click(function() {
+                const query = $('#location-search').val().trim();
+                if (query) {
+                    performSearch(query);
+                }
+            });
+            
+            $('#location-search').keypress(function(e) {
+                if (e.which === 13) {  // Enter key
+                    const query = $(this).val().trim();
+                    if (query) {
+                        performSearch(query);
+                    }
+                    e.preventDefault();
+                }
+            });
+            
+            // Reset view button
+            $('#reset-view-btn').click(function() {
+                map.setView([initialLat, initialLng], 13);
+            });
+            
+            // Update buffer circle when radius changes
+            $('#BUFFER_RADIUS').on('input change', function() {
+                const newRadius = parseFloat($(this).val());
+                if (!isNaN(newRadius) && newRadius >= 0) {
+                    bufferCircle.setRadius(newRadius);
+                    $('#buffer-radius-display').text(newRadius);
+                }
+            });
+            
+            // Hide loading indicator
+            $('#map-loading').hide();
+            
+            // Force a resize to ensure the map renders correctly
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 100);
+        }
+        
+        // Handle window resize to update map
+        $(window).on('resize', function() {
+            if (map) {
+                map.invalidateSize();
+            }
+        });
+    });
+</script>
 {% endblock %}

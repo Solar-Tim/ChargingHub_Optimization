@@ -12,7 +12,7 @@ class Config:
     PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
     CONTINUE_ON_ERROR = False
     FORECAST_YEAR = '2035'
-    RESULT_NAMING = {'USE_CUSTOM_ID': True, 'CUSTOM_ID': '950'}
+    RESULT_NAMING = {'USE_CUSTOM_ID': True, 'CUSTOM_ID': '945'}
     EXECUTION_FLAGS = {'RUN_TRAFFIC_CALCULATION': True,
         'RUN_CHARGING_HUB_SETUP': True, 'RUN_GRID_OPTIMIZATION': True,
         'RECALCULATE_BREAKS': False, 'RECALCULATE_TOLL_MIDPOINTS': False,
@@ -21,12 +21,12 @@ class Config:
         'CREATE_PLOT': False, 'CREATE_DISTANCE_MAPS': True,
         'INCLUDE_BATTERY': True, 'USE_MANUAL_CHARGER_COUNT': False,
         'DEBUG_MODE': False}
-    CHARGING_CONFIG = {'STRATEGY': ['Hub'], 'ladequote': 0.8, 'power':
+    CHARGING_CONFIG = {'STRATEGY': ['T_min'], 'ladequote': 0.8, 'power':
         '100-100-100', 'pause': '45-540'}
     MANUAL_CHARGER_COUNT = {'NCS': 4, 'HPC': 6, 'MCS': 2}
     MANUAL_DISTANCES = {'distribution_distance': 10,
         'transmission_distance': 9999999, 'powerline_distance': 9999999}
-    DEFAULT_LOCATION = {'LONGITUDE': 6.60414, 'LATITUDE': 51.12994}
+    DEFAULT_LOCATION = {'LONGITUDE': 7.007347, 'LATITUDE': 51.037505}
     SPATIAL = {'DEFAULT_CRS': 'EPSG:4326', 'TARGET_CRS': 'EPSG:3857',
         'BUFFER_RADIUS': 10000}
     SCENARIOS = {'TARGET_YEARS': ['2030', '2035', '2040', '2045'], 'R_BEV':
@@ -38,9 +38,9 @@ class Config:
         'Wednesday', 'Donnerstag': 'Thursday', 'Freitag': 'Friday',
         'Samstag': 'Saturday', 'Sonntag': 'Sunday'}
     GERMAN_DAYS = list(DAY_MAPPING.keys())
-    TIME = {'WEEKS_PER_YEAR': None, 'RESOLUTION_MINUTES': None,
-        'SIMULATION_HOURS': None, 'WEEK_MINUTES': None, 'TIMESTEPS_PER_DAY':
-        None, 'TIMESTEPS_PER_WEEK': None}
+    TIME = {'WEEKS_PER_YEAR': 52, 'RESOLUTION_MINUTES': 5,
+        'SIMULATION_HOURS': 8760, 'WEEK_MINUTES': 10080,
+        'TIMESTEPS_PER_DAY': 288, 'TIMESTEPS_PER_WEEK': 2016}
     CSV = {'DEFAULT_SEPARATOR': ';', 'DEFAULT_DECIMAL': ','}
     CHARGING_TYPES = {'NCS': {'power_kw': 100, 'cost': 35000}, 'HPC': {
         'power_kw': 400, 'cost': 110000}, 'MCS': {'power_kw': 1000, 'cost':

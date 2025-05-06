@@ -116,6 +116,126 @@ def update_config_file(settings):
         with open(backup_path, 'w') as f:
             f.write(original_content)
         
+        # Special handling for TIME dictionary
+        if 'TIME' in settings:
+            # Get current TIME values from Config
+            current_time = Config.TIME.copy()
+            
+            # Only update values that are actually provided and valid
+            for key, value in settings['TIME'].items():
+                if key in current_time:
+                    try:
+                        # Validate the value (ensure it's an integer and makes sense)
+                        if key == 'RESOLUTION_MINUTES':
+                            # Must be > 0 and divide evenly into 60
+                            if value <= 0 or 60 % value != 0:
+                                logger.warning(f"Invalid {key} value: {value}. Must be > 0 and divide evenly into 60.")
+                                continue
+                        elif key in ['TIMESTEPS_PER_DAY', 'TIMESTEPS_PER_WEEK']:
+                            # These should be calculated values, not directly set
+                            # TIMESTEPS_PER_DAY = 24 hours * 60 minutes / RESOLUTION_MINUTES
+                            # TIMESTEPS_PER_WEEK = TIMESTEPS_PER_DAY * 7
+                            continue
+                        
+                        # For other values, just ensure they're positive integers
+                        if value <= 0:
+                            logger.warning(f"Invalid {key} value: {value}. Must be > 0.")
+                            continue
+                            
+                        # Update the value in the current_time dict
+                        current_time[key] = value
+                    except (ValueError, TypeError):
+                        logger.warning(f"Invalid {key} value: {value}. Must be an integer.")
+                        continue
+            
+            # Recalculate dependent values
+            if 'RESOLUTION_MINUTES' in current_time:
+                resolution = current_time['RESOLUTION_MINUTES']
+                current_time['TIMESTEPS_PER_DAY'] = 24 * 60 // resolution
+                current_time['TIMESTEPS_PER_WEEK'] = current_time['TIMESTEPS_PER_DAY'] * 7
+                
+            # Replace the settings TIME with our validated version
+            settings['TIME'] = current_time
+
+        # Special handling for array synchronization (aluminium_kabel, kupfer_kabel)
+        if 'aluminium_kabel' in settings:
+            # Get current values
+            current_values = Config.aluminium_kabel.copy()
+            new_values = settings['aluminium_kabel']
+            
+            # Check that all arrays have the same length
+            lengths = [len(new_values.get(key, [])) for key in ['Nennquerschnitt', 'Belastbarkeit', 'Kosten']]
+            if len(set(lengths)) > 1:
+                logger.warning(f"aluminium_kabel arrays have inconsistent lengths: {lengths}. Using current values.")
+            else:
+                # Update values while preserving structure
+                for key in current_values:
+                    if key in new_values and isinstance(new_values[key], list):
+                        current_values[key] = new_values[key]
+            
+            settings['aluminium_kabel'] = current_values
+
+        # Similar handling for kupfer_kabel
+        if 'kupfer_kabel' in settings:
+            # Get current values
+            current_values = Config.kupfer_kabel.copy()
+            new_values = settings['kupfer_kabel']
+            
+            # Check that all arrays have the same length
+            lengths = [len(new_values.get(key, [])) for key in ['Nennquerschnitt', 'Kosten']]
+            if len(set(lengths)) > 1:
+                logger.warning(f"kupfer_kabel arrays have inconsistent lengths: {lengths}. Using current values.")
+            else:
+                # Update values while preserving structure
+                for key in current_values:
+                    if key in new_values and isinstance(new_values[key], list):
+                        current_values[key] = new_values[key]
+            
+            settings['kupfer_kabel'] = current_values
+
+        # Special handling for TRANSFORMER_CONFIG
+        if 'TRANSFORMER_CONFIG' in settings:
+            current_config = Config.TRANSFORMER_CONFIG.copy()
+            new_config = settings['TRANSFORMER_CONFIG']
+            
+            # Check that CAPACITIES and COSTS have the same length
+            if ('CAPACITIES' in new_config and 'COSTS' in new_config and 
+                len(new_config['CAPACITIES']) != len(new_config['COSTS'])):
+                logger.warning("TRANSFORMER_CONFIG has inconsistent lengths for CAPACITIES and COSTS. Using current values.")
+            else:
+                # Update values while preserving structure
+                for key in current_config:
+                    if key in new_config:
+                        current_config[key] = new_config[key]
+            
+            settings['TRANSFORMER_CONFIG'] = current_config
+
+        # Special handling for SCENARIOS
+        if 'SCENARIOS' in settings:
+            current_scenarios = Config.SCENARIOS.copy()
+            new_scenarios = settings['SCENARIOS']
+            
+            # Make sure TARGET_YEARS is consistent with the years in R_BEV and R_TRAFFIC
+            if 'TARGET_YEARS' in new_scenarios:
+                target_years = new_scenarios['TARGET_YEARS']
+                
+                # Ensure R_BEV and R_TRAFFIC are consistent with TARGET_YEARS
+                for key in ['R_BEV', 'R_TRAFFIC']:
+                    if key in new_scenarios:
+                        # Check if all target years exist in the dictionary
+                        missing_years = [year for year in target_years if year not in new_scenarios[key]]
+                        if missing_years:
+                            logger.warning(f"Missing years {missing_years} in {key}. Using current values.")
+                            # Keep the current values for this dictionary
+                            new_scenarios[key] = current_scenarios[key]
+            
+            # Update values while preserving structure
+            for key in current_scenarios:
+                if key in new_scenarios:
+                    current_scenarios[key] = new_scenarios[key]
+            
+            settings['SCENARIOS'] = current_scenarios
+            
         # Apply the changes to the in-memory configuration
         changes_made = False
         for section, values in settings.items():
@@ -125,16 +245,11 @@ def update_config_file(settings):
                 if isinstance(section_obj, dict):
                     for key, value in values.items():
                         if key in section_obj:
-                            old_value = section_obj[key]
-                            # Convert string representations of booleans
-                            if isinstance(old_value, bool) and isinstance(value, str):
-                                if value.lower() == 'true':
-                                    value = True
-                                elif value.lower() == 'false':
-                                    value = False
-                            section_obj[key] = value
-                            logger.info(f"Updated {section}.{key}: {old_value} -> {value}")
-                            changes_made = True
+                            # Only mark as changed if the value is actually different
+                            if section_obj[key] != value:
+                                section_obj[key] = value
+                                changes_made = True
+                                logger.info(f"Updated Config.{section}['{key}'] = {value}")
         
         # If changes were made, we need to update the file
         if changes_made:
@@ -266,14 +381,14 @@ def update_config_file(settings):
                         # Create a new list node
                         elts = []
                         for i, item in enumerate(value):
-                            node_path = path + [f"[{i}]"]
+                            node_path = path + [f"[i]"]
                             elts.append(self.create_node_for_value(item, node_path))
                         return ast.List(elts=elts, ctx=ast.Load())
                     elif isinstance(value, tuple):
                         # Create a new tuple node
                         elts = []
                         for i, item in enumerate(value):
-                            node_path = path + [f"[{i}]"]
+                            node_path = path + [f"[i]"]
                             elts.append(self.create_node_for_value(item, node_path))
                         return ast.Tuple(elts=elts, ctx=ast.Load())
                     elif value is None:
