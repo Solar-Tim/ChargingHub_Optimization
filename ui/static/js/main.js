@@ -120,3 +120,45 @@ document.addEventListener('DOMContentLoaded', function() {
     // Expose form validation function globally
     window.validateForm = validateForm;
 });
+
+// Bootstrap-style notification function for use in multiple pages
+window.showToast = function(message, type = 'info') {
+    // Create notification element
+    const notificationElement = document.createElement('div');
+    notificationElement.className = `toast align-items-center border-0 bg-${type}`;
+    notificationElement.setAttribute('role', 'alert');
+    notificationElement.setAttribute('aria-live', 'assertive');
+    notificationElement.setAttribute('aria-atomic', 'true');
+    
+    notificationElement.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body text-white">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+    
+    // Create container if it doesn't exist
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(container);
+    }
+    
+    // Add notification to container
+    container.appendChild(notificationElement);
+    
+    // Show the notification
+    const toast = new bootstrap.Toast(notificationElement, {
+        autohide: true,
+        delay: 5000
+    });
+    toast.show();
+    
+    // Remove from DOM after hiding
+    notificationElement.addEventListener('hidden.bs.toast', function () {
+        notificationElement.remove();
+    });
+};

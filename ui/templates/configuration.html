@@ -85,60 +85,12 @@
                 {% include 'config_tabs/results.html' %}
             </div>
         </div>
-        
-        <!-- Process Output -->
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 id="process-title">Process Output</h5>
-                <button id="stopProcess" class="btn btn-danger btn-sm" style="display: none;">
-                    <i class="fas fa-stop me-1"></i> Stop Process
-                </button>
-            </div>
-            <div class="card-body">
-                <pre id="process-output" class="process-output">No process running...</pre>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Initialize Socket.IO
-    const socket = io();
-    let currentProcessId = null;
-    
-    // Connect to the server
-    socket.on('connect', () => {
-        console.log('Connected to server');
-    });
-    
-    // Process events
-    socket.on('process_started', (data) => {
-        console.log('Process started:', data);
-        currentProcessId = data.id;
-        $('#process-title').text(`Process Output (${data.id})`);
-        $('#process-output').text('');
-        $('#stopProcess').show();
-    });
-    
-    socket.on('process_output', (data) => {
-        console.log('Process output:', data);
-        if (data.id === currentProcessId) {
-            const output = $('#process-output');
-            output.append(data.output + '\n');
-            output.scrollTop(output[0].scrollHeight);
-        }
-    });
-    
-    socket.on('process_completed', (data) => {
-        console.log('Process completed:', data);
-        if (data.id === currentProcessId) {
-            $('#process-output').append('\n' + (data.success ? 'Process completed successfully!' : 'Process completed with errors.') + '\n');
-            $('#stopProcess').hide();
-        }
-    });
-    
     // Document ready
     $(document).ready(function() {
         // Make the Execution tab active by default
@@ -427,7 +379,7 @@
             for (const german of ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']) {
                 config.DAY_MAPPING[german] = $('#DAY_' + german).val();
             }
-            // Replace the entire Scenarios section (around line 425-465) with this simplified version
+            
             // Scenarios
             config.SCENARIOS = {
                 R_BEV: {},
@@ -542,26 +494,6 @@
             runProcess('/api/run/grid_optimization');
         });
         
-        // Stop running process
-        $('#stopProcess').click(function() {
-            if (currentProcessId) {
-                $.ajax({
-                    url: `/api/process/${currentProcessId}/stop`,
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({}),  // Send empty JSON object
-                    success: function(response) {
-                        $('#process-output').append('\nProcess stopped by user.\n');
-                        $('#stopProcess').hide();
-                    },
-                    error: function(error) {
-                        console.error('Error stopping process:', error);
-                        alert('Error stopping process: ' + (error.responseJSON?.error || 'Unknown error'));
-                    }
-                });
-            }
-        });
-        
         // Helper function to run a process
         function runProcess(url) {
             // Save config first
@@ -576,10 +508,14 @@
                     data: JSON.stringify({ useCurrentConfig: true }),
                     success: function(response) {
                         console.log('Process started:', response);
-                        currentProcessId = response.processId;
-                        $('#process-title').text(`Process Output (${response.processId})`);
-                        $('#process-output').text('Starting process...\n');
-                        $('#stopProcess').show();
+                        // Show success message
+                        const alertHtml = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <i class="fas fa-check-circle me-1"></i> Process started successfully!
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        `;
+                        $('#configTabContent').prepend(alertHtml);
                     },
                     error: function(error) {
                         console.error('Error starting process:', error);
@@ -606,17 +542,6 @@
       crossorigin=""/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 <style>
-    .process-output {
-        background-color: #212529;
-        color: #f8f9fa;
-        padding: 15px;
-        border-radius: 5px;
-        height: 300px;
-        overflow-y: auto;
-        font-family: monospace;
-        font-size: 0.9rem;
-    }
-    
     .nav-tabs .nav-link {
         color: #495057;
     }
@@ -685,194 +610,9 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-     crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+        crossorigin=""></script>
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-
-<!-- Location map script -->
-<script>
-    $(document).ready(function() {
-        // Initialize map only when location tab is shown
-        $('#location-tab').on('shown.bs.tab', function (e) {
-            initLocationMap();
-        });
-        
-        let map = null;
-        let marker = null;
-        let bufferCircle = null;
-        
-        function initLocationMap() {
-            // Skip if map is already initialized
-            if (map !== null) {
-                // Just resize the map if it already exists
-                map.invalidateSize();
-                return;
-            }
-            
-            // Get initial coordinates from input fields
-            const initialLat = parseFloat($('#LATITUDE').val());
-            const initialLng = parseFloat($('#LONGITUDE').val());
-            const bufferRadius = parseFloat($('#BUFFER_RADIUS').val());
-            
-            // Create map centered at initial coordinates
-            map = L.map('location-map').setView([initialLat, initialLng], 13);
-            
-            // Add OpenStreetMap tile layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 19
-            }).addTo(map);
-            
-            // Create marker at initial position
-            marker = L.marker([initialLat, initialLng], {
-                draggable: true,
-                title: "Charging Hub Location"
-            }).addTo(map);
-            
-            // Create buffer circle
-            bufferCircle = L.circle([initialLat, initialLng], {
-                radius: bufferRadius,
-                color: '#3388ff',
-                fillColor: '#3388ff',
-                fillOpacity: 0.2
-            }).addTo(map);
-            
-            // Add a legend to explain the buffer
-            const legend = L.control({position: 'bottomright'});
-            legend.onAdd = function(map) {
-                const div = L.DomUtil.create('div', 'buffer-legend');
-                div.innerHTML = `
-                    <strong>Buffer Radius:</strong> <span id="buffer-radius-display">${bufferRadius}</span>m<br>
-                    <small>This area represents the search radius for infrastructure elements</small>
-                `;
-                return div;
-            };
-            legend.addTo(map);
-            
-            // Add geocoder control for searching
-            const geocoder = L.Control.geocoder({
-                defaultMarkGeocode: false,
-                placeholder: "Search for a location...",
-                errorMessage: "Nothing found. Try a different search.",
-                showResultIcons: true
-            }).on('markgeocode', function(e) {
-                const latlng = e.geocode.center;
-                updateMarkerPosition(latlng.lat, latlng.lng);
-                map.fitBounds(e.geocode.bbox);
-            }).addTo(map);
-            
-            // Event handlers for marker drag
-            marker.on('dragend', function(e) {
-                const position = marker.getLatLng();
-                updateLatLngInputs(position.lat, position.lng);
-                bufferCircle.setLatLng(position);
-            });
-            
-            // Map click event
-            map.on('click', function(e) {
-                updateMarkerPosition(e.latlng.lat, e.latlng.lng);
-            });
-            
-            // Update marker position and related elements
-            function updateMarkerPosition(lat, lng) {
-                marker.setLatLng([lat, lng]);
-                bufferCircle.setLatLng([lat, lng]);
-                updateLatLngInputs(lat, lng);
-            }
-            
-            // Update latitude and longitude input fields
-            function updateLatLngInputs(lat, lng) {
-                $('#LATITUDE').val(lat.toFixed(6));
-                $('#LONGITUDE').val(lng.toFixed(6));
-            }
-            
-            // Search box functionality (manual implementation)
-            function performSearch(query) {
-                // Show a loading indicator
-                $('#search-btn').html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
-                
-                // Use Nominatim API for geocoding
-                $.ajax({
-                    url: 'https://nominatim.openstreetmap.org/search',
-                    type: 'GET',
-                    data: {
-                        q: query,
-                        format: 'json',
-                        limit: 5
-                    },
-                    success: function(data) {
-                        // Reset button
-                        $('#search-btn').html('<i class="fas fa-search"></i> Search');
-                        
-                        if (data && data.length > 0) {
-                            // Use the first result
-                            const result = data[0];
-                            updateMarkerPosition(parseFloat(result.lat), parseFloat(result.lon));
-                            map.setView([result.lat, result.lon], 13);
-                            
-                            // Show notification
-                            window.showNotification(`Location found: ${result.display_name}`, 'success');
-                        } else {
-                            window.showNotification('No locations found for your search', 'warning');
-                        }
-                    },
-                    error: function() {
-                        // Reset button
-                        $('#search-btn').html('<i class="fas fa-search"></i> Search');
-                        window.showNotification('Error performing search. Please try again.', 'danger');
-                    }
-                });
-            }
-            
-            // Bind events for search
-            $('#search-btn').click(function() {
-                const query = $('#location-search').val().trim();
-                if (query) {
-                    performSearch(query);
-                }
-            });
-            
-            $('#location-search').keypress(function(e) {
-                if (e.which === 13) {  // Enter key
-                    const query = $(this).val().trim();
-                    if (query) {
-                        performSearch(query);
-                    }
-                    e.preventDefault();
-                }
-            });
-            
-            // Reset view button
-            $('#reset-view-btn').click(function() {
-                map.setView([initialLat, initialLng], 13);
-            });
-            
-            // Update buffer circle when radius changes
-            $('#BUFFER_RADIUS').on('input change', function() {
-                const newRadius = parseFloat($(this).val());
-                if (!isNaN(newRadius) && newRadius >= 0) {
-                    bufferCircle.setRadius(newRadius);
-                    $('#buffer-radius-display').text(newRadius);
-                }
-            });
-            
-            // Hide loading indicator
-            $('#map-loading').hide();
-            
-            // Force a resize to ensure the map renders correctly
-            setTimeout(function() {
-                map.invalidateSize();
-            }, 100);
-        }
-        
-        // Handle window resize to update map
-        $(window).on('resize', function() {
-            if (map) {
-                map.invalidateSize();
-            }
-        });
-    });
-</script>
+<script src="{{ url_for('static', filename='js/location-map.js') }}"></script>
 {% endblock %}

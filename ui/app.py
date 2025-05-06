@@ -442,33 +442,203 @@ def run_command_with_output(process_id, cmd, cwd=None, env=None):
         # Use the provided environment or copy the current environment
         process_env = env if env else os.environ.copy()
         
-        process = subprocess.Popen(
-            cmd, 
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            shell=True,
-            cwd=cwd,
-            env=process_env
-        )
-        active_processes[process_id] = process
-        
-        socketio.emit('process_started', {'id': process_id})
-        
-        for line in iter(process.stdout.readline, ''):
-            line = line.strip()
-            process_logs[process_id].append(line)
-            socketio.emit('process_output', {'id': process_id, 'output': line})
-            logger.debug(f"Process {process_id} output: {line}")
-        
-        process.wait()
-        exit_code = process.returncode
-        logger.info(f"Process {process_id} completed with exit code {exit_code}")
-        socketio.emit('process_completed', {
-            'id': process_id,
-            'exitCode': exit_code,
-            'success': exit_code == 0
-        })
+        # For Python scripts, use a different approach to ensure all output is captured
+        if isinstance(cmd, str) and (cmd.startswith(sys.executable) or 'python' in cmd.lower()):
+            # Extract the Python script path and arguments
+            parts = cmd.split()
+            python_exe = parts[0]
+            script_path = parts[1]
+            script_args = parts[2:] if len(parts) > 2 else []
+            
+            # Import the module and redirect stdout/stderr to capture all output
+            import io
+            import contextlib
+            from importlib import util
+            import traceback
+            
+            # Create a custom stdout/stderr redirector
+            class StreamCapture(io.StringIO):
+                def __init__(self):
+                    super().__init__()
+                    self.output_handlers = []
+                
+                def write(self, s):
+                    # Call the original write method
+                    result = super().write(s)
+                    
+                    # Handle the output line by line
+                    if '\n' in s:
+                        lines = s.splitlines()
+                        for line in lines:
+                            if line.strip():  # Only process non-empty lines
+                                for handler in self.output_handlers:
+                                    handler(line.strip())
+                    return result
+            
+            # Create captures for stdout and stderr
+            stdout_capture = StreamCapture()
+            stderr_capture = StreamCapture()
+            
+            # Add handlers to process the output
+            def handle_output(line):
+                process_logs[process_id].append(line)
+                socketio.emit('process_output', {'id': process_id, 'output': line})
+                logger.debug(f"Process {process_id} output: {line}")
+            
+            stdout_capture.output_handlers.append(handle_output)
+            stderr_capture.output_handlers.append(handle_output)
+            
+            # Emit process started event
+            socketio.emit('process_started', {'id': process_id})
+            
+            # Run the script with redirected output
+            exit_code = 0
+            try:
+                # Set the working directory
+                orig_cwd = os.getcwd()
+                if cwd:
+                    os.chdir(cwd)
+                
+                # Set up the environment
+                orig_env = os.environ.copy()
+                if process_env:
+                    for key, value in process_env.items():
+                        os.environ[key] = value
+                
+                # Redirect stdout and stderr
+                with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
+                    # Create a fake sys.argv
+                    orig_argv = sys.argv.copy()
+                    sys.argv = [script_path] + script_args
+                    
+                    # Load and run the module
+                    try:
+                        # Use importlib to load the script as a module
+                        spec = util.spec_from_file_location("__main__", script_path)
+                        module = util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+                    except SystemExit as e:
+                        exit_code = e.code if isinstance(e.code, int) else 1
+                    except Exception as e:
+                        exit_code = 1
+                        error_message = f"Error executing script: {str(e)}\n{traceback.format_exc()}"
+                        handle_output(error_message)
+                    
+                    # Restore sys.argv
+                    sys.argv = orig_argv
+                
+                # Restore environment
+                os.environ.clear()
+                os.environ.update(orig_env)
+                
+                # Restore working directory
+                if cwd:
+                    os.chdir(orig_cwd)
+            
+            except Exception as e:
+                exit_code = 1
+                error_message = f"Error setting up script execution: {str(e)}\n{traceback.format_exc()}"
+                handle_output(error_message)
+            
+            # Get any remaining output from the captures
+            for line in stdout_capture.getvalue().splitlines():
+                if line.strip() and line.strip() not in process_logs[process_id]:
+                    handle_output(line.strip())
+            
+            for line in stderr_capture.getvalue().splitlines():
+                if line.strip() and line.strip() not in process_logs[process_id]:
+                    handle_output(line.strip())
+            
+            # Emit process completed event
+            socketio.emit('process_completed', {
+                'id': process_id,
+                'exitCode': exit_code,
+                'success': exit_code == 0
+            })
+            
+        else:
+            # For non-Python commands, use the standard subprocess approach
+            try:
+                # Run the command with the appropriate settings based on platform
+                if isinstance(cmd, str):
+                    if sys.platform == 'win32':
+                        # On Windows, use shell=True to find the executable
+                        process = subprocess.Popen(
+                            cmd, 
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            universal_newlines=True,
+                            bufsize=1,  # Line buffered
+                            shell=True,
+                            cwd=cwd,
+                            env=process_env
+                        )
+                    else:
+                        # On Unix, split the command to avoid shell=True
+                        process = subprocess.Popen(
+                            cmd.split(), 
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            universal_newlines=True,
+                            bufsize=1,  # Line buffered
+                            shell=False,
+                            cwd=cwd,
+                            env=process_env
+                        )
+                else:
+                    # If cmd is already a list, use it directly
+                    process = subprocess.Popen(
+                        cmd, 
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        universal_newlines=True,
+                        bufsize=1,  # Line buffered
+                        shell=False,
+                        cwd=cwd,
+                        env=process_env
+                    )
+                    
+                active_processes[process_id] = process
+                
+                socketio.emit('process_started', {'id': process_id})
+                
+                # Read from stdout line by line to ensure we capture everything
+                for line in iter(process.stdout.readline, ''):
+                    if not line:
+                        break
+                    
+                    line = line.strip()
+                    if line:
+                        process_logs[process_id].append(line)
+                        socketio.emit('process_output', {'id': process_id, 'output': line})
+                        logger.debug(f"Process {process_id} stdout: {line}")
+                
+                # Process finished, get exit code
+                process.wait()
+                exit_code = process.returncode
+                logger.info(f"Process {process_id} completed with exit code {exit_code}")
+                
+                # Emit process completed event
+                socketio.emit('process_completed', {
+                    'id': process_id,
+                    'exitCode': exit_code,
+                    'success': exit_code == 0
+                })
+                
+            except Exception as e:
+                logger.error(f"Error running subprocess: {e}")
+                traceback_str = traceback.format_exc()
+                logger.error(f"Traceback: {traceback_str}")
+                
+                error_message = f"Error executing process: {str(e)}"
+                process_logs[process_id].append(error_message)
+                socketio.emit('process_output', {'id': process_id, 'output': error_message})
+                
+                socketio.emit('process_completed', {
+                    'id': process_id,
+                    'exitCode': 1,
+                    'success': False
+                })
         
     thread = threading.Thread(target=run_and_stream)
     thread.daemon = True
