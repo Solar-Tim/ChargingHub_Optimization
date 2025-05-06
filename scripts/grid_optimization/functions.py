@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import datetime
 import hashlib
 import os
-# Import all the needed variables from config
-from config_grid import (
+# Import all the needed variables from config using absolute import path
+from grid_optimization.config_grid import (
     aluminium_kabel, 
     mv_capacity_fee, 
     hv_capacity_fee, 

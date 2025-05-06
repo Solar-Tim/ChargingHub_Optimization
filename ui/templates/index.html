@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-5">
+        <div class="col-lg-8 offset-lg-2 text-center">
+            <h1 class="display-4 mt-4">ChargingHub Optimization</h1>
+            <p class="lead">A tool for optimizing electric vehicle charging hub infrastructure for trucks</p>
+            <hr class="my-4">
+            <p>This tool helps in planning and optimizing charging infrastructure for electric trucks, considering traffic patterns, grid connections, and cost optimization.</p>
+        </div>
+    </div>
+
+    <!-- Main Sections Overview -->
+    <div class="row mb-5">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">Project Overview</h2>
+                </div>
+                <div class="card-body">
+                    <p>This application provides a comprehensive solution for optimizing charging hubs for electric trucks. The optimization process consists of three main phases:</p>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h3 class="h5 mb-0">Phase 1: Traffic Calculation</h3>
+                                </div>
+                                <div class="card-body">
+                                    <p>Analyzes traffic patterns to determine charging demand at potential hub locations based on:</p>
+                                    <ul>
+                                        <li>Truck traffic volumes and routes</li>
+                                        <li>Required breaks for drivers</li>
+                                        <li>BEV adoption rates across forecast years</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h3 class="h5 mb-0">Phase 2: Charging Hub Setup</h3>
+                                </div>
+                                <div class="card-body">
+                                    <p>Configures the optimal charging hub based on:</p>
+                                    <ul>
+                                        <li>Matching trucks to appropriate charging types</li>
+                                        <li>Determining optimal number of chargers</li>
+                                        <li>Optimizing charging demand with different strategies</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h3 class="h5 mb-0">Phase 3: Grid Optimization</h3>
+                                </div>
+                                <div class="card-body">
+                                    <p>Optimizes grid connections and infrastructure for cost-efficiency:</p>
+                                    <ul>
+                                        <li>Calculating optimal grid connection sizing</li>
+                                        <li>Determining cable requirements and distances</li>
+                                        <li>Evaluating battery storage options</li>
+                                        <li>Finding the minimum cost solution</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Guidance -->
+    <div class="row mb-5">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">Navigation Guide</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h3 class="h5 mb-0">Dashboard</h3>
+                                </div>
+                                <div class="card-body">
+                                    <p>The Dashboard provides control over the optimization process:</p>
+                                    <ul>
+                                        <li>Run the complete optimization pipeline</li>
+                                        <li>View real-time process status and progress</li>
+                                        <li>Run individual optimization modules separately</li>
+                                        <li>Monitor the execution of each phase</li>
+                                    </ul>
+                                    <a href="/dashboard" class="btn btn-primary mt-3">Go to Dashboard</a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h3 class="h5 mb-0">Configuration</h3>
+                                </div>
+                                <div class="card-body">
+                                    <p>The Configuration page allows you to modify parameters:</p>
+                                    <ul>
+                                        <li>Charging station specifications and costs</li>
+                                        <li>Grid connection parameters</li>
+                                        <li>Battery storage options</li>
+                                        <li>Execution flags for controlling the optimization flow</li>
+                                    </ul>
+                                    <a href="/configuration" class="btn btn-primary mt-3">Go to Configuration</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h3 class="h5 mb-0">Map</h3>
+                                </div>
+                                <div class="card-body">
+                                    <p>The Map page visualizes geographical data:</p>
+                                    <ul>
+                                        <li>View optimized charging hub locations</li>
+                                        <li>See power line routes and substations</li>
+                                        <li>Access different map views (combined, power lines, substations)</li>
+                                        <li>Review optimization results in spatial context</li>
+                                    </ul>
+                                    <a href="/map" class="btn btn-primary mt-3">Go to Map</a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h3 class="h5 mb-0">Results & Logs</h3>
+                                </div>
+                                <div class="card-body">
+                                    <p>Access detailed results and process logs:</p>
+                                    <ul>
+                                        <li>View optimization results in JSON format</li>
+                                        <li>Examine log files for detailed process information</li>
+                                        <li>Track optimization history across different runs</li>
+                                        <li>Download results for further analysis</li>
+                                    </ul>
+                                    <div class="d-flex mt-3">
+                                        <a href="/results" class="btn btn-primary me-2">View Results</a>
+                                        <a href="/logs" class="btn btn-primary">View Logs</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Key Configuration Options -->
+    <div class="row mb-5">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">Key Configuration Options</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <h3 class="h5">Charging Strategies</h3>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Strategy</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>T_min</strong></td>
+                                            <td>Minimizes charging time; prioritizes fastest possible charging without load management</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Konstant</strong></td>
+                                            <td>Uses constant charging power to minimize grid connection load; provides charging load management</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Hub</strong></td>
+                                            <td>Minimizes peak loads across the entire hub; provides global load optimization at hub level</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <h3 class="h5">Charger Types</h3>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Power</th>
+                                            <th>Use Case</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>NCS</strong></td>
+                                            <td>100 kW</td>
+                                            <td>Night charging (long breaks)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>HPC</strong></td>
+                                            <td>400 kW</td>
+                                            <td>High-power charging (medium breaks)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>MCS</strong></td>
+                                            <td>1000 kW</td>
+                                            <td>Megawatt charging (short breaks)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h3 class="h5">Grid Connection Options</h3>
+                            <ul>
+                                <li><strong>Transformers:</strong> Different capacities with varying costs</li>
+                                <li><strong>Cable Types:</strong> Aluminum and copper with different cross-sections</li>
+                                <li><strong>Battery Storage:</strong> Optional battery integration to reduce peak load</li>
+                                <li><strong>Distance Calculation:</strong> Optimized routing to nearest grid connection points</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h3 class="h5">Execution Options</h3>
+                            <ul>
+                                <li><strong>Run Full Pipeline:</strong> Execute all three phases in sequence</li>
+                                <li><strong>Individual Modules:</strong> Run traffic calculation, charging hub setup, or grid optimization separately</li>
+                                <li><strong>Manual Charger Count:</strong> Override automatic charger count optimization</li>
+                                <li><strong>Battery Integration:</strong> Include or exclude battery storage options</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Start -->
+    <div class="row mb-5">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h2 class="h4 mb-0">Quick Start Guide</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <ol class="mb-4">
+                                <li class="mb-2">Go to the <strong>Configuration</strong> page to set up your parameters</li>
+                                <li class="mb-2">Navigate to the <strong>Dashboard</strong> to run the optimization</li>
+                                <li class="mb-2">Monitor the progress in real-time on the Dashboard</li>
+                                <li class="mb-2">View the results on the <strong>Results</strong> page and <strong>Map</strong> page</li>
+                            </ol>
+                            <div class="text-center">
+                                <a href="/dashboard" class="btn btn-success btn-lg">Start Optimization Now</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-header {
+        font-weight: 500;
+    }
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    .lead {
+        font-size: 1.4rem;
+    }
+    .display-4 {
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

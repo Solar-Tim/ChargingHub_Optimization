@@ -1,0 +1,64 @@
+<!-- Battery Tab -->
+<div class="tab-pane fade" id="battery" role="tabpanel" aria-labelledby="battery-tab">
+    <div class="card">
+        <div class="card-header">
+            <h4>Battery Configuration</h4>
+        </div>
+        <div class="card-body">
+            <p class="card-text">Configure parameters for battery storage.</p>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="COST_PER_KWH" class="form-label">Cost per kWh (€)</label>
+                        <input type="number" class="form-control" id="COST_PER_KWH" value="{{ battery_config.COST_PER_KWH }}" min="0" step="1">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="COST_PER_KW" class="form-label">Cost per kW (€)</label>
+                        <input type="number" class="form-control" id="COST_PER_KW" value="{{ battery_config.COST_PER_KW }}" min="0" step="1">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="MAX_CAPACITY" class="form-label">Maximum Capacity (kWh)</label>
+                        <input type="number" class="form-control" id="MAX_CAPACITY" value="{{ battery_config.MAX_CAPACITY }}" min="0" step="100">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="MAX_POWER" class="form-label">Maximum Power (kW)</label>
+                        <input type="number" class="form-control" id="MAX_POWER" value="{{ battery_config.MAX_POWER }}" min="0" step="100">
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="EFFICIENCY" class="form-label">Round-trip Efficiency</label>
+                        <input type="number" class="form-control" id="EFFICIENCY" value="{{ battery_config.EFFICIENCY }}" min="0" max="1" step="0.01">
+                        <div class="form-text">Value between 0 and 1 (0.95 = 95%)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="MIN_SOC" class="form-label">Minimum State of Charge</label>
+                        <input type="number" class="form-control" id="MIN_SOC" value="{{ battery_config.MIN_SOC }}" min="0" max="1" step="0.01">
+                        <div class="form-text">Value between 0 and 1</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="MAX_SOC" class="form-label">Maximum State of Charge</label>
+                        <input type="number" class="form-control" id="MAX_SOC" value="{{ battery_config.MAX_SOC }}" min="0" max="1" step="0.01">
+                        <div class="form-text">Value between 0 and 1</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle me-2"></i>
+                        Battery storage is only used when the "Include Battery" option is enabled in the Execution tab.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

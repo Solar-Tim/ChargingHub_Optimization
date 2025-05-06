@@ -1,0 +1,25 @@
+/* Results Page Styles */
+.json-viewer {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    color: #333;
+    max-height: 600px;
+    overflow-y: auto;
+}
+.json-key { color: #2185d0; }
+.json-string { color: #21ba45; }
+.json-boolean { color: #db2828; }
+.json-number { color: #6435c9; }
+.card { box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+#result-list { max-height: 500px; overflow-y: auto; }
+#compare-select { height: 180px; }
+.spinner-border { width: 3rem; height: 3rem; }
+/* Fix for result item layout */
+.result-info { max-width: 70%; overflow: hidden; }
+.result-date { white-space: nowrap; flex-shrink: 0; margin-left: 8px; align-self: center; }
+.text-truncate { max-width: 100%; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

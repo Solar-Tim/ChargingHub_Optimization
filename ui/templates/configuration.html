@@ -1,0 +1,618 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Configuration</h1>
+            <div>
+                <button id="saveConfig" class="btn btn-primary me-2">
+                    <i class="fas fa-save me-1"></i> Save Configuration
+                </button>
+                <div class="btn-group">
+                    <button id="runOptimization" class="btn btn-success">
+                        <i class="fas fa-play me-1"></i> Run All
+                    </button>
+                    <button class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" id="runTraffic">Run Traffic Calculation</a></li>
+                        <li><a class="dropdown-item" href="#" id="runChargingHub">Run Charging Hub Setup</a></li>
+                        <li><a class="dropdown-item" href="#" id="runGridOpt">Run Grid Optimization</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabbed Configuration Interface -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="configTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="execution-tab" data-bs-toggle="tab" data-bs-target="#execution" type="button" role="tab" aria-controls="execution" aria-selected="true">
+                            <i class="fas fa-cogs me-1"></i> Execution
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="charging-tab" data-bs-toggle="tab" data-bs-target="#charging" type="button" role="tab" aria-controls="charging" aria-selected="false">
+                            <i class="fas fa-charging-station me-1"></i> Charging
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="location-tab" data-bs-toggle="tab" data-bs-target="#location" type="button" role="tab" aria-controls="location" aria-selected="false">
+                            <i class="fas fa-map-marker-alt me-1"></i> Location
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="battery-tab" data-bs-toggle="tab" data-bs-target="#battery" type="button" role="tab" aria-controls="battery" aria-selected="false">
+                            <i class="fas fa-battery-full me-1"></i> Battery
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="grid-tab" data-bs-toggle="tab" data-bs-target="#grid" type="button" role="tab" aria-controls="grid" aria-selected="false">
+                            <i class="fas fa-plug me-1"></i> Grid
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="cables-tab" data-bs-toggle="tab" data-bs-target="#cables" type="button" role="tab" aria-controls="cables" aria-selected="false">
+                            <i class="fas fa-network-wired me-1"></i> Cables
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="traffic-tab" data-bs-toggle="tab" data-bs-target="#traffic" type="button" role="tab" aria-controls="traffic" aria-selected="false">
+                            <i class="fas fa-truck me-1"></i> Traffic
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="results-tab" data-bs-toggle="tab" data-bs-target="#results" type="button" role="tab" aria-controls="results" aria-selected="false">
+                            <i class="fas fa-file-alt me-1"></i> Results
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Tab content -->
+            <div class="tab-content" id="configTabContent">
+                <!-- Include all tab templates here -->
+                {% include 'config_tabs/execution.html' %}
+                {% include 'config_tabs/charging.html' %}
+                {% include 'config_tabs/location.html' %}
+                {% include 'config_tabs/battery.html' %}
+                {% include 'config_tabs/grid.html' %}
+                {% include 'config_tabs/cables.html' %}
+                {% include 'config_tabs/traffic.html' %}
+                {% include 'config_tabs/results.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Document ready
+    $(document).ready(function() {
+        // Make the Execution tab active by default
+        $('#execution-tab').tab('show');
+        
+        // Toggle custom ID input based on checkbox
+        $('#USE_CUSTOM_ID').change(function() {
+            if($(this).is(':checked')) {
+                $('#CUSTOM_ID').prop('disabled', false);
+            } else {
+                $('#CUSTOM_ID').prop('disabled', true);
+            }
+        });
+        
+        // Dynamic table row handling
+        function addTableRow(tableId, rowTemplate) {
+            const table = document.getElementById(tableId);
+            const newRow = table.insertRow();
+            newRow.innerHTML = rowTemplate;
+        }
+        
+        function removeTableRow(tableId) {
+            const table = document.getElementById(tableId);
+            if (table.rows.length > 1) {
+                table.deleteRow(table.rows.length - 1);
+            }
+        }
+        
+        // Add event listeners for dynamic tables
+        $('#addTransformerRow').click(() => {
+            const rowCount = $('#transformerTable tr').length;
+            const template = `
+                <td><input type="number" class="form-control transformer-capacity" id="TRANSFORMER_CAPACITY_${rowCount}" value="0" min="0"></td>
+                <td><input type="number" class="form-control transformer-cost" id="TRANSFORMER_COST_${rowCount}" value="0" min="0"></td>
+            `;
+            addTableRow('transformerTable', template);
+        });
+        
+        $('#removeTransformerRow').click(() => {
+            removeTableRow('transformerTable');
+        });
+        
+        $('#addAluminiumRow').click(() => {
+            const rowCount = $('#aluminiumTable tr').length;
+            const template = `
+                <td><input type="number" class="form-control" id="AL_CROSS_SECTION_${rowCount}" value="0" min="0" step="0.1"></td>
+                <td><input type="number" class="form-control" id="AL_LOAD_CAPACITY_${rowCount}" value="0" min="0"></td>
+                <td><input type="number" class="form-control" id="AL_COST_${rowCount}" value="0" min="0" step="0.01"></td>
+            `;
+            addTableRow('aluminiumTable', template);
+        });
+        
+        $('#removeAluminiumRow').click(() => {
+            removeTableRow('aluminiumTable');
+        });
+        
+        $('#addCopperRow').click(() => {
+            const rowCount = $('#copperTable tr').length;
+            const template = `
+                <td><input type="number" class="form-control" id="CU_CROSS_SECTION_${rowCount}" value="0" min="0" step="0.1"></td>
+                <td><input type="number" class="form-control" id="CU_COST_${rowCount}" value="0" min="0" step="0.01"></td>
+            `;
+            addTableRow('copperTable', template);
+        });
+        
+        $('#removeCopperRow').click(() => {
+            removeTableRow('copperTable');
+        });
+        
+        // Save configuration
+        $('#saveConfig').click(function() {
+            console.log("Save button clicked!");
+            
+            // Show loading spinner
+            $(this).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Saving...');
+            
+            // Collect data from all tabs
+            const config = {
+                EXECUTION_FLAGS: {},
+                CHARGING_CONFIG: {},
+                DEFAULT_LOCATION: {},
+                SPATIAL: {},
+                MANUAL_DISTANCES: {},
+                BATTERY_CONFIG: {},
+                RESULT_NAMING: {},
+                FORECAST_YEAR: '',
+                SCENARIOS: {
+                    TARGET_YEARS: [],
+                    R_BEV: {},
+                    R_TRAFFIC: {}
+                },
+                BREAKS: {},
+                TIME: {},
+                CSV: {},
+                PATHS: {},
+                TRAFFIC_PATHS: {},
+                GRID_CAPACITIES: {},
+                CAPACITY_FEES: {},
+                SUBSTATION_CONFIG: {},
+                TRANSFORMER_CONFIG: {},
+                CABLE_CONFIG: {},
+                CHARGING_TYPES: {},
+                MANUAL_CHARGER_COUNT: {},
+                DAY_MAPPING: {}
+            };
+            
+            // Execution flags
+            $('#execution input[type="checkbox"]').each(function() {
+                config.EXECUTION_FLAGS[this.id] = this.checked;
+            });
+            
+            // Charging config
+            config.CHARGING_CONFIG = {
+                STRATEGY: [],
+                ladequote: parseFloat($('#ladequote').val()),
+                power: $('#power').val(),
+                pause: $('#pause').val()
+            };
+
+            // Collect strategies from toggle switches
+            if ($('#strategy_T_min').is(':checked')) config.CHARGING_CONFIG.STRATEGY.push('T_min');
+            if ($('#strategy_Konstant').is(':checked')) config.CHARGING_CONFIG.STRATEGY.push('Konstant');
+            if ($('#strategy_Hub').is(':checked')) config.CHARGING_CONFIG.STRATEGY.push('Hub');
+            
+            // Charging Types
+            config.CHARGING_TYPES = {
+                NCS: {
+                    power_kw: parseFloat($('#NCS_POWER').val()),
+                    cost: parseFloat($('#NCS_COST').val())
+                },
+                HPC: {
+                    power_kw: parseFloat($('#HPC_POWER').val()),
+                    cost: parseFloat($('#HPC_COST').val())
+                },
+                MCS: {
+                    power_kw: parseFloat($('#MCS_POWER').val()),
+                    cost: parseFloat($('#MCS_COST').val())
+                }
+            };
+            
+            // Manual Charger Count
+            config.MANUAL_CHARGER_COUNT = {
+                NCS: parseInt($('#MANUAL_NCS').val()),
+                HPC: parseInt($('#MANUAL_HPC').val()),
+                MCS: parseInt($('#MANUAL_MCS').val())
+            };
+            
+            // Location
+            config.DEFAULT_LOCATION = {
+                LONGITUDE: parseFloat($('#LONGITUDE').val()),
+                LATITUDE: parseFloat($('#LATITUDE').val())
+            };
+            
+            // Spatial Analysis
+            config.SPATIAL = {
+                DEFAULT_CRS: "EPSG:4326",  // Default value since field was removed
+                TARGET_CRS: "EPSG:3857",   // Default value since field was removed
+                BUFFER_RADIUS: parseFloat($('#BUFFER_RADIUS').val())
+            };
+            
+            // Manual Distances
+            config.MANUAL_DISTANCES = {
+                distribution_distance: parseFloat($('#MANUAL_DISTRIBUTION_DISTANCE').val()),
+                transmission_distance: parseFloat($('#MANUAL_TRANSMISSION_DISTANCE').val()),
+                powerline_distance: parseFloat($('#MANUAL_POWERLINE_DISTANCE').val())
+            };
+            
+            // Battery config
+            config.BATTERY_CONFIG = {
+                COST_PER_KWH: parseFloat($('#COST_PER_KWH').val()),
+                COST_PER_KW: parseFloat($('#COST_PER_KW').val()),
+                MAX_CAPACITY: parseFloat($('#MAX_CAPACITY').val()),
+                MAX_POWER: parseFloat($('#MAX_POWER').val()),
+                EFFICIENCY: parseFloat($('#EFFICIENCY').val()),
+                MIN_SOC: parseFloat($('#MIN_SOC').val()),
+                MAX_SOC: parseFloat($('#MAX_SOC').val())
+            };
+            
+            // Result naming
+            config.RESULT_NAMING = {
+                USE_CUSTOM_ID: $('#USE_CUSTOM_ID').is(':checked'),
+                CUSTOM_ID: $('#CUSTOM_ID').val()
+            };
+            
+            // Forecast Year
+            config.FORECAST_YEAR = $('#FORECAST_YEAR').val();
+            
+            // Grid capacities
+            config.GRID_CAPACITIES = {
+                EXISTING_MV: parseFloat($('#EXISTING_MV').val()),
+                DISTRIBUTION: parseFloat($('#DISTRIBUTION').val()),
+                TRANSMISSION: parseFloat($('#TRANSMISSION').val()),
+                HV_LINE: parseFloat($('#HV_LINE').val())
+            };
+            
+            // Capacity fees
+            config.CAPACITY_FEES = {
+                HV: parseFloat($('#HV_FEE').val()),
+                MV: parseFloat($('#MV_FEE').val())
+            };
+            
+            // Substation config
+            config.SUBSTATION_CONFIG = {
+                DISTRIBUTION: {
+                    EXISTING_CAPACITY: parseFloat($('#DIST_EXISTING_CAPACITY').val()),
+                    MAX_EXPANSION: parseFloat($('#DIST_MAX_EXPANSION').val()),
+                    EXPANSION_FIXED_COST: parseFloat($('#DIST_EXPANSION_FIXED_COST').val())
+                },
+                TRANSMISSION: {
+                    EXISTING_CAPACITY: parseFloat($('#TRANS_EXISTING_CAPACITY').val()),
+                    MAX_EXPANSION: parseFloat($('#TRANS_MAX_EXPANSION').val()),
+                    EXPANSION_FIXED_COST: parseFloat($('#TRANS_EXPANSION_FIXED_COST').val())
+                },
+                HV_SUBSTATION_COST: parseFloat($('#HV_SUBSTATION_COST').val())
+            };
+            
+            // Transformer config
+            config.TRANSFORMER_CONFIG = {
+                CAPACITIES: [],
+                COSTS: []
+            };
+            $('.transformer-capacity').each(function() {
+                config.TRANSFORMER_CONFIG.CAPACITIES.push(parseFloat($(this).val()));
+            });
+            $('.transformer-cost').each(function() {
+                config.TRANSFORMER_CONFIG.COSTS.push(parseFloat($(this).val()));
+            });
+            
+            // Cable config
+            config.CABLE_CONFIG = {
+                LV: {
+                    VOLTAGE: parseFloat($('#LV_VOLTAGE').val()),
+                    VOLTAGE_DROP_PERCENT: parseFloat($('#LV_VOLTAGE_DROP_PERCENT').val()),
+                    POWER_FACTOR: parseFloat($('#LV_POWER_FACTOR').val()),
+                    CONDUCTIVITY: parseFloat($('#LV_CONDUCTIVITY').val()),
+                    NUM_DC_CABLES: parseInt($('#LV_NUM_DC_CABLES').val())
+                },
+                MV: {
+                    VOLTAGE: parseFloat($('#MV_VOLTAGE').val()),
+                    VOLTAGE_DROP_PERCENT: parseFloat($('#MV_VOLTAGE_DROP_PERCENT').val()),
+                    POWER_FACTOR: parseFloat($('#MV_POWER_FACTOR').val()),
+                    CONDUCTIVITY: parseFloat($('#MV_CONDUCTIVITY').val()),
+                    NUM_CABLES: parseInt($('#MV_NUM_CABLES').val())
+                },
+                CONSTRUCTION: {
+                    DIGGING_COST: parseFloat($('#DIGGING_COST').val()),
+                    HARDWARE_CONNECTION_COST: parseFloat($('#HARDWARE_CONNECTION_COST').val())
+                }
+            };
+            
+            // Aluminium cables
+            config.aluminium_kabel = {
+                Nennquerschnitt: [],
+                Belastbarkeit: [],
+                Kosten: []
+            };
+            for (let i = 0; $('#AL_CROSS_SECTION_' + i).length; i++) {
+                config.aluminium_kabel.Nennquerschnitt.push(parseFloat($('#AL_CROSS_SECTION_' + i).val()));
+                config.aluminium_kabel.Belastbarkeit.push(parseFloat($('#AL_LOAD_CAPACITY_' + i).val()));
+                config.aluminium_kabel.Kosten.push(parseFloat($('#AL_COST_' + i).val()));
+            }
+            
+            // Copper cables
+            config.kupfer_kabel = {
+                Nennquerschnitt: [],
+                Kosten: []
+            };
+            for (let i = 0; $('#CU_CROSS_SECTION_' + i).length; i++) {
+                config.kupfer_kabel.Nennquerschnitt.push(parseFloat($('#CU_CROSS_SECTION_' + i).val()));
+                config.kupfer_kabel.Kosten.push(parseFloat($('#CU_COST_' + i).val()));
+            }
+            
+            // Breaks config
+            config.BREAKS = {
+                DISTANCE_THRESHOLD: parseFloat($('#DISTANCE_THRESHOLD').val()),
+                MAX_DISTANCE_SINGLEDRIVER: parseFloat($('#MAX_DISTANCE_SINGLEDRIVER').val()),
+                RANDOM_RANGE: [
+                    parseFloat($('#RANDOM_RANGE_MIN').val()),
+                    parseFloat($('#RANDOM_RANGE_MAX').val())
+                ],
+                TWO_DRIVER_SHORT_BREAKS_BEFORE_LONG: parseInt($('#TWO_DRIVER_SHORT_BREAKS').val())
+            };
+            
+            // Day mapping
+            config.DAY_MAPPING = {};
+            for (const german of ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']) {
+                config.DAY_MAPPING[german] = $('#DAY_' + german).val();
+            }
+            
+            // Scenarios
+            config.SCENARIOS = {
+                R_BEV: {},
+                R_TRAFFIC: {},
+                TARGET_YEARS: ['2030', '2035', '2040', '2045']
+            };
+
+            // Get values from form inputs
+            ['2030', '2035', '2040', '2045'].forEach(year => {
+                const bevValue = parseFloat($(`#R_BEV_${year}`).val());
+                const trafficValue = parseFloat($(`#R_TRAFFIC_${year}`).val());
+                
+                if (!isNaN(bevValue)) {
+                    config.SCENARIOS.R_BEV[year] = bevValue;
+                }
+                
+                if (!isNaN(trafficValue)) {
+                    config.SCENARIOS.R_TRAFFIC[year] = trafficValue;
+                }
+            });
+            
+            // Time constants
+            config.TIME = {
+                WEEKS_PER_YEAR: parseInt($('#WEEKS_PER_YEAR').val()),
+                RESOLUTION_MINUTES: parseInt($('#RESOLUTION_MINUTES').val()),
+                SIMULATION_HOURS: parseInt($('#SIMULATION_HOURS').val()),
+                WEEK_MINUTES: parseInt($('#WEEK_MINUTES').val()),
+                TIMESTEPS_PER_DAY: parseInt($('#TIMESTEPS_PER_DAY').val()),
+                TIMESTEPS_PER_WEEK: parseInt($('#TIMESTEPS_PER_WEEK').val())
+            };
+            
+            // CSV settings
+            config.CSV = {
+                DEFAULT_SEPARATOR: $('#DEFAULT_SEPARATOR').val(),
+                DEFAULT_DECIMAL: $('#DEFAULT_DECIMAL').val()
+            };
+            
+            // Directory paths
+            config.PATHS = {
+                DATA: $('#DATA_PATH').val(),
+                RESULTS: $('#RESULTS_PATH').val(),
+                LOGS: $('#LOGS_PATH').val()
+            };
+            
+            // Traffic data paths
+            config.TRAFFIC_PATHS = {
+                INPUT_DIR: $('#INPUT_DIR').val(),
+                OUTPUT_DIR: $('#OUTPUT_DIR').val(),
+                FINAL_OUTPUT_DIR: $('#FINAL_OUTPUT_DIR').val()
+            };
+            
+            console.log("Sending configuration data:", config);
+            
+            // Send to server
+            $.ajax({
+                url: '/api/config/save',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(config),
+                success: function(response) {
+                    console.log("Configuration saved successfully:", response);
+                    // Reset button text
+                    $('#saveConfig').html('<i class="fas fa-save me-1"></i> Save Configuration');
+                    
+                    // Show success message
+                    const alertHtml = `
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-1"></i> Configuration saved successfully!
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    `;
+                    $('#configTabContent').prepend(alertHtml);
+                    
+                    // Auto-dismiss alert after 5 seconds
+                    setTimeout(() => {
+                        $('.alert').alert('close');
+                    }, 5000);
+                },
+                error: function(error) {
+                    console.error("Error saving configuration:", error);
+                    // Reset button text
+                    $('#saveConfig').html('<i class="fas fa-save me-1"></i> Save Configuration');
+                    
+                    console.error('Error saving configuration:', error);
+                    
+                    // Show error message
+                    const alertHtml = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-1"></i> Error saving configuration: ${error.responseJSON?.error || 'Unknown error'}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    `;
+                    $('#configTabContent').prepend(alertHtml);
+                }
+            });
+        });
+        
+        // Run optimization processes
+        $('#runOptimization').click(function() {
+            runProcess('/api/run/main');
+        });
+        
+        $('#runTraffic').click(function() {
+            runProcess('/api/run/traffic_calculation');
+        });
+        
+        $('#runChargingHub').click(function() {
+            runProcess('/api/run/charging_hub_setup');
+        });
+        
+        $('#runGridOpt').click(function() {
+            runProcess('/api/run/grid_optimization');
+        });
+        
+        // Helper function to run a process
+        function runProcess(url) {
+            // Save config first
+            $('#saveConfig').click();
+            
+            // Wait a bit to ensure config is saved
+            setTimeout(() => {
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ useCurrentConfig: true }),
+                    success: function(response) {
+                        console.log('Process started:', response);
+                        // Show success message
+                        const alertHtml = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <i class="fas fa-check-circle me-1"></i> Process started successfully!
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        `;
+                        $('#configTabContent').prepend(alertHtml);
+                    },
+                    error: function(error) {
+                        console.error('Error starting process:', error);
+                        
+                        // Show error message
+                        const alertHtml = `
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="fas fa-exclamation-circle me-1"></i> Error starting process: ${error.responseJSON?.error || 'Unknown error'}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        `;
+                        $('#configTabContent').prepend(alertHtml);
+                    }
+                });
+            }, 1000);
+        }
+    });
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+      crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+<style>
+    .nav-tabs .nav-link {
+        color: #495057;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #007bff;
+        font-weight: 500;
+    }
+    
+    .tab-pane {
+        padding: 1rem 0;
+    }
+    
+    .card-header h4 {
+        margin-bottom: 0;
+    }
+    
+    .form-check-input {
+        cursor: pointer;
+    }
+    
+    .form-text {
+        font-size: 0.8rem;
+    }
+    
+    .table th {
+        background-color: #f8f9fa;
+    }
+    
+    /* Leaflet Map Styling */
+    .leaflet-container {
+        z-index: 1;
+    }
+    
+    .search-results {
+        max-height: 200px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        position: absolute;
+        width: 100%;
+        z-index: 1000;
+        display: none;
+    }
+    
+    .search-results .result-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .search-results .result-item:hover {
+        background-color: #f0f0f0;
+    }
+    
+    .buffer-legend {
+        padding: 6px 8px;
+        background: white;
+        background: rgba(255,255,255,0.8);
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        border-radius: 5px;
+        line-height: 1.5;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+        crossorigin=""></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<script src="{{ url_for('static', filename='js/location-map.js') }}"></script>
+{% endblock %}

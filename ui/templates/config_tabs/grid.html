@@ -1,0 +1,158 @@
+<!-- Grid Tab -->
+<div class="tab-pane fade" id="grid" role="tabpanel" aria-labelledby="grid-tab">
+    <div class="card">
+        <div class="card-header">
+            <h4>Grid Configuration</h4>
+        </div>
+        <div class="card-body">
+            <p class="card-text">Configure grid capacity parameters and capacity fees.</p>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5>Grid Capacity Limits</h5>
+                    
+                    <div class="mb-3">
+                        <label for="EXISTING_MV" class="form-label">Existing MV Line (kW)</label>
+                        <input type="number" class="form-control" id="EXISTING_MV" value="{{ grid_capacities.EXISTING_MV }}" min="0" step="100">
+                        <div class="form-text">Maximum capacity of existing medium voltage line</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="DISTRIBUTION" class="form-label">Distribution Substation (kW)</label>
+                        <input type="number" class="form-control" id="DISTRIBUTION" value="{{ grid_capacities.DISTRIBUTION }}" min="0" step="100">
+                        <div class="form-text">Maximum capacity for a distribution substation</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="TRANSMISSION" class="form-label">Transmission Substation (kW)</label>
+                        <input type="number" class="form-control" id="TRANSMISSION" value="{{ grid_capacities.TRANSMISSION }}" min="0" step="100">
+                        <div class="form-text">Maximum capacity for a transmission substation</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="HV_LINE" class="form-label">HV Line (kW)</label>
+                        <input type="number" class="form-control" id="HV_LINE" value="{{ grid_capacities.HV_LINE }}" min="0" step="1000">
+                        <div class="form-text">Maximum capacity for a high voltage line</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5>Capacity Fees</h5>
+                    
+                    <div class="mb-3">
+                        <label for="HV_FEE" class="form-label">HV Capacity Fee (€/kW)</label>
+                        <input type="number" class="form-control" id="HV_FEE" value="{{ capacity_fees.HV }}" min="0" step="0.01">
+                        <div class="form-text">Connection fee per kW for high voltage</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="MV_FEE" class="form-label">MV Capacity Fee (€/kW)</label>
+                        <input type="number" class="form-control" id="MV_FEE" value="{{ capacity_fees.MV }}" min="0" step="0.01">
+                        <div class="form-text">Connection fee per kW for medium voltage</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h5>Substation Configuration</h5>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Distribution Substation</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="DIST_EXISTING_CAPACITY" class="form-label">Existing Capacity (kW)</label>
+                                <input type="number" class="form-control" id="DIST_EXISTING_CAPACITY" value="{{ substation_config.DISTRIBUTION.EXISTING_CAPACITY }}" min="0" step="100">
+                            </div>
+                            <div class="mb-3">
+                                <label for="DIST_MAX_EXPANSION" class="form-label">Max Expansion (kW)</label>
+                                <input type="number" class="form-control" id="DIST_MAX_EXPANSION" value="{{ substation_config.DISTRIBUTION.MAX_EXPANSION }}" min="0" step="100">
+                            </div>
+                            <div class="mb-3">
+                                <label for="DIST_EXPANSION_FIXED_COST" class="form-label">Expansion Fixed Cost (€)</label>
+                                <input type="number" class="form-control" id="DIST_EXPANSION_FIXED_COST" value="{{ substation_config.DISTRIBUTION.EXPANSION_FIXED_COST }}" min="0" step="1000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Transmission Substation</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="TRANS_EXISTING_CAPACITY" class="form-label">Existing Capacity (kW)</label>
+                                <input type="number" class="form-control" id="TRANS_EXISTING_CAPACITY" value="{{ substation_config.TRANSMISSION.EXISTING_CAPACITY }}" min="0" step="100">
+                            </div>
+                            <div class="mb-3">
+                                <label for="TRANS_MAX_EXPANSION" class="form-label">Max Expansion (kW)</label>
+                                <input type="number" class="form-control" id="TRANS_MAX_EXPANSION" value="{{ substation_config.TRANSMISSION.MAX_EXPANSION }}" min="0" step="100">
+                            </div>
+                            <div class="mb-3">
+                                <label for="TRANS_EXPANSION_FIXED_COST" class="form-label">Expansion Fixed Cost (€)</label>
+                                <input type="number" class="form-control" id="TRANS_EXPANSION_FIXED_COST" value="{{ substation_config.TRANSMISSION.EXPANSION_FIXED_COST }}" min="0" step="1000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="HV_SUBSTATION_COST" class="form-label">HV Substation Cost (€)</label>
+                        <input type="number" class="form-control" id="HV_SUBSTATION_COST" value="{{ substation_config.HV_SUBSTATION_COST }}" min="0" step="10000">
+                        <div class="form-text">Cost of a new high voltage substation</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12">
+                    <h5>Transformer Configuration</h5>
+                </div>
+                
+                <div class="col-md-12">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Capacity (kW)</th>
+                                    <th>Cost (€)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transformerTable">
+                                {% for i in range(transformer_config.CAPACITIES|length) %}
+                                <tr>
+                                    <td>
+                                        <input type="number" class="form-control transformer-capacity" 
+                                               id="TRANSFORMER_CAPACITY_{{ i }}" 
+                                               value="{{ transformer_config.CAPACITIES[i] }}" min="0">
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control transformer-cost" 
+                                               id="TRANSFORMER_COST_{{ i }}" 
+                                               value="{{ transformer_config.COSTS[i] }}" min="0">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end mt-2">
+                        <button id="addTransformerRow" class="btn btn-sm btn-primary me-2">
+                            <i class="fas fa-plus"></i> Add Row
+                        </button>
+                        <button id="removeTransformerRow" class="btn btn-sm btn-danger">
+                            <i class="fas fa-minus"></i> Remove Row
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

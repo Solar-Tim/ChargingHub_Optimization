@@ -13,26 +13,28 @@ import sys
 import json
 import time
 import numpy as np
-from pathlib import Path  # Add this import here
+from pathlib import Path
 from gurobipy import Model, GRB
 from shapely.geometry import Point
 from concurrent.futures import ProcessPoolExecutor
 
-# Add the parent directory (scripts) to the path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the project root and scripts directory to the path
+script_dir = os.path.dirname(os.path.abspath(__file__))
+scripts_dir = os.path.dirname(script_dir)
+project_root = os.path.dirname(scripts_dir)
+sys.path.insert(0, project_root)
+sys.path.insert(0, scripts_dir)
 
-from functions import * 
-# Import config_grid before other modules that might depend on it
+# Import modules with absolute imports
+from grid_optimization.functions import *
 from grid_optimization.config_grid import *
-from config_grid import generate_result_filename as grid_generate_result_filename
-from cables import *
+from grid_optimization.cables import *
 from grid_optimization.data_loading import load_data
 from grid_optimization.data_extraction import extract_charger_counts
 
 # Fix the import path for distance module
-# This line is already correctly handling the path for distance_scripts
-from distance_scripts.distance_functions import *
-from distance_scripts.distance_lines import *
+from scripts.distance_scripts.distance_functions import *
+from scripts.distance_scripts.distance_lines import *
 
 
 strategy = all_strategies  # Default strategy for testing
@@ -475,28 +477,65 @@ def run_optimization_for_strategy(strategy):
                                             for i, count in transformer_selections.items()])
         
         results = {
+            # Cost-related items
             'total_cost': float(model.objVal),
+            'expansion_cost': float(expansion_cost_value.X),
+            'connection_cost': float(connection_cost_value.X),
+            'capacity_cost': float(capacity_cost_value.X),
+            'transformer_cost': float(transformer_cost_value.X),
+            'battery_cost': float(battery_cost_value.X),
+            'total_charginghub_cost': float(charginghub_cost_value.X),
+            'charger_cost': float(charger_cost_value.X),
+            'internal_cable_cost': float(internal_cable_cost_value.X),
+
+            # Energy throughput calculations - adjusted for 5-minute time resolution
+            'energy_throughput_weekly_kwh': float(sum(load_profile) * (5/60)),  # Convert kW to kWh (5/60 hours per timestep)
+            'energy_throughput_annual_gwh': float(sum(load_profile) * (5/60) * 52 / 1000000),  # To GWh and annual
+            
+            # Configuration parameters
+            'buffer_radius': Config.SPATIAL['BUFFER_RADIUS'],  # Buffer radius from config
+            'forecast_year': Config.FORECAST_YEAR,  # Add forecast year from config
+            
+            # Non-time-dependent values
+            'charging_strategy': strategy,
             'max_grid_load': float(max_grid_load.X),
-            'battery_capacity': float(battery_capacity.X),
+            'peak_load': float(max(load_profile)),
+            'capacity_limit': float(cap_limit.X),
             'use_hv': float(use_hv_line.X),
             'use_transmission': float(use_transmission_substation.X),
             'use_distribution': float(use_distribution_substation.X),
             'use_existing_mv': float(use_existing_mv_line.X),
-            'charging_strategy': strategy,
             'distribution_expansion': float(distribution_expansion.X),
             'transmission_expansion': float(transmission_expansion.X),
             'expand_distribution': float(expand_distribution.X),
             'expand_transmission': float(expand_transmission.X),
-            'expansion_cost': float(expansion_cost_value.X),
-            'grid_energy': [float(grid_energy[t].X) for t in range(time_periods)],
-            'battery_soc': [float(battery_soc[t].X) for t in range(time_periods)],
-            'battery_charge': [float(battery_charge[t].X) for t in range(time_periods)],
-            'battery_discharge': [float(battery_discharge[t].X) for t in range(time_periods)],
-            'connection_cost': float(connection_cost_value.X),
-            'capacity_cost': float(capacity_cost_value.X),
-            'battery_cost': float(battery_cost_value.X),
-            'transformer_cost': float(transformer_cost_value.X),
+            'battery_capacity': float(battery_capacity.X),
+            'battery_peak_power': float(battery_peak_power.X),
+            
+            # Battery utilization
+            'battery_cycles_weekly': float(sum(battery_discharge[t].X for t in range(time_periods)) * (5/60) / battery_capacity.X) if battery_capacity.X > 0 else 0.0,
+            'battery_cycles_annual': float(sum(battery_discharge[t].X for t in range(time_periods)) * (5/60) * 52 / battery_capacity.X) if battery_capacity.X > 0 else 0.0,
+            
+            # Distance values
+            'distribution_distance': float(distribution_substation_distance),
+            'transmission_distance': float(transmission_substation_distance),
+            'powerline_distance': float(hvline_distance),
+
+            # Non-time-dependent values
+            'charging_strategy': strategy,
+            'max_grid_load': float(max_grid_load.X),
+            'peak_load': float(max(load_profile)),
             'capacity_limit': float(cap_limit.X),
+            'use_hv': float(use_hv_line.X),
+            'use_transmission': float(use_transmission_substation.X),
+            'use_distribution': float(use_distribution_substation.X),
+            'use_existing_mv': float(use_existing_mv_line.X),
+            'distribution_expansion': float(distribution_expansion.X),
+            'transmission_expansion': float(transmission_expansion.X),
+            'expand_distribution': float(expand_distribution.X),
+            'expand_transmission': float(expand_transmission.X),
+            'battery_capacity': float(battery_capacity.X),
+            'battery_peak_power': float(battery_peak_power.X),
             'distribution_distance': float(distribution_substation_distance),
             'transmission_distance': float(transmission_substation_distance),
             'powerline_distance': float(hvline_distance),
@@ -510,12 +549,15 @@ def run_optimization_for_strategy(strategy):
             'transformer_cost': total_transformer_cost,
             'transformer_selections': transformer_selections,
             'transformer_description': transformer_description,
-            'internal_cable_cost': float(internal_cable_cost_value.X),
-            'charger_cost': float(charger_cost_value.X),
-            'total_charginghub_cost': float(charginghub_cost_value.X),
             'MCS_count': int(MCS_count),
             'HPC_count': int(HPC_count),
-            'NCS_count': int(NCS_count)
+            'NCS_count': int(NCS_count),
+            
+            # Time-dependent values
+            'grid_energy': [float(grid_energy[t].X) for t in range(time_periods)],
+            'battery_soc': [float(battery_soc[t].X) for t in range(time_periods)],
+            'battery_charge': [float(battery_charge[t].X) for t in range(time_periods)],
+            'battery_discharge': [float(battery_discharge[t].X) for t in range(time_periods)]
         }
         
         # Add charging sessions data
@@ -637,7 +679,7 @@ def process_strategy(strategy):
 def main():
     """Main function to run the optimization for all strategies"""
     start_time = time.time()
-    print(f"Starting optimization for {len(Config.CHARGING_CONFIG['ALL_STRATEGIES'])} strategies")
+    print(f"Starting optimization for {len(Config.CHARGING_CONFIG['STRATEGY'])} strategies")
 
     # Option 1: Sequential execution
     # all_results = []
@@ -646,10 +688,11 @@ def main():
     #    all_results.append(result)
 
     # Option 2: Parallel execution with ProcessPoolExecutor
-    with ProcessPoolExecutor(max_workers=min(len(Config.CHARGING_CONFIG['ALL_STRATEGIES']), os.cpu_count() or 1)) as executor:
+    # Change to:
+    with ProcessPoolExecutor(max_workers=min(len(Config.CHARGING_CONFIG['STRATEGY']), os.cpu_count() or 1)) as executor:
         # Submit all strategies for processing
         futures = {executor.submit(process_strategy, strategy): strategy 
-                   for strategy in Config.CHARGING_CONFIG['ALL_STRATEGIES']}
+                for strategy in Config.CHARGING_CONFIG['STRATEGY']}
         
         # Collect results as they complete
         all_results = []
@@ -686,9 +729,6 @@ def main():
     end_time = time.time()
     print(f"\nTotal execution time: {end_time - start_time:.2f} seconds")
 
-
-def generate_result_filename(results, strategy, include_battery=True, custom_id=None):
-    return grid_generate_result_filename(results, strategy, include_battery, custom_id)
 
 
 def add_charging_sessions_data(results, strategy):

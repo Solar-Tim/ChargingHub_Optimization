@@ -1,0 +1,208 @@
+<!-- Cables Tab -->
+<div class="tab-pane fade" id="cables" role="tabpanel" aria-labelledby="cables-tab">
+    <div class="card">
+        <div class="card-header">
+            <h4>Cable Configuration</h4>
+        </div>
+        <div class="card-body">
+            <p class="card-text">Configure cable parameters for low and medium voltage connections.</p>
+            
+            <ul class="nav nav-tabs mb-3" id="cableTypeTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="lv-tab" data-bs-toggle="tab" data-bs-target="#lv-content" type="button" role="tab">
+                        Low Voltage
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="mv-tab" data-bs-toggle="tab" data-bs-target="#mv-content" type="button" role="tab">
+                        Medium Voltage
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="construction-tab" data-bs-toggle="tab" data-bs-target="#construction-content" type="button" role="tab">
+                        Construction Costs
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="aluminium-tab" data-bs-toggle="tab" data-bs-target="#aluminium-content" type="button" role="tab">
+                        Aluminium Cables
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="copper-tab" data-bs-toggle="tab" data-bs-target="#copper-content" type="button" role="tab">
+                        Copper Cables
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="cableTypeContent">
+                <!-- Low Voltage Tab -->
+                <div class="tab-pane fade show active" id="lv-content" role="tabpanel" aria-labelledby="lv-tab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="LV_VOLTAGE" class="form-label">Voltage (V)</label>
+                                <input type="number" class="form-control" id="LV_VOLTAGE" value="{{ cable_config.LV.VOLTAGE }}" min="0">
+                            </div>
+                            <div class="mb-3">
+                                <label for="LV_VOLTAGE_DROP_PERCENT" class="form-label">Voltage Drop (%)</label>
+                                <input type="number" class="form-control" id="LV_VOLTAGE_DROP_PERCENT" value="{{ cable_config.LV.VOLTAGE_DROP_PERCENT }}" min="0" max="10" step="0.1">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="LV_POWER_FACTOR" class="form-label">Power Factor</label>
+                                <input type="number" class="form-control" id="LV_POWER_FACTOR" value="{{ cable_config.LV.POWER_FACTOR }}" min="0" max="1" step="0.01">
+                            </div>
+                            <div class="mb-3">
+                                <label for="LV_CONDUCTIVITY" class="form-label">Conductivity</label>
+                                <input type="number" class="form-control" id="LV_CONDUCTIVITY" value="{{ cable_config.LV.CONDUCTIVITY }}" min="0">
+                                <div class="form-text">Copper: 56, Aluminium: 35</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="LV_NUM_DC_CABLES" class="form-label">Number of DC Cables</label>
+                                <input type="number" class="form-control" id="LV_NUM_DC_CABLES" value="{{ cable_config.LV.NUM_DC_CABLES }}" min="1" step="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Medium Voltage Tab -->
+                <div class="tab-pane fade" id="mv-content" role="tabpanel" aria-labelledby="mv-tab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="MV_VOLTAGE" class="form-label">Voltage (V)</label>
+                                <input type="number" class="form-control" id="MV_VOLTAGE" value="{{ cable_config.MV.VOLTAGE }}" min="0">
+                            </div>
+                            <div class="mb-3">
+                                <label for="MV_VOLTAGE_DROP_PERCENT" class="form-label">Voltage Drop (%)</label>
+                                <input type="number" class="form-control" id="MV_VOLTAGE_DROP_PERCENT" value="{{ cable_config.MV.VOLTAGE_DROP_PERCENT }}" min="0" max="10" step="0.1">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="MV_POWER_FACTOR" class="form-label">Power Factor</label>
+                                <input type="number" class="form-control" id="MV_POWER_FACTOR" value="{{ cable_config.MV.POWER_FACTOR }}" min="0" max="1" step="0.01">
+                            </div>
+                            <div class="mb-3">
+                                <label for="MV_CONDUCTIVITY" class="form-label">Conductivity</label>
+                                <input type="number" class="form-control" id="MV_CONDUCTIVITY" value="{{ cable_config.MV.CONDUCTIVITY }}" min="0">
+                                <div class="form-text">Copper: 56, Aluminium: 35</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="MV_NUM_CABLES" class="form-label">Number of Cables</label>
+                                <input type="number" class="form-control" id="MV_NUM_CABLES" value="{{ cable_config.MV.NUM_CABLES }}" min="1" step="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Construction Costs Tab -->
+                <div class="tab-pane fade" id="construction-content" role="tabpanel" aria-labelledby="construction-tab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="DIGGING_COST" class="form-label">Digging Cost (EUR/m)</label>
+                                <input type="number" class="form-control" id="DIGGING_COST" value="{{ cable_config.CONSTRUCTION.DIGGING_COST }}" min="0" step="0.1">
+                                <div class="form-text">Cost of digging per meter</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="HARDWARE_CONNECTION_COST" class="form-label">Hardware Connection Cost (EUR)</label>
+                                <input type="number" class="form-control" id="HARDWARE_CONNECTION_COST" value="{{ cable_config.CONSTRUCTION.HARDWARE_CONNECTION_COST }}" min="0" step="1">
+                                <div class="form-text">Cable mounting costs per piece</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Aluminium Cables Tab -->
+                <div class="tab-pane fade" id="aluminium-content" role="tabpanel" aria-labelledby="aluminium-tab">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Cross-section (mm²)</th>
+                                    <th>Load Capacity (A)</th>
+                                    <th>Cost (€/m)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="aluminiumTable">
+                                {% for i in range(aluminium_kabel.Nennquerschnitt|length) %}
+                                <tr>
+                                    <td>
+                                        <input type="number" class="form-control" 
+                                               id="AL_CROSS_SECTION_{{ i }}" 
+                                               value="{{ aluminium_kabel.Nennquerschnitt[i] }}" min="0" step="0.1">
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control" 
+                                               id="AL_LOAD_CAPACITY_{{ i }}" 
+                                               value="{{ aluminium_kabel.Belastbarkeit[i] }}" min="0">
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control" 
+                                               id="AL_COST_{{ i }}" 
+                                               value="{{ aluminium_kabel.Kosten[i] }}" min="0" step="0.01">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end mt-2">
+                        <button id="addAluminiumRow" class="btn btn-sm btn-primary me-2">
+                            <i class="fas fa-plus"></i> Add Row
+                        </button>
+                        <button id="removeAluminiumRow" class="btn btn-sm btn-danger">
+                            <i class="fas fa-minus"></i> Remove Row
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Copper Cables Tab -->
+                <div class="tab-pane fade" id="copper-content" role="tabpanel" aria-labelledby="copper-tab">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Cross-section (mm²)</th>
+                                    <th>Cost (€/m)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="copperTable">
+                                {% for i in range(kupfer_kabel.Nennquerschnitt|length) %}
+                                <tr>
+                                    <td>
+                                        <input type="number" class="form-control" 
+                                               id="CU_CROSS_SECTION_{{ i }}" 
+                                               value="{{ kupfer_kabel.Nennquerschnitt[i] }}" min="0" step="0.1">
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control" 
+                                               id="CU_COST_{{ i }}" 
+                                               value="{{ kupfer_kabel.Kosten[i] }}" min="0" step="0.01">
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end mt-2">
+                        <button id="addCopperRow" class="btn btn-sm btn-primary me-2">
+                            <i class="fas fa-plus"></i> Add Row
+                        </button>
+                        <button id="removeCopperRow" class="btn btn-sm btn-danger">
+                            <i class="fas fa-minus"></i> Remove Row
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

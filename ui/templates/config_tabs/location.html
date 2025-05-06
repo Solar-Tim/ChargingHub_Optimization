@@ -1,0 +1,97 @@
+<!-- Location Tab -->
+<div class="tab-pane fade" id="location" role="tabpanel" aria-labelledby="location-tab">
+    <div class="card">
+        <div class="card-header">
+            <h4>Location Configuration</h4>
+        </div>
+        <div class="card-body">
+            <p class="card-text">Set the default coordinates and buffer radius for optimization.</p>
+            
+            <!-- Search Box -->
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="location-search" placeholder="Search for a location...">
+                        <button class="btn btn-outline-secondary" type="button" id="search-btn">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-outline-primary" id="reset-view-btn">
+                        <i class="fas fa-redo"></i> Reset View
+                    </button>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5>Default Location</h5>
+                    <div class="mb-3">
+                        <label for="LONGITUDE" class="form-label">Longitude</label>
+                        <input type="number" class="form-control" id="LONGITUDE" value="{{ default_location.LONGITUDE }}" step="0.000001">
+                    </div>
+                    <div class="mb-3">
+                        <label for="LATITUDE" class="form-label">Latitude</label>
+                        <input type="number" class="form-control" id="LATITUDE" value="{{ default_location.LATITUDE }}" step="0.000001">
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5>Spatial Settings</h5>
+                    <div class="mb-3">
+                        <label for="BUFFER_RADIUS" class="form-label">Buffer Radius (m)</label>
+                        <input type="number" class="form-control" id="BUFFER_RADIUS" value="{{ spatial.BUFFER_RADIUS }}" min="0">
+                        <div class="form-text">Radius in meters for location buffer</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col">
+                    <h5>Manual Distances</h5>
+                    <p class="text-muted">These values are used when "Use Distance Calculation" is disabled</p>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="MANUAL_DISTRIBUTION_DISTANCE" class="form-label">Distribution Distance (m)</label>
+                                <input type="number" class="form-control" id="MANUAL_DISTRIBUTION_DISTANCE" value="{{ manual_distances.distribution_distance }}" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="MANUAL_TRANSMISSION_DISTANCE" class="form-label">Transmission Distance (m)</label>
+                                <input type="number" class="form-control" id="MANUAL_TRANSMISSION_DISTANCE" value="{{ manual_distances.transmission_distance }}" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="MANUAL_POWERLINE_DISTANCE" class="form-label">Powerline Distance (m)</label>
+                                <input type="number" class="form-control" id="MANUAL_POWERLINE_DISTANCE" value="{{ manual_distances.powerline_distance }}" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col">
+                    <div id="location-map" style="width: 100%; height: 400px; border: 1px solid #ccc; border-radius: 4px;">
+                        <div id="map-loading" class="d-flex justify-content-center align-items-center h-100">
+                            <div>
+                                <div class="spinner-border text-primary mb-2" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="text-center">Loading map...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-muted small">
+                        <i class="fas fa-info-circle"></i> Click on the map to set location or use the search box above.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

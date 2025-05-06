@@ -1,0 +1,27 @@
+<!-- Results Tab -->
+<div class="tab-pane fade" id="results" role="tabpanel" aria-labelledby="results-tab">
+    <div class="card">
+        <div class="card-header">
+            <h4>Results Configuration</h4>
+        </div>
+        <div class="card-body">
+            <p class="card-text">Configure how results are named and saved.</p>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="USE_CUSTOM_ID" {% if result_naming.USE_CUSTOM_ID %}checked{% endif %}>
+                        <label class="form-check-label" for="USE_CUSTOM_ID">Use Custom ID</label>
+                        <div class="form-text">If enabled, uses a custom ID instead of a hash for result files</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="CUSTOM_ID" class="form-label">Custom ID</label>
+                        <input type="text" class="form-control" id="CUSTOM_ID" value="{{ result_naming.CUSTOM_ID }}" {% if not result_naming.USE_CUSTOM_ID %}disabled{% endif %}>
+                        <div class="form-text">Custom identifier for result files</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

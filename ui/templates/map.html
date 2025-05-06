@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <h2>Map View</h2>
+        
+        <div class="row mb-3 align-items-end">
+            <div class="col-md-8">
+                <label for="map-select" class="form-label">Select Map Type:</label>
+                <select id="map-select" class="form-select">
+                    {% if latest_maps.combined %}
+                    <option value="{{ latest_maps.combined }}">Latest Combined Map ({{ latest_maps.combined }})</option>
+                    {% endif %}
+                    {% if latest_maps.power_line %}
+                    <option value="{{ latest_maps.power_line }}">Latest Power Line Map ({{ latest_maps.power_line }})</option>
+                    {% endif %}
+                    {% if latest_maps.substation %}
+                    <option value="{{ latest_maps.substation }}">Latest Substation Map ({{ latest_maps.substation }})</option>
+                    {% endif %}
+                    {% for map in all_maps %}
+                    <option value="{{ map.name }}">{{ map.type }} ({{ map.date }}) - {{ map.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button id="load-map-btn" class="btn btn-primary w-100">Load Map</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body p-0">
+                <div id="map-container" style="height: 600px; width: 100%; position: relative;">
+                    <div id="map-loading" class="d-flex justify-content-center align-items-center h-100" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 15; background-color: white;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading map...</p>
+                        </div>
+                    </div>
+                    <iframe id="map-frame" style="height: 100%; width: 100%; border: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 5;"></iframe>
+                    <div id="no-map-message" class="d-flex justify-content-center align-items-center h-100" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10;">
+                        <div class="text-center">
+                            <p>No map files found. Run an optimization to generate maps.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const mapSelect = document.getElementById('map-select');
+        const mapFrame = document.getElementById('map-frame');
+        const mapLoading = document.getElementById('map-loading');
+        const noMapMessage = document.getElementById('no-map-message');
+        const loadMapBtn = document.getElementById('load-map-btn');
+        
+        function loadMap(mapName) {
+            // Show loading indicator
+            mapFrame.style.display = 'block';
+            noMapMessage.style.display = 'none';
+            mapLoading.style.display = 'flex';
+            
+            if (mapName) {
+                // Set the iframe source to the map file
+                const mapUrl = "{{ url_for('serve_map', map_name='') }}" + mapName;
+                
+                // Clear any previous src and handlers first
+                mapFrame.onload = null;
+                mapFrame.onerror = null;
+                mapFrame.src = '';
+                
+                // Set up new handlers
+                mapFrame.onload = function() {
+                    console.log("Map loaded successfully");
+                    // When map loads, hide loading overlay completely
+                    mapLoading.style.display = 'none';
+                    // Make sure iframe is visible and on top
+                    mapFrame.style.display = 'block';
+                    mapFrame.style.zIndex = '20';
+                };
+                
+                // Handle loading errors
+                mapFrame.onerror = function() {
+                    console.error("Error loading map");
+                    mapLoading.style.display = 'none';
+                    noMapMessage.style.display = 'flex';
+                    noMapMessage.innerHTML = '<div class="text-center"><p>Error loading map file.</p></div>';
+                };
+                
+                // Set the src after establishing handlers
+                mapFrame.src = mapUrl;
+                
+                // Add a more aggressive fallback timeout
+                setTimeout(function() {
+                    console.log("Timeout reached - forcing display of map");
+                    mapLoading.style.display = 'none';
+                    mapFrame.style.display = 'block';
+                    mapFrame.style.zIndex = '20';
+                }, 2000); // 2 second fallback
+            } else {
+                // No map selected
+                mapLoading.style.display = 'none';
+                noMapMessage.style.display = 'flex';
+            }
+        }
+        
+        // Load map button click handler
+        loadMapBtn.addEventListener('click', function() {
+            const selectedMap = mapSelect.value;
+            loadMap(selectedMap);
+        });
+        
+        // Initial load if we have maps
+        if (mapSelect.options.length > 0) {
+            const initialMap = mapSelect.value;
+            loadMap(initialMap);
+        } else {
+            mapLoading.style.display = 'none';
+            noMapMessage.style.display = 'flex';
+        }
+    });
+</script>
+{% endblock %}

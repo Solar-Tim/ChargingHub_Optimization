@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Optimization Results - ChargingHub Optimization{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/results.css') }}">
+{% endblock %}
+
+{% block content %}
+<main role="main" class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar with result list and actions -->
+        <aside class="col-md-3" aria-label="Result navigation">
+            {% include "components/result_list.html" %}
+        </aside>
+
+        <!-- Main results display -->
+        <section class="col-md-9">
+            <div class="card mb-4">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0" id="result-title">Select a result file to view</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-light active" id="tab-overview">Overview</button>
+                        <button class="btn btn-sm btn-outline-light" id="tab-charts">Charts</button>
+                        <button class="btn btn-sm btn-outline-light" id="tab-data">Raw Data</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="result-content">
+                        <div id="placeholder-message" class="text-center py-5">
+                            <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+                            <p class="lead">Select a result file to view optimization details.</p>
+                            <p class="text-muted">Your optimization results will be displayed here.</p>
+                            <div class="mt-4">
+                                <button id="test-loading-btn" class="btn btn-outline-secondary">
+                                    <i class="fas fa-bug"></i> Test File Loading
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Loading Spinner -->
+                        <div id="loading-spinner" class="text-center py-5 d-none">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading result data...</p>
+                        </div>
+                        
+                        <!-- Overview Tab -->
+                        <div id="overview-content" class="result-tab-content d-none">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="card-title mb-0">Configuration</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <table class="table table-sm table-striped">
+                                                <tbody id="config-table">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="card-title mb-0">Summary</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <table class="table table-sm table-striped">
+                                                <tbody id="summary-table">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="card-title mb-0">Key Metrics</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-primary" id="metric-peak-power">-</h5>
+                                                    <p class="mb-0 text-muted">Peak Power</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-success" id="metric-total-energy">-</h5>
+                                                    <p class="mb-0 text-muted">Total Energy</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-danger" id="metric-total-cost">-</h5>
+                                                    <p class="mb-0 text-muted">Total Cost</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Battery status row - only shown when battery is included -->
+                                    <div class="row d-none" id="battery-metrics-row">
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-info" id="metric-battery-capacity">-</h5>
+                                                    <p class="mb-0 text-muted">Battery Capacity</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-info" id="metric-battery-peak-power">-</h5>
+                                                    <p class="mb-0 text-muted">Battery Peak Power</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h5 class="text-info" id="metric-battery-savings">-</h5>
+                                                    <p class="mb-0 text-muted">Cost Savings</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="card-title mb-0">Distance & Capacity</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <table class="table table-sm table-striped">
+                                                <tbody id="infrastructure-distance-table">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="card-title mb-0">Transformer & Grid</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <table class="table table-sm table-striped">
+                                                <tbody id="infrastructure-transformer-table">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="card-title mb-0">Charging Infrastructure</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h6>Charger Summary</h6>
+                                            <table class="table table-sm table-bordered">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Charger Type</th>
+                                                        <th>Count</th>
+                                                        <th>Weekly Sessions</th>
+                                                        <th>Utilization</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="charger-summary-table">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Charts Tab -->
+                        <div id="charts-content" class="result-tab-content d-none">
+                            <div class="card mb-4">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="card-title mb-0">Grid Energy</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="grid-energy-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4 d-none" id="battery-energy-container">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="card-title mb-0">Battery Energy Level</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="battery-energy-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="card-title mb-0">Costs Breakdown</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="costs-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="card-title mb-0">Daily Charging Sessions</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="daily-sessions-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Raw Data Tab -->
+                        <div id="data-content" class="result-tab-content d-none">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="card-title mb-0">Raw JSON Data</h6>
+                                    <button id="copy-json-btn" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-copy"></i> Copy to Clipboard
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <pre id="json-display" class="json-viewer"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Compare Modal -->
+    <div class="modal fade" id="compareModal" tabindex="-1" role="dialog" aria-labelledby="compareModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="compareModalLabel">Compare Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Select the results you want to compare.
+                    </div>
+                    <div class="form-group">
+                        <label>Select Result Files to Compare:</label>
+                        <select id="compare-select" class="form-control" multiple size="5">
+                            <!-- Options will be added dynamically -->
+                        </select>
+                    </div>
+                    <div class="mt-3">
+                        <button id="do-compare" class="btn btn-primary btn-block">Compare</button>
+                    </div>
+                    <div id="compare-results" class="d-none">
+                        <h5 class="mt-4 mb-3">Comparison Results</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Metric</th>
+                                        <th id="compare-col-1">Result 1</th>
+                                        <th id="compare-col-2">Result 2</th>
+                                        <th>Difference</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="compare-table">
+                                    <!-- Comparison data will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4" defer></script>
+<script src="{{ url_for('static', filename='js/results.js') }}" defer></script>
+{% endblock %}

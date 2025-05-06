@@ -102,15 +102,7 @@ def load_input_data(path):
     try:
         # Load distribution function
         df_verteilungsfunktion = pd.read_csv(verteilungsfunktion_path, sep=',')
-        #*
-        # else:
-        #    logging.warning(f"File not found: {verteilungsfunktion_path}")
-            # Create a dummy distribution function if the file doesn't exist
-        #    df_verteilungsfunktion = pd.DataFrame({
-        #        'Zeit': list(range(0, 1440, 15)),  # Time in minutes
-        #        'HPC': [1/96] * 96,  # Uniform distribution
-        #        'NCS': [1/96] * 96   # Uniform distribution
-        #    })
+
     
         
         # Load traffic data
@@ -121,8 +113,8 @@ def load_input_data(path):
             logging.warning(f"File not found: {laden_mauttabelle_path}")
 
         
-        # Get the forecast year from metadata (default to 2035)
-        forecast_year = laden_data.get('metadata', {}).get('forecast_year', '2035')
+        # Get the forecast year from metadata (default to 2030)
+        forecast_year = laden_data.get('metadata', {}).get('forecast_year', '2030')
         
         # Extract traffic data per day from metadata
         traffic_data = laden_data['metadata']['toll_section']['traffic']
@@ -176,8 +168,8 @@ def load_input_data(path):
             bev_adoption_rate = 0.15
             
             for day, traffic in traffic_data.items():
-                # Calculate proportion of traffic for this day
-                day_proportion = traffic / total_traffic if total_traffic > 0 else 0
+                # Calculate proportion of traffic for this day - assign 0 if total_traffic is 0
+                day_proportion = 0 if total_traffic == 0 else traffic / total_traffic
                 
                 # Calculate number of charging sessions based on break data and traffic proportion
                 schnelllader_count = int(short_breaks * day_proportion * bev_adoption_rate)
@@ -341,7 +333,6 @@ def assign_charging_stations(df_lkws, config):
         
         if soc_target < soc_init:
             print(f"Warning: Truck {df_lkws.loc[index, 'Nummer']} has a target SOC less than initial SOC!")
-            # raise ValueError("Error: Target SOC is less than initial SOC!")
 
         ladezeiten = {}
 
@@ -353,7 +344,9 @@ def assign_charging_stations(df_lkws, config):
                 leistungsfaktor = get_leistungsfaktor(soc)
                 aktuelle_leistung = min(leistung_init, leistungsfaktor * max_leistung_lkw)
                 energie = aktuelle_leistung * config['freq'] / 60
-                soc += energie / kapazitaet
+                # Avoid division by zero
+                soc_increment = 0 if kapazitaet == 0 else energie / kapazitaet
+                soc += soc_increment
             ladezeiten[station] = pausenzeit - ladezeit
 
         if ladezeiten['HPC'] >= 0:
@@ -365,12 +358,14 @@ def assign_charging_stations(df_lkws, config):
             count += 1
     if count > 0:
         print(f"Warning: {count} trucks have been assigned to MCS due to insufficient charging capacity.")
-        
+    
+    # Avoid division by zero in dict_anteile
+    total_trucks = df_lkws.shape[0]
     dict_anteile = {
-        1: df_lkws[df_lkws['Lkw_ID'] == 1].shape[0] / df_lkws.shape[0],
-        2: df_lkws[df_lkws['Lkw_ID'] == 2].shape[0] / df_lkws.shape[0],
-        3: df_lkws[df_lkws['Lkw_ID'] == 3].shape[0] / df_lkws.shape[0],
-        4: df_lkws[df_lkws['Lkw_ID'] == 4].shape[0] / df_lkws.shape[0]
+        1: 0 if total_trucks == 0 else df_lkws[df_lkws['Lkw_ID'] == 1].shape[0] / total_trucks,
+        2: 0 if total_trucks == 0 else df_lkws[df_lkws['Lkw_ID'] == 2].shape[0] / total_trucks,
+        3: 0 if total_trucks == 0 else df_lkws[df_lkws['Lkw_ID'] == 3].shape[0] / total_trucks,
+        4: 0 if total_trucks == 0 else df_lkws[df_lkws['Lkw_ID'] == 4].shape[0] / total_trucks
     }
 
     print(dict_anteile)

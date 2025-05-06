@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <h2>Application Logs</h2>
+        
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="log-file-select" class="form-select">
+                    {% for log in log_files %}
+                    <option value="{{ log.name }}">{{ log.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button id="refresh-log-btn" class="btn btn-primary">Refresh</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body p-0">
+                <pre id="log-content" class="bg-dark text-light p-3" style="height: 600px; overflow-y: auto; white-space: pre-wrap;">Loading log data...</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const logFileSelect = document.getElementById('log-file-select');
+        const logContent = document.getElementById('log-content');
+        const refreshLogBtn = document.getElementById('refresh-log-btn');
+        
+        // Function to load log content
+        function loadLogContent(logName) {
+            logContent.textContent = 'Loading log data...';
+            
+            fetch(`/api/logs/${logName}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.content && data.content.length > 0) {
+                        logContent.textContent = data.content.join('');
+                        // Scroll to bottom
+                        logContent.scrollTop = logContent.scrollHeight;
+                    } else {
+                        logContent.textContent = 'Log file is empty.';
+                    }
+                })
+                .catch(error => {
+                    logContent.textContent = `Error loading log: ${error.message}`;
+                });
+        }
+        
+        // Load initial log content
+        if (logFileSelect.options.length > 0) {
+            loadLogContent(logFileSelect.value);
+        } else {
+            logContent.textContent = 'No log files found.';
+        }
+        
+        // Handle log file selection change
+        logFileSelect.addEventListener('change', function() {
+            loadLogContent(this.value);
+        });
+        
+        // Handle refresh button click
+        refreshLogBtn.addEventListener('click', function() {
+            loadLogContent(logFileSelect.value);
+        });
+    });
+</script>
+{% endblock %}

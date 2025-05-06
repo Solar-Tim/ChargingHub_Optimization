@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">ChargingHub Optimization Terminal</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>Run Optimization</h5>
+                        <p class="text-muted">Execute the full optimization pipeline or individual modules</p>
+                        
+                        <div class="d-flex flex-wrap mb-3">
+                            <button id="run-full-optimization" class="btn btn-primary me-2 mb-2">
+                                <i class="fas fa-play-circle"></i> Run Full Optimization
+                            </button>
+                            <div class="dropdown me-2 mb-2">
+                                <button class="btn btn-outline-primary dropdown-toggle" type="button" id="moduleDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-cogs"></i> Run Individual Module
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="moduleDropdown">
+                                    <li><button class="dropdown-item" id="run-traffic-btn">Traffic Calculation</button></li>
+                                    <li><button class="dropdown-item" id="run-hub-btn">Charging Hub Setup</button></li>
+                                    <li><button class="dropdown-item" id="run-grid-btn">Grid Optimization</button></li>
+                                </ul>
+                            </div>
+                            <button id="stop-all-btn" class="btn btn-danger me-2 mb-2" disabled>
+                                <i class="fas fa-stop-circle"></i> Stop All Processes
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Optimization Progress</h5>
+                        <div id="optimization-progress">
+                            <!-- Phase 1: Traffic Calculation -->
+                            <div class="card mb-3">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="phase-number badge rounded-pill bg-primary me-2">1</span>
+                                        <strong>Traffic Calculation</strong>
+                                    </div>
+                                    <div class="phase-status">
+                                        <span class="badge bg-secondary" id="phase1-status">Pending</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-3">
+                                            <div class="progress-bar" id="phase1-progress" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <span id="phase1-progress-text">0%</span>
+                                    </div>
+                                    <div class="mt-2 phase-details" id="phase1-details">
+                                        <small class="text-muted">Analyzing traffic patterns and calculating charging demand...</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Phase 2: Charging Hub Setup -->
+                            <div class="card mb-3">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="phase-number badge rounded-pill bg-primary me-2">2</span>
+                                        <strong>Charging Hub Setup</strong>
+                                    </div>
+                                    <div class="phase-status">
+                                        <span class="badge bg-secondary" id="phase2-status">Pending</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-3">
+                                            <div class="progress-bar" id="phase2-progress" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <span id="phase2-progress-text">0%</span>
+                                    </div>
+                                    <div class="mt-2 phase-details" id="phase2-details">
+                                        <small class="text-muted">Configuring charging hub and optimizing demand...</small>
+                                    </div>
+                                    
+                                    <!-- Sub-steps for Phase 2 -->
+                                    <div class="ms-4 mt-3" id="phase2-substeps">
+                                        <div class="substep d-flex align-items-center mb-2">
+                                            <div class="substep-indicator me-2" id="substep2-1-indicator">
+                                                <i class="far fa-circle text-secondary"></i>
+                                            </div>
+                                            <span class="substep-text" id="substep2-1-text">Truck-Charging Type Matching</span>
+                                        </div>
+                                        <div class="substep d-flex align-items-center mb-2">
+                                            <div class="substep-indicator me-2" id="substep2-2-indicator">
+                                                <i class="far fa-circle text-secondary"></i>
+                                            </div>
+                                            <span class="substep-text" id="substep2-2-text">Charging Hub Configuration</span>
+                                        </div>
+                                        <div class="substep d-flex align-items-center">
+                                            <div class="substep-indicator me-2" id="substep2-3-indicator">
+                                                <i class="far fa-circle text-secondary"></i>
+                                            </div>
+                                            <span class="substep-text" id="substep2-3-text">Demand Optimization</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Phase 3: Grid Optimization -->
+                            <div class="card mb-3">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="phase-number badge rounded-pill bg-primary me-2">3</span>
+                                        <strong>Grid Optimization</strong>
+                                    </div>
+                                    <div class="phase-status">
+                                        <span class="badge bg-secondary" id="phase3-status">Pending</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-3">
+                                            <div class="progress-bar" id="phase3-progress" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <span id="phase3-progress-text">0%</span>
+                                    </div>
+                                    <div class="mt-2 phase-details" id="phase3-details">
+                                        <small class="text-muted">Optimizing grid connections and infrastructure...</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Process Output</h5>
+                    <div>
+                        <button id="clear-output-btn" class="btn btn-sm btn-outline-light me-2">
+                            <i class="fas fa-eraser"></i> Clear
+                        </button>
+                        <button id="follow-output-btn" class="btn btn-sm btn-outline-light active">
+                            <i class="fas fa-arrow-down"></i> Auto-scroll
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="terminal-output" class="terminal-container">
+                        <pre class="terminal-text">--- Terminal Ready ---
+Run an optimization process to see output here.</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Execution Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-3">Module Selection</h6>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="run-traffic-calculation" checked>
+                        <label class="form-check-label" for="run-traffic-calculation">Traffic Calculation</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="run-charging-hub-setup" checked>
+                        <label class="form-check-label" for="run-charging-hub-setup">Charging Hub Setup</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="run-grid-optimization" checked>
+                        <label class="form-check-label" for="run-grid-optimization">Grid Optimization</label>
+                    </div>
+
+                    <h6 class="mb-3 mt-4">Charging Hub Setup Options</h6>
+                    <div class="ms-2">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="run-truck-matching" checked>
+                            <label class="form-check-label" for="run-truck-matching">Truck-Charging Type Matching</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="run-hub-configuration" checked>
+                            <label class="form-check-label" for="run-hub-configuration">Charging Hub Configuration</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="run-demand-optimization" checked>
+                            <label class="form-check-label" for="run-demand-optimization">Demand Optimization</label>
+                        </div>
+                    </div>
+
+                    <h6 class="mb-3 mt-4">Grid Optimization Options</h6>
+                    <div class="ms-2">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="use-distance-calculation" checked>
+                            <label class="form-check-label" for="use-distance-calculation">Use Distance Calculation</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="create-maps" checked>
+                            <label class="form-check-label" for="create-maps">Create Distance Maps</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="include-battery" checked>
+                            <label class="form-check-label" for="include-battery">Include Battery Storage</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="use-manual-charger-count">
+                            <label class="form-check-label" for="use-manual-charger-count">Use Manual Charger Count</label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="/configuration" class="btn btn-outline-primary">
+                            <i class="fas fa-cog"></i> Advanced Configuration
+                        </a>
+                        <button id="save-execution-config" class="btn btn-success">
+                            <i class="fas fa-save"></i> Save Execution Settings
+                        </button>
+                        <a href="/results" class="btn btn-outline-info">
+                            <i class="fas fa-chart-bar"></i> View Results
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}

@@ -7,6 +7,7 @@ import folium
 from folium.features import DivIcon
 from datetime import datetime
 from .distance_lines import calc_power_lines
+from ..config import Config
 
 # Add function to get the map directory
 def get_map_directory():
@@ -204,8 +205,11 @@ def calc_substations(ref_point: Point, map: bool = False):
     # Create and save map if requested
     if map:
         result_map = create_map(ref_point, distribution_result, transmission_result)
-        timestamp = datetime.now().strftime('%m%d_%H%M')
-        map_name = os.path.join(get_map_directory(), f"{timestamp}_substation_map.html")
+        file_id = (Config.RESULT_NAMING['CUSTOM_ID']
+                   if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False)
+                   else datetime.now().strftime('%m%d_%H%M'))
+        map_name = os.path.join(get_map_directory(),
+                                 f"{file_id}_substation_map.html")
         result_map.save(map_name)
         print(f"Map saved as: {map_name}")
 
@@ -281,8 +285,11 @@ def calculate_all_distances(ref_point: Point, create_map: bool) -> Dict[str, Any
             powerline_distance or 0, 
             nearest_point # type: ignore
         )
-        timestamp = datetime.now().strftime('%m%d_%H%M')
-        map_name = os.path.join(get_map_directory(), f"{timestamp}_combined_distance_map.html")
+        file_id = (Config.RESULT_NAMING['CUSTOM_ID']
+                   if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False)
+                   else datetime.now().strftime('%m%d_%H%M'))
+        map_name = os.path.join(get_map_directory(),
+                                 f"{file_id}_combined_distance_map.html")
         map_obj.save(map_name)
         print(f"Map saved as: {map_name}")
     

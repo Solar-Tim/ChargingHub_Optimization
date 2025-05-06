@@ -17,7 +17,7 @@ import logging
 import subprocess
 
 # Configure logging
-log_dir = Path("logs")
+log_dir = Path("../logs")
 log_dir.mkdir(exist_ok=True)
 logging.basicConfig(
     filename=log_dir/'charging_hub_optimization.log',
@@ -27,12 +27,13 @@ logging.basicConfig(
 )
 
 # Set up Python path properly
-base_dir = os.path.dirname(os.path.abspath(__file__))
-scripts_dir = os.path.join(base_dir, 'scripts')
+scripts_dir = os.path.dirname(os.path.abspath(__file__))  # Now points to scripts folder
+base_dir = os.path.dirname(scripts_dir)  # Project root is parent of scripts dir
 traffic_dir = os.path.join(scripts_dir, 'traffic_calculation')
 charginghub_dir = os.path.join(scripts_dir, 'charginghub_setup')
 
 # Add all necessary directories to path
+sys.path.append(base_dir)  # Add project root
 sys.path.append(scripts_dir)
 sys.path.append(traffic_dir)
 sys.path.append(charginghub_dir)
@@ -40,64 +41,96 @@ sys.path.append(charginghub_dir)
 # Import configuration
 from config import Config
 
+# Check for environment variables set by GUI
+def apply_environment_overrides():
+    """
+    Apply any environment variable overrides passed from the GUI
+    """
+    # Check for execution flags
+    if 'CHARGING_HUB_RUN_TRAFFIC_CALCULATION' in os.environ:
+        Config.EXECUTION_FLAGS['RUN_TRAFFIC_CALCULATION'] = os.environ['CHARGING_HUB_RUN_TRAFFIC_CALCULATION'] == '1'
+        logging.info(f"Environment override: RUN_TRAFFIC_CALCULATION = {Config.EXECUTION_FLAGS['RUN_TRAFFIC_CALCULATION']}")
+    
+    if 'CHARGING_HUB_RUN_CHARGING_HUB_SETUP' in os.environ:
+        Config.EXECUTION_FLAGS['RUN_CHARGING_HUB_SETUP'] = os.environ['CHARGING_HUB_RUN_CHARGING_HUB_SETUP'] == '1'
+        logging.info(f"Environment override: RUN_CHARGING_HUB_SETUP = {Config.EXECUTION_FLAGS['RUN_CHARGING_HUB_SETUP']}")
+    
+    if 'CHARGING_HUB_RUN_GRID_OPTIMIZATION' in os.environ:
+        Config.EXECUTION_FLAGS['RUN_GRID_OPTIMIZATION'] = os.environ['CHARGING_HUB_RUN_GRID_OPTIMIZATION'] == '1'
+        logging.info(f"Environment override: RUN_GRID_OPTIMIZATION = {Config.EXECUTION_FLAGS['RUN_GRID_OPTIMIZATION']}")
+    
+    # Check for other settings
+    if 'CHARGING_HUB_CUSTOM_ID' in os.environ:
+        custom_id = os.environ['CHARGING_HUB_CUSTOM_ID']
+        Config.RESULT_NAMING['USE_CUSTOM_ID'] = True
+        Config.RESULT_NAMING['CUSTOM_ID'] = custom_id
+        logging.info(f"Environment override: CUSTOM_ID = {custom_id}")
+    
+    if 'CHARGING_HUB_LONGITUDE' in os.environ and 'CHARGING_HUB_LATITUDE' in os.environ:
+        try:
+            longitude = float(os.environ['CHARGING_HUB_LONGITUDE'])
+            latitude = float(os.environ['CHARGING_HUB_LATITUDE'])
+            Config.DEFAULT_LOCATION['LONGITUDE'] = longitude
+            Config.DEFAULT_LOCATION['LATITUDE'] = latitude
+            logging.info(f"Environment override: DEFAULT_LOCATION = ({longitude}, {latitude})")
+        except ValueError:
+            logging.error("Invalid coordinates in environment variables")
+    
+    if 'CHARGING_HUB_INCLUDE_BATTERY' in os.environ:
+        Config.EXECUTION_FLAGS['INCLUDE_BATTERY'] = os.environ['CHARGING_HUB_INCLUDE_BATTERY'] == '1'
+        logging.info(f"Environment override: INCLUDE_BATTERY = {Config.EXECUTION_FLAGS['INCLUDE_BATTERY']}")
 
 def run_traffic_calculation():
-    """
-    Run the traffic calculation module.
-    """
+    """Run the traffic calculation module."""
     if not Config.EXECUTION_FLAGS['RUN_TRAFFIC_CALCULATION']:
-        logging.info("Traffic calculation module skipped (disabled in config)")
-        print("\n" + "="*80)
-        print("PHASE 1: TRAFFIC CALCULATION - SKIPPED (disabled in config)")
-        print("="*80)
+        report_progress(1, "TRAFFIC CALCULATION", "skipped")
         return True
         
-    print("\n" + "="*80)
-    print("PHASE 1: TRAFFIC CALCULATION")
-    print("="*80)
-    
-    logging.info("Starting Phase 1: Traffic Calculation")
+    report_progress(1, "TRAFFIC CALCULATION", "started")
     
     try:
-        # Change working directory to traffic_calculation folder
-        original_dir = os.getcwd()
-        os.chdir(traffic_dir)
+        # Define the path to the traffic calculation script
+        traffic_script = os.path.join(traffic_dir, 'main.py')
         
-        # Import here to avoid issues with module paths
-        from traffic_calculation.main import main as traffic_main # type: ignore
+        # Set up environment variables
+        env = os.environ.copy()
+        env['PYTHONPATH'] = f"{base_dir}:{env.get('PYTHONPATH', '')}"
         
         start_time = time.time()
-        traffic_main()
+        
+        # Run the traffic calculation script as a subprocess
+        result = subprocess.run(
+            [sys.executable, traffic_script], 
+            env=env,
+            cwd=base_dir,  
+            capture_output=True, 
+            text=True, 
+            check=False
+        )
+        
+        # Print the output to ensure it's visible
+        print(result.stdout)
+        
+        if result.returncode != 0:
+            raise Exception(f"Traffic calculation script failed with error:\n{result.stderr}")
+        
         elapsed_time = time.time() - start_time
-        
-        # Change back to original directory
-        os.chdir(original_dir)
-        
-        logging.info(f"Phase 1 completed successfully in {elapsed_time:.2f} seconds")
-        print(f"\nPhase 1 completed successfully in {elapsed_time:.2f} seconds")
+        report_progress(1, "TRAFFIC CALCULATION", "completed", elapsed_time)
         return True
     except Exception as e:
-        logging.error(f"Error in Phase 1: {str(e)}")
-        print(f"\nError in Phase 1: {str(e)}")
+        report_progress(1, "TRAFFIC CALCULATION", "failed")
+        print(f"Error details: {str(e)}")
         return False
-
 
 def run_charging_hub_setup():
     """
     Run the charging hub setup module.
     """
     if not Config.EXECUTION_FLAGS['RUN_CHARGING_HUB_SETUP']:
-        logging.info("Charging hub setup module skipped (disabled in config)")
-        print("\n" + "="*80)
-        print("PHASE 2: CHARGING HUB SETUP - SKIPPED (disabled in config)")
-        print("="*80)
+        report_progress(2, "CHARGING HUB SETUP", "skipped")
         return True
-    
-    print("\n" + "="*80)
-    print("PHASE 2: CHARGING HUB SETUP")
-    print("="*80)
-    
-    logging.info("Starting Phase 2: Charging Hub Setup")
+        
+    report_progress(2, "CHARGING HUB SETUP", "started")
     
     try:
         # Change working directory to charginghub_setup folder
@@ -114,12 +147,11 @@ def run_charging_hub_setup():
         # Change back to original directory
         os.chdir(original_dir)
         
-        logging.info(f"Phase 2 completed successfully in {elapsed_time:.2f} seconds")
-        print(f"\nPhase 2 completed successfully in {elapsed_time:.2f} seconds")
+        report_progress(2, "CHARGING HUB SETUP", "completed", elapsed_time)
         return True
     except Exception as e:
-        logging.error(f"Error in Phase 2: {str(e)}")
-        print(f"\nError in Phase 2: {str(e)}")
+        report_progress(2, "CHARGING HUB SETUP", "failed")
+        print(f"Error details: {str(e)}")
         return False
 
 def run_grid_optimization():
@@ -127,17 +159,10 @@ def run_grid_optimization():
     Run the grid optimization module.
     """
     if not Config.EXECUTION_FLAGS['RUN_GRID_OPTIMIZATION']:
-        logging.info("Grid optimization module skipped (disabled in config)")
-        print("\n" + "="*80)
-        print("PHASE 3: GRID OPTIMIZATION - SKIPPED (disabled in config)")
-        print("="*80)
+        report_progress(3, "GRID OPTIMIZATION", "skipped")
         return True
-    
-    print("\n" + "="*80)
-    print("PHASE 3: GRID OPTIMIZATION")
-    print("="*80)
-    
-    logging.info("Starting Phase 3: Grid Optimization")
+        
+    report_progress(3, "GRID OPTIMIZATION", "started")
     
     try:
         # Define the path to the optimization script
@@ -185,12 +210,11 @@ def run_grid_optimization():
         
         elapsed_time = time.time() - start_time
         
-        logging.info(f"Phase 3 completed successfully in {elapsed_time:.2f} seconds")
-        print(f"\nPhase 3 completed successfully in {elapsed_time:.2f} seconds")
+        report_progress(3, "GRID OPTIMIZATION", "completed", elapsed_time)
         return True
     except Exception as e:
-        logging.error(f"Error in Phase 3: {str(e)}")
-        print(f"\nError in Phase 3: {str(e)}")
+        report_progress(3, "GRID OPTIMIZATION", "failed")
+        print(f"Error details: {str(e)}")
         return False
 
 
@@ -210,6 +234,54 @@ def display_execution_flags():
         print("    Demand Optimization:", "ENABLED" if Config.EXECUTION_FLAGS['RUN_DEMAND_OPTIMIZATION'] else "DISABLED")
 
 
+def report_progress(phase_num, phase_name, status, elapsed_time=None, step_num=None, step_name=None, progress_percent=None):
+    """
+    Standardized progress reporting function for all phases and steps.
+    
+    Args:
+        phase_num: Phase number (1, 2, or 3)
+        phase_name: Phase name (e.g., "TRAFFIC CALCULATION")
+        status: Status message (e.g., "started", "completed", "skipped", "failed", "progress")
+        elapsed_time: Time taken to complete (for completion messages)
+        step_num: Sub-step number within the phase (if applicable)
+        step_name: Sub-step name (if applicable)
+        progress_percent: Optional progress percentage (0-100)
+    """
+    # Construct the progress message
+    if step_num and step_name:
+        # Sub-step progress
+        prefix = f"PHASE {phase_num} - STEP {step_num}: {step_name}"
+    else:
+        # Main phase progress
+        prefix = f"PHASE {phase_num}: {phase_name}"
+    
+    # Append status and time if provided
+    if status == "completed" and elapsed_time is not None:
+        message = f"{prefix} {status.upper()} in {elapsed_time:.2f} seconds"
+    elif status == "progress" and progress_percent is not None:
+        message = f"{prefix} {progress_percent}% COMPLETE"
+    else:
+        message = f"{prefix} {status.upper()}"
+    
+    # Add progress percentage if provided
+    if progress_percent is not None and status != "progress":
+        message += f" [{progress_percent}%]"
+    
+    # Log and print the message
+    print("\n" + "="*50)
+    print(message)
+    print("="*50)
+    
+    if status == "completed":
+        logging.info(message)
+    elif status == "failed":
+        logging.error(message)
+    else:
+        logging.info(message)
+    
+    return message
+
+
 def main(config=None):
     """
     Main function to orchestrate the entire charging hub optimization process.
@@ -221,6 +293,9 @@ def main(config=None):
     if config:
         global Config
         Config = config
+        
+    # Apply any environment variable overrides from the GUI
+    apply_environment_overrides()
 
     print("\n" + "="*80)
     print("CHARGING HUB OPTIMIZATION - MAIN CONTROL SCRIPT")

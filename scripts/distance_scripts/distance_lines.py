@@ -6,6 +6,7 @@ import folium
 from folium.features import DivIcon
 from datetime import datetime
 import os
+from ..config import Config
 
 # Earth's radius in kilometers
 R = 6371.0
@@ -242,7 +243,10 @@ def calc_power_lines(ref_point: Point, map: bool = False) -> Optional[Tuple[floa
             )
             # Create results directory if it doesn't exist
             os.makedirs("results/maps", exist_ok=True)
-            map_name = f"results/maps/{datetime.now().strftime('%m%d_%H%M')}_power_line_map.html"
+            file_id = (Config.RESULT_NAMING['CUSTOM_ID']
+                       if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False)
+                       else datetime.now().strftime('%m%d_%H%M'))
+            map_name = f"results/maps/{file_id}_power_line_map.html"
             result_map.save(map_name)
             print(f"Map saved as: {map_name}")
         except Exception as e:
@@ -261,7 +265,7 @@ def calc_power_lines(ref_point: Point, map: bool = False) -> Optional[Tuple[floa
         distance, line, nearest_point = result
         print(f"Nearest power line: {distance:.0f} meters away")
         if nearest_point is not None:
-            print(f"Nearest point: Lat {nearest_point[1]:.6f}, Lon {nearest_point[0]:.6f}")
+            print(f"Nearest point: Lat {nearest_point[1]:.6f}, Lon {nearest_point[0]::.6f}")
             print(f"Line properties: {line.get('properties', {})}")
     else:
         print("No power lines found in range.")
