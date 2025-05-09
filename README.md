@@ -108,6 +108,7 @@ ChargingHub_Optimization/
 │   ├── charginghub_setup/  # Charging hub optimization
 │   ├── grid_optimization/  # Grid connection optimization
 │   └── visuals/            # Visualization generation
+│   └── main.py             # Entry Point for the whole Optimization Pipeline
 │
 ├── ui/                     # Web interface components
 │   ├── static/             # JavaScript, CSS and other static files
@@ -115,7 +116,6 @@ ChargingHub_Optimization/
 │   └── app.py              # Flask web application
 │
 ├── requirements.txt        # Dependencies
-├── main.py                 # Main script to run the pipeline
 └── README.md               # This file
 ```
 
