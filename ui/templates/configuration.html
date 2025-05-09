@@ -90,11 +90,20 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    // Document ready
+<script>    // Document ready
     $(document).ready(function() {
-        // Make the Execution tab active by default
+        // Fix: Ensure execution tab is always shown by default
         $('#execution-tab').tab('show');
+        // Make the Execution tab active by default and show its content
+        $('#execution-tab').addClass('active');
+        $('#execution').addClass('show active');
+        
+        // Ensure execution tab is active when navigating to the configuration page
+        if(window.location.pathname === '/configuration') {
+            setTimeout(function() {
+                $('#execution-tab').tab('show');
+            }, 100);
+        }
         
         // Toggle custom ID input based on checkbox
         $('#USE_CUSTOM_ID').change(function() {
@@ -615,4 +624,11 @@
         crossorigin=""></script>
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 <script src="{{ url_for('static', filename='js/location-map.js') }}"></script>
+<script>
+    // When the page loads from navigation bar click, activate the execution tab
+    document.addEventListener('DOMContentLoaded', function() {
+        // Always show the execution tab by default, regardless of navigation path
+        $('#execution-tab').tab('show');
+    });
+</script>
 {% endblock %}

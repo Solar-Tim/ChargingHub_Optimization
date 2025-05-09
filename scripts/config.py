@@ -12,14 +12,14 @@ class Config:
     PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
     CONTINUE_ON_ERROR = False
     FORECAST_YEAR = '2030'
-    RESULT_NAMING = {'USE_CUSTOM_ID': True, 'CUSTOM_ID': '988'}
+    RESULT_NAMING = {'USE_CUSTOM_ID': True, 'CUSTOM_ID': '000'}
     EXECUTION_FLAGS = {'RUN_TRAFFIC_CALCULATION': True,
         'RUN_CHARGING_HUB_SETUP': True, 'RUN_GRID_OPTIMIZATION': True,
         'RECALCULATE_BREAKS': False, 'RECALCULATE_TOLL_MIDPOINTS': False,
         'RUN_TRUCK_MATCHING': True, 'RUN_HUB_CONFIGURATION': True,
         'RUN_DEMAND_OPTIMIZATION': True, 'USE_DISTANCE_CALCULATION': True,
-        'CREATE_PLOT': False, 'CREATE_DISTANCE_MAPS': True,
-        'INCLUDE_BATTERY': True, 'USE_MANUAL_CHARGER_COUNT': False,
+        'CREATE_PLOT': True, 'CREATE_DISTANCE_MAPS': True,
+        'INCLUDE_BATTERY': False, 'USE_MANUAL_CHARGER_COUNT': False,
         'DEBUG_MODE': False}
     CHARGING_CONFIG = {'ALL_STRATEGIES': ['T_min', 'Konstant', 'Hub'],
         'STRATEGY': ['T_min', 'Konstant', 'Hub'], 'ladequote': 0.8, 'power':
@@ -27,9 +27,9 @@ class Config:
     MANUAL_CHARGER_COUNT = {'NCS': 4, 'HPC': 6, 'MCS': 2}
     MANUAL_DISTANCES = {'distribution_distance': 1000,
         'transmission_distance': 25000, 'powerline_distance': 500}
-    DEFAULT_LOCATION = {'LONGITUDE': 9.165425, 'LATITUDE': 51.084404}
+    DEFAULT_LOCATION = {'LONGITUDE': 7.939339, 'LATITUDE': 49.930761}
     SPATIAL = {'DEFAULT_CRS': 'EPSG:4326', 'TARGET_CRS': 'EPSG:3857',
-        'BUFFER_RADIUS': 5000}
+        'BUFFER_RADIUS': 5226}
     SCENARIOS = {'TARGET_YEARS': ['2030', '2035', '2040', '2045'], 'R_BEV':
         {'2030': 0.15, '2035': 0.61, '2040': 0.94, '2045': 1}, 'R_TRAFFIC':
         {'2030': 1, '2035': 1.0462, '2040': 1.0549, '2045': 1.1672}}

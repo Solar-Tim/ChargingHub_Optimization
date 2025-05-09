@@ -14,31 +14,33 @@
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-            </div>
-            <div id="result-list" class="list-group">
-                {% if result_files %}
-                    {% for result in result_files %}
-                        <a href="#" class="list-group-item list-group-item-action" 
-                           data-result-id="{{ result.id }}" 
-                           data-result-name="{{ result.name }}">
-                            <div class="d-flex justify-content-between">
-                                <div class="result-info">
-                                    <strong>{{ result.id }}: {{ result.type }}</strong><br>
-                                    <small class="text-muted text-truncate">{{ result.name }}</small>
+            </div>            <div class="results-container">
+                <div id="result-list" class="list-group">
+                    {% if result_files %}
+                        {% for result in result_files %}
+                            <a href="#" class="list-group-item list-group-item-action" 
+                               data-result-id="{{ result.id }}" 
+                               data-result-name="{{ result.name }}">
+                                <div class="d-flex justify-content-between">
+                                    <div class="result-info">
+                                        <strong>{{ result.id }}: {{ result.type }}</strong><br>
+                                        <small class="text-muted text-truncate">{{ result.name }}</small>
+                                    </div>
+                                    <small class="text-muted result-date">
+                                        {{ result.date_formatted }}
+                                    </small>
                                 </div>
-                                <small class="text-muted result-date">
-                                    {{ result.date_formatted }}
-                                </small>
-                            </div>
-                        </a>
-                    {% endfor %}
-                {% else %}
-                    <div class="text-center" id="no-results-message">
-                        <i class="fas fa-file-alt fa-2x mb-2 text-muted"></i><br>
-                        No result files found
-                    </div>
-                {% endif %}
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center" id="no-results-message">
+                            <i class="fas fa-file-alt fa-2x mb-2 text-muted"></i><br>
+                            No result files found
+                        </div>
+                    {% endif %}
+                </div>
             </div>
+            <!-- Pagination controls will be added here dynamically -->
         </div>
     </div>
     <div class="card">

@@ -1,0 +1,100 @@
+/* Map page styles */
+.map-results-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid rgba(0,0,0,.125);
+    border-radius: .25rem;
+    margin-bottom: 10px;
+    position: relative;
+    scrollbar-width: thin; /* Firefox */
+}
+
+.map-results-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.map-results-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,.2);
+    border-radius: 3px;
+}
+
+.map-results-container:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to top, rgba(255,255,255,0.7), rgba(255,255,255,0));
+    pointer-events: none;
+    display: none;
+}
+
+.map-results-container.can-scroll:after {
+    display: block;
+}
+
+/* Map list item styling */
+#map-list .list-group-item {
+    padding: 0.75rem;
+    cursor: pointer;
+}
+
+#map-list .list-group-item:hover {
+    background-color: rgba(0,123,255,0.05);
+}
+
+#map-list .list-group-item.active {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+/* Map type badges */
+.map-type {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-weight: bold;
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+.map-type-combined {
+    background-color: #28a745;
+    color: white;
+}
+
+.map-type-power-line {
+    background-color: #fd7e14;
+    color: white;
+}
+
+.map-type-substation {
+    background-color: #6f42c1;
+    color: white;
+}
+
+/* Pagination controls styling */
+#map-pagination-controls {
+    padding: 0.25rem 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    border: 1px solid rgba(0,0,0,.125);
+}
+
+#map-pagination-controls .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+#map-pagination-controls span {
+    font-size: 0.875rem;
+}
+
+/* Responsiveness */
+@media (max-width: 767px) {
+    .map-results-container {
+        max-height: 300px; /* Shorter on mobile */
+    }
+}

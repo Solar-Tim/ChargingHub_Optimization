@@ -1,0 +1,193 @@
+<!-- Overview Tab Component -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h6 class="card-title mb-0">Configuration</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-striped">
+                    <tbody id="config-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h6 class="card-title mb-0">Summary</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-striped">
+                    <tbody id="summary-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h6 class="card-title mb-0">Key Metrics</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 class="text-primary" id="metric-peak-power">-</h5>
+                        <p class="mb-0 text-muted">Peak Power (kW)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 class="text-success" id="metric-total-energy">-</h5>
+                        <p class="mb-0 text-muted">Total Energy (kWh)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 class="text-danger" id="metric-total-cost">-</h5>
+                        <p class="mb-0 text-muted">Total Cost (€)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Battery status row - only shown when battery is included -->
+        <div class="row d-none" id="battery-metrics-row">
+            <div class="col-md-4 mb-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 class="text-info" id="metric-battery-capacity">-</h5>
+                        <p class="mb-0 text-muted">Battery Capacity (kWh)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 class="text-info" id="metric-battery-peak-power">-</h5>
+                        <p class="mb-0 text-muted">Battery Peak Power (kW)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5 class="text-info" id="metric-battery-savings">-</h5>
+                        <p class="mb-0 text-muted">Cost Savings (€)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h6 class="card-title mb-0">Distance & Capacity</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-striped">
+                    <tbody id="infrastructure-distance-table"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h6 class="card-title mb-0">Energy Metrics</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-striped" id="energy-metrics-table">
+                    <tbody>
+                        <tr><th>Weekly Energy Throughput</th><td class="text-end" id="metric-weekly-energy">-</td></tr>
+                        <tr><th>Annual Energy Throughput</th><td class="text-end" id="metric-annual-energy">-</td></tr>
+                        <tr><th>Battery Cycles (Weekly)</th><td class="text-end" id="metric-battery-cycles-weekly">-</td></tr>
+                        <tr><th>Battery Cycles (Annual)</th><td class="text-end" id="metric-battery-cycles-annual">-</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h6 class="card-title mb-0">Transformer & Grid</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-striped">
+                    <tbody id="infrastructure-transformer-table"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h6 class="card-title mb-0">Connection Details</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-striped" id="connection-details-table">
+                    <tbody>
+                        <tr><th>Transmission Capacity</th><td class="text-end" id="metric-transmission-capacity">-</td></tr>
+                        <tr><th>Distribution Capacity</th><td class="text-end" id="metric-distribution-capacity">-</td></tr>
+                        <tr><th>Use Distribution</th><td class="text-end" id="metric-use-distribution">-</td></tr>
+                        <tr><th>Use Transmission</th><td class="text-end" id="metric-use-transmission">-</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h6 class="card-title mb-0">Charging Infrastructure</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-12">
+                <h6>Charger Summary</h6>
+                <table class="table table-sm table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Charger Type</th>
+                            <th>Count</th>
+                            <th>Weekly Sessions</th>
+                            <th>Utilization</th>
+                        </tr>
+                    </thead>
+                    <tbody id="charger-summary-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h6 class="card-title mb-0">Cost Breakdown</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <canvas id="overview-costs-chart" height="200"></canvas>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-striped" id="cost-breakdown-table">
+                    <tbody>
+                        <!-- Cost breakdown will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
