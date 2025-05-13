@@ -315,13 +315,24 @@ $(document).ready(function() {
         return Math.round(num)
                   .toString()
                   .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    }
-
-    function formatDecimal(num, places = 2) {
+    }    function formatDecimal(num, places = 2) {
         if (num === undefined || num === null) {
             return '-';
         }
         return Number(num).toFixed(places).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+    
+    function formatEnergyValue(value, places = 2) {
+        if (value === undefined || value === null) {
+            return '-';
+        }
+        
+        // Convert to MWh if value is >= 1000 kWh
+        if (value >= 1000) {
+            return formatDecimal(value / 1000, places) + ' MWh';
+        } else {
+            return formatDecimal(value, places) + ' kWh';
+        }
     }
 
     function parseTimestamp(ts) {
@@ -409,24 +420,20 @@ $(document).ready(function() {
                 <th class="text-end">${formatNumber(r.total_cost)} €</th>
                 <th class="text-end">100%</th>
             </tr>`
-        );
-
-        // Key metrics
+        );        // Key metrics
         $('#metric-peak-power').text(formatDecimal(r.max_grid_load, 2));
         const totalEnergy = r.grid_energy?.reduce((sum, val) => sum + val, 0) || 0;
-        $('#metric-total-energy').text(formatDecimal(totalEnergy, 2));
+        $('#metric-weekly-energy-throughput').text(formatEnergyValue(r.energy_throughput_weekly_kwh));
         $('#metric-total-cost').text(formatDecimal(r.total_cost, 2));
-        
-        // Energy metrics
-        $('#metric-weekly-energy').text(formatDecimal(r.energy_throughput_weekly_kwh) + ' kWh');
+          // Energy metrics
+        $('#metric-weekly-energy').text(formatEnergyValue(r.energy_throughput_weekly_kwh));
         $('#metric-annual-energy').text(formatDecimal(r.energy_throughput_annual_gwh) + ' GWh');
-        
-        // Battery metrics
+          // Battery metrics
         if (r.battery_capacity > 0) {
             $('#battery-metrics-row').removeClass('d-none');
             $('#metric-battery-capacity').text(formatDecimal(r.battery_capacity, 2));
-            $('#metric-battery-peak-power').text(formatDecimal(r.battery_peak_power || (Math.max(...r.grid_energy) - r.max_grid_load), 2));
-            $('#metric-battery-savings').text(formatDecimal(r.capacity_cost - r.battery_cost, 2));
+            $('#metric-battery-peak-power').text(formatDecimal(r.battery_peak_power, 2));
+            $('#metric-battery-cost').text(formatDecimal(r.battery_cost, 2));
             $('#metric-battery-cycles-weekly').text(formatDecimal(r.battery_cycles_weekly || 0, 2));
             $('#metric-battery-cycles-annual').text(formatDecimal(r.battery_cycles_annual || 0, 2));
             $('#battery-state-container').show();
@@ -435,20 +442,47 @@ $(document).ready(function() {
             $('#battery-state-container').hide();
             $('#metric-battery-cycles-weekly').text('-');
             $('#metric-battery-cycles-annual').text('-');
+        }        // Connection details - determine which connection is used
+        const useDistribution = r.use_distribution != null ? (r.use_distribution > 0.5 ? 1 : 0) : 0;
+        const useTransmission = r.use_transmission != null ? (r.use_transmission > 0.5 ? 1 : 0) : 0;
+        
+        // Clear the connection details table
+        $('#connection-details-table').empty();
+        
+        // Add connection type header
+        let connectionType = "None";
+        if (useDistribution === 1) {
+            connectionType = "Distribution Line";
+        } else if (useTransmission === 1) {
+            connectionType = "Transmission Line";
         }
-
-        // Connection details
-        $('#metric-transmission-capacity').text(formatDecimal(r.transmission_capacity || 0) + ' kW');
-        $('#metric-distribution-capacity').text(formatDecimal(r.distribution_capacity || 0) + ' kW');
-        $('#metric-use-distribution').text(r.use_distribution != null ? r.use_distribution.toString() : '-');
-        $('#metric-use-transmission').text(r.use_transmission != null ? r.use_transmission.toString() : '-');
-
-        // Infrastructure tables
-        $('#infrastructure-distance-table').empty().append(
-            `<tr><th>Transmission Distance</th><td>${formatDecimal(r.transmission_distance, 2)} m</td></tr>
-             <tr><th>Distribution Distance</th><td>${formatDecimal(r.distribution_distance, 2)} m</td></tr>
-             <tr><th>Powerline Distance</th><td>${formatDecimal(r.powerline_distance || 0, 2)} m</td></tr>`
-        );
+        
+        $('#connection-details-table').append(`<tr class="table-primary"><th colspan="2" class="text-center">Connection Type: ${connectionType}</th></tr>`);
+        
+        // Only show details for the used connection
+        if (useDistribution === 1) {
+            $('#connection-details-table').append(`
+                <tr><th>Distribution Capacity</th><td class="text-end">${formatDecimal(r.distribution_capacity || 0)} kW</td></tr>
+                <tr><th>Distribution Distance</th><td class="text-end">${formatDecimal(r.distribution_distance, 2)} m</td></tr>
+            `);
+        } else if (useTransmission === 1) {
+            $('#connection-details-table').append(`
+                <tr><th>Transmission Capacity</th><td class="text-end">${formatDecimal(r.transmission_capacity || 0)} kW</td></tr>
+                <tr><th>Transmission Distance</th><td class="text-end">${formatDecimal(r.transmission_distance, 2)} m</td></tr>
+            `);
+        }
+        
+        // Add powerline distance if available
+        if (r.powerline_distance) {
+            $('#connection-details-table').append(`<tr><th>Powerline Distance</th><td class="text-end">${formatDecimal(r.powerline_distance, 2)} m</td></tr>`);
+        }
+        
+        // Add connection cost
+        $('#connection-details-table').append(`<tr><th>Connection Cost</th><td class="text-end">${formatNumber(r.connection_cost)} €</td></tr>`);        // Infrastructure tables - now only showing non-connection distance information
+        $('#infrastructure-distance-table').empty();
+        
+        // Add any other distance/capacity metrics that aren't connection-related
+        // For example, if there are site-specific distances or capacities
         $('#infrastructure-transformer-table').empty().append(
             `<tr><th>Transformer Capacity</th><td>${r.transformer_capacity} kW</td></tr>
              <tr><th>Description</th><td>${r.transformer_description || '-'}</td></tr>`

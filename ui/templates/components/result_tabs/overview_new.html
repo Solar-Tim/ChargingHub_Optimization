@@ -1,7 +1,7 @@
 <!-- Overview Tab Component -->
 <div class="row">
     <div class="col-md-6">
-        <div class="card mb-3">
+        <div class="card mb-3 h-100">
             <div class="card-header bg-primary text-white">
                 <h6 class="card-title mb-0">Configuration</h6>
             </div>
@@ -13,7 +13,7 @@
         </div>
     </div>
     <div class="col-md-6">
-        <div class="card mb-3">
+        <div class="card mb-3 h-100">
             <div class="card-header bg-primary text-white">
                 <h6 class="card-title mb-0">Summary</h6>
             </div>
@@ -31,25 +31,24 @@
         <h6 class="card-title mb-0">Key Metrics</h6>
     </div>
     <div class="card-body">
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <div class="card bg-light">
+        <div class="row row-cols-1 row-cols-md-3 g-3">
+            <div class="col">
+                <div class="card h-100 bg-light">
                     <div class="card-body text-center">
                         <h5 class="text-primary" id="metric-peak-power">-</h5>
                         <p class="mb-0 text-muted">Peak Power (kW)</p>
                     </div>
                 </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card bg-light">
+            </div>            <div class="col">
+                <div class="card h-100 bg-light">
                     <div class="card-body text-center">
-                        <h5 class="text-success" id="metric-total-energy">-</h5>
-                        <p class="mb-0 text-muted">Total Energy (kWh)</p>
+                        <h5 class="text-success" id="metric-weekly-energy-throughput">-</h5>
+                        <p class="mb-0 text-muted">Weekly Energy Throughput (kWh)</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card bg-light">
+            <div class="col">
+                <div class="card h-100 bg-light">
                     <div class="card-body text-center">
                         <h5 class="text-danger" id="metric-total-cost">-</h5>
                         <p class="mb-0 text-muted">Total Cost (€)</p>
@@ -59,28 +58,27 @@
         </div>
         
         <!-- Battery status row - only shown when battery is included -->
-        <div class="row d-none" id="battery-metrics-row">
-            <div class="col-md-4 mb-3">
-                <div class="card bg-light">
+        <div class="row row-cols-1 row-cols-md-3 g-3 mt-2 d-none" id="battery-metrics-row">
+            <div class="col">
+                <div class="card h-100 bg-light">
                     <div class="card-body text-center">
                         <h5 class="text-info" id="metric-battery-capacity">-</h5>
                         <p class="mb-0 text-muted">Battery Capacity (kWh)</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card bg-light">
+            <div class="col">
+                <div class="card h-100 bg-light">
                     <div class="card-body text-center">
                         <h5 class="text-info" id="metric-battery-peak-power">-</h5>
                         <p class="mb-0 text-muted">Battery Peak Power (kW)</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h5 class="text-info" id="metric-battery-savings">-</h5>
-                        <p class="mb-0 text-muted">Cost Savings (€)</p>
+            <div class="col">
+                <div class="card h-100 bg-light">
+                    <div class="card-body text-center">                        <h5 class="text-info" id="metric-battery-cost">-</h5>
+                        <p class="mb-0 text-muted">Battery Cost (€)</p>
                     </div>
                 </div>
             </div>
@@ -88,9 +86,10 @@
     </div>
 </div>
 
-<div class="row">
+<!-- Infrastructure rows -->
+<div class="row mb-3">
     <div class="col-md-6">
-        <div class="card mb-3">
+        <div class="card h-100">
             <div class="card-header bg-primary text-white">
                 <h6 class="card-title mb-0">Distance & Capacity</h6>
             </div>
@@ -100,8 +99,25 @@
                 </table>
             </div>
         </div>
-        
-        <div class="card mb-3">
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h6 class="card-title mb-0">Transformer & Grid</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-striped">
+                    <tbody id="infrastructure-transformer-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Energy and Connection row -->
+<div class="row mb-3">
+    <div class="col-md-6">
+        <div class="card h-100">
             <div class="card-header bg-primary text-white">
                 <h6 class="card-title mb-0">Energy Metrics</h6>
             </div>
@@ -117,20 +133,8 @@
             </div>
         </div>
     </div>
-    
     <div class="col-md-6">
-        <div class="card mb-3">
-            <div class="card-header bg-primary text-white">
-                <h6 class="card-title mb-0">Transformer & Grid</h6>
-            </div>
-            <div class="card-body">
-                <table class="table table-sm table-striped">
-                    <tbody id="infrastructure-transformer-table"></tbody>
-                </table>
-            </div>
-        </div>
-        
-        <div class="card mb-3">
+        <div class="card h-100">
             <div class="card-header bg-primary text-white">
                 <h6 class="card-title mb-0">Connection Details</h6>
             </div>
@@ -155,9 +159,8 @@
     <div class="card-body">
         <div class="row">
             <div class="col-md-12">
-                <h6>Charger Summary</h6>
                 <table class="table table-sm table-bordered">
-                    <thead>
+                    <thead class="table-light">
                         <tr>
                             <th>Charger Type</th>
                             <th>Count</th>
@@ -178,11 +181,11 @@
     </div>
     <div class="card-body">
         <div class="row">
-            <div class="col-md-6">
-                <canvas id="overview-costs-chart" height="200"></canvas>
+            <div class="col-md-6 d-flex align-items-center">
+                <canvas id="overview-costs-chart" height="220"></canvas>
             </div>
             <div class="col-md-6">
-                <table class="table table-striped" id="cost-breakdown-table">
+                <table class="table table-striped table-bordered" id="cost-breakdown-table">
                     <tbody>
                         <!-- Cost breakdown will be populated here -->
                     </tbody>
