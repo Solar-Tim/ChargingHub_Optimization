@@ -268,9 +268,9 @@ $(document).ready(function() {
         }
     });
     
-    // View filters for Energy Flows (All Days, Weekday, Weekend)
-    $('#view-all-days, #view-weekday, #view-weekend').click(function() {
-        $('#view-all-days, #view-weekday, #view-weekend').removeClass('active');
+    // View filters for Energy Flows (All Days, 24h, Weekday, Weekend)
+    $('#view-all-days, #view-24h, #view-weekday, #view-weekend').click(function() {
+        $('#view-all-days, #view-24h, #view-weekday, #view-weekend').removeClass('active');
         $(this).addClass('active');
         if (resultData) {
             updateEnergyFlowsChart(resultData);
@@ -565,6 +565,10 @@ $(document).ready(function() {
     
     // Initialize all charts
     function initCharts(data) {
+        // Always make sure "All Days" option is selected by default when initializing charts
+        $('#view-all-days, #view-24h, #view-weekday, #view-weekend').removeClass('active');
+        $('#view-all-days').addClass('active');
+        
         // Create cost breakdown chart
         createCostBreakdownChart(data);
         
@@ -589,6 +593,12 @@ $(document).ready(function() {
     
     // Update charts when switching to charts tab or changing filters
     function updateCharts(data) {
+        // Make sure "All Days" is selected by default when switching to charts tab if none are active
+        if (!$('#view-all-days.active, #view-24h.active, #view-weekday.active, #view-weekend.active').length) {
+            $('#view-all-days, #view-24h, #view-weekday, #view-weekend').removeClass('active');
+            $('#view-all-days').addClass('active');
+        }
+        
         updateEnergyFlowsChart(data);
         if (charts.batteryStateChart) charts.batteryStateChart.update();
         if (charts.costsChart) charts.costsChart.update();
@@ -709,12 +719,48 @@ $(document).ready(function() {
         let startIndex = 0;
         let endIndex = timePoints.length - 1;
         const viewMode = $('#view-all-days.active').length ? 'all' :
+                        $('#view-24h.active').length ? '24h' :
                         $('#view-weekday.active').length ? 'weekday' : 'weekend';
         
-        // For demonstration - in a real implementation, you would filter based on day of the week
-        if (viewMode === 'weekday') {
+        console.log(`Selected view mode: ${viewMode}`);
+        
+        // Calculate indices based on view mode
+        if (viewMode === '24h') {
+            // Find the timestamps for Day 1 9:00 (hours = 9) and Day 2 9:00 (hours = 33)
+            // A day has 24 hours, so day 1 hour 9 = 9, day 2 hour 9 = 33
+            const day1Minutes = 24 * 60; // Minutes in a day
+            const hour9Minutes = 9 * 60; // 9:00 in minutes
+            
+            // Find exact or closest time points to Day 1 9:00 and Day 2 9:00
+            const findClosestTimePoint = (targetMinutes) => {
+                let closest = 0;
+                let minDiff = Number.MAX_SAFE_INTEGER;
+                
+                timePoints.forEach((tp, index) => {
+                    const minutes = parseInt(tp);
+                    const diff = Math.abs(minutes - targetMinutes);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closest = index;
+                    }
+                });
+                
+                return closest;
+            };
+            
+            // Day 1 9:00 AM is the 9th hour of the first day = 9 * 60 = 540 minutes
+            const day1Hour9 = hour9Minutes;
+            
+            // Day 2 9:00 AM is the 9th hour of the second day = 24 * 60 + 9 * 60 = 1980 minutes
+            const day2Hour9 = day1Minutes + hour9Minutes;
+            
+            startIndex = findClosestTimePoint(day1Hour9);
+            endIndex = findClosestTimePoint(day2Hour9);
+            
+            console.log(`24h view - Start: Day 1, 9:00 (${timePoints[startIndex]} minutes), End: Day 2, 9:00 (${timePoints[endIndex]} minutes)`);
+        } else if (viewMode === 'weekday') {
             // Assuming first 5 days are weekdays (simple simulation)
-            endIndex = Math.floor(timePoints.length * (5/7));
+            endIndex = Math.floor(timePoints.length * (5/7)) - 1;
         } else if (viewMode === 'weekend') {
             // Assuming last 2 days are weekend
             startIndex = Math.floor(timePoints.length * (5/7));
@@ -727,12 +773,20 @@ $(document).ready(function() {
         const filteredBatteryCharge = r.battery_charge ? r.battery_charge.slice(startIndex, endIndex + 1) : [];
         const filteredBatteryDischarge = r.battery_discharge ? r.battery_discharge.slice(startIndex, endIndex + 1) : [];
         
-        // Convert time points to more readable format (Day X, Hour Y)
+        // Convert time points to more readable format with additional debugging info
         const labels = filteredTimePoints.map(tp => {
             const minutesTotal = parseInt(tp);
             const day = Math.floor(minutesTotal / (24 * 60)) + 1;
             const hour = Math.floor((minutesTotal % (24 * 60)) / 60);
-            return `Day ${day}, ${hour}:00`;
+            const minutes = minutesTotal % 60;
+            const hourStr = hour.toString().padStart(2, '0');
+            
+            // Include minutes if non-zero (useful for 15-min intervals)
+            if (minutes > 0) {
+                const minStr = minutes.toString().padStart(2, '0');
+                return `Day ${day}, ${hourStr}:${minStr}`;
+            }
+            return `Day ${day}, ${hourStr}:00`;
         });
         
         // Prepare datasets based on checkboxes
