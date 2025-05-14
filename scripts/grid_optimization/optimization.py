@@ -69,7 +69,7 @@ def run_optimization_for_strategy(strategy):
     if use_distance_calculation:
         # Get custom ID from Config
         custom_id = Config.RESULT_NAMING.get('CUSTOM_ID') if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False) else None
-        distances = calculate_all_distances(ref_point, create_distance_maps, custom_id=custom_id)
+        distances = calculate_all_distances(ref_point, create_distance_maps)
         print(f"Using calculated distances for coordinates: ({location_longitude}, {location_latitude})")
     else:
         distances = manual_distances

@@ -48,18 +48,22 @@
             <h5 class="card-title mb-0">Actions</h5>
         </div>
         <div class="card-body">
-            <div class="btn-group w-100 mb-3">
-                <button id="download-json-btn" class="btn btn-outline-primary" disabled>
-                    <i class="fas fa-download"></i> JSON
-                </button>
-                <button id="download-csv-btn" class="btn btn-outline-primary" disabled>
-                    <i class="fas fa-download"></i> CSV
-                </button>
+            <div class="row mb-3">
+                <div class="col-6 pe-1">
+                    <button id="download-json-btn" class="btn btn-outline-primary w-100" disabled>
+                        <i class="fas fa-download"></i> JSON
+                    </button>
+                </div>
+                <div class="col-6 ps-1">
+                    <button id="download-csv-btn" class="btn btn-outline-secondary w-100" disabled title="CSV export not yet implemented">
+                        <i class="fas fa-download"></i> CSV
+                    </button>
+                </div>
             </div>
-            <button id="compare-btn" class="btn btn-outline-info btn-block mb-3" disabled>
+            <button id="compare-btn" class="btn btn-outline-info w-100 mb-3" disabled>
                 <i class="fas fa-balance-scale"></i> Compare Results
             </button>
-            <button id="run-optimization-btn" class="btn btn-success btn-block">
+            <button id="run-optimization-btn" class="btn btn-success w-100">
                 <i class="fas fa-play"></i> Run New Optimization
             </button>
         </div>

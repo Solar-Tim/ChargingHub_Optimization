@@ -21,7 +21,10 @@ $(document).ready(function() {
                 
                 if (data.results && data.results.length) {
                     $('#no-results-message').hide();
-                    data.results.sort((a, b) => b.date - a.date);data.results.forEach(result => {
+                    // Sort results by name instead of date
+                    data.results.sort((a, b) => a.name.localeCompare(b.name));
+                    
+                    data.results.forEach(result => {
                         const dateStr = new Date(result.date * 1000).toISOString().split('T')[0];
                         const item = $(
                             `<a href="#" class="list-group-item list-group-item-action" 
@@ -359,7 +362,7 @@ $(document).ready(function() {
 
         // ─── Config table ────────────────────────────────────────────────────
         const configRows = [
-            ['Scenario',  data.scenario],
+            ['File',  data.scenario],
             ['Strategy',  r.charging_strategy],
             ['Date',      ts.date],
             ['Time',      ts.time],
@@ -420,15 +423,16 @@ $(document).ready(function() {
                 <th class="text-end">${formatNumber(r.total_cost)} €</th>
                 <th class="text-end">100%</th>
             </tr>`
-        );        // Key metrics
-        $('#metric-peak-power').text(formatDecimal(r.max_grid_load, 2));
-        const totalEnergy = r.grid_energy?.reduce((sum, val) => sum + val, 0) || 0;
-        $('#metric-weekly-energy-throughput').text(formatEnergyValue(r.energy_throughput_weekly_kwh));
-        $('#metric-total-cost').text(formatDecimal(r.total_cost, 2));
-          // Energy metrics
-        $('#metric-weekly-energy').text(formatEnergyValue(r.energy_throughput_weekly_kwh));
+        );        // Key metrics - Correctly mapped to the appropriate data fields
+        $('#metric-peak-demand').text(formatDecimal(r.peak_load || r.peak_demand || r.max_demand || 0, 2)); // Peak Demand
+        $('#metric-peak-grid-load').text(formatDecimal(r.max_grid_load, 2)); // Peak Grid Load
+        $('#metric-weekly-energy').text(formatEnergyValue(r.energy_throughput_weekly_kwh)); // Weekly Energy Throughput
+        
+        // Energy metrics
+        $('#energy-metric-weekly').text(formatEnergyValue(r.energy_throughput_weekly_kwh));
         $('#metric-annual-energy').text(formatDecimal(r.energy_throughput_annual_gwh) + ' GWh');
-          // Battery metrics
+        
+        // Battery metrics
         if (r.battery_capacity > 0) {
             $('#battery-metrics-row').removeClass('d-none');
             $('#metric-battery-capacity').text(formatDecimal(r.battery_capacity, 2));
@@ -445,40 +449,72 @@ $(document).ready(function() {
         }        // Connection details - determine which connection is used
         const useDistribution = r.use_distribution != null ? (r.use_distribution > 0.5 ? 1 : 0) : 0;
         const useTransmission = r.use_transmission != null ? (r.use_transmission > 0.5 ? 1 : 0) : 0;
+        const useExistingMV = r.use_existing_mv != null ? (r.use_existing_mv > 0.5 ? 1 : 0) : 0;
+        const useHV = r.use_hv != null ? (r.use_hv > 0.5 ? 1 : 0) : 0;
         
-        // Clear the connection details table
+        // Clear the connection details table and prepare to populate it
         $('#connection-details-table').empty();
         
-        // Add connection type header
+        // Determine the connection type
         let connectionType = "None";
-        if (useDistribution === 1) {
+        if (useExistingMV === 1) {
+            connectionType = "Existing MV Connection";
+        } else if (useDistribution === 1) {
             connectionType = "Distribution Line";
         } else if (useTransmission === 1) {
             connectionType = "Transmission Line";
+        } else if (useHV === 1) {
+            connectionType = "New Substation";
         }
         
-        $('#connection-details-table').append(`<tr class="table-primary"><th colspan="2" class="text-center">Connection Type: ${connectionType}</th></tr>`);
+        // Add connection type
+        $('#connection-details-table').append(`
+            <tr><th>Connection Type</th><td class="text-end">${connectionType}</td></tr>
+        `);
         
-        // Only show details for the used connection
-        if (useDistribution === 1) {
+        // Add grid connection limit
+        if (r.capacity_limit) {
             $('#connection-details-table').append(`
-                <tr><th>Distribution Capacity</th><td class="text-end">${formatDecimal(r.distribution_capacity || 0)} kW</td></tr>
-                <tr><th>Distribution Distance</th><td class="text-end">${formatDecimal(r.distribution_distance, 2)} m</td></tr>
-            `);
-        } else if (useTransmission === 1) {
-            $('#connection-details-table').append(`
-                <tr><th>Transmission Capacity</th><td class="text-end">${formatDecimal(r.transmission_capacity || 0)} kW</td></tr>
-                <tr><th>Transmission Distance</th><td class="text-end">${formatDecimal(r.transmission_distance, 2)} m</td></tr>
+                <tr><th>Grid Connection Limit</th><td class="text-end">${formatDecimal(r.capacity_limit, 2)} kW</td></tr>
             `);
         }
         
-        // Add powerline distance if available
-        if (r.powerline_distance) {
-            $('#connection-details-table').append(`<tr><th>Powerline Distance</th><td class="text-end">${formatDecimal(r.powerline_distance, 2)} m</td></tr>`);
+        // Add cable power limit only for transmission, distribution, or HV connections
+        if (useExistingMV !== 1) {
+            if (useDistribution === 1 && r.distribution_capacity) {
+                $('#connection-details-table').append(`
+                    <tr><th>Cable Power Limit</th><td class="text-end">${formatDecimal(r.distribution_capacity, 2)} kW</td></tr>
+                `);
+            } else if (useTransmission === 1 && r.transmission_capacity) {
+                $('#connection-details-table').append(`
+                    <tr><th>Cable Power Limit</th><td class="text-end">${formatDecimal(r.transmission_capacity, 2)} kW</td></tr>
+                `);
+            } else if (useHV === 1 && r.hv_capacity) {
+                $('#connection-details-table').append(`
+                    <tr><th>Cable Power Limit</th><td class="text-end">${formatDecimal(r.hv_capacity, 2)} kW</td></tr>
+                `);
+            }
         }
         
         // Add connection cost
-        $('#connection-details-table').append(`<tr><th>Connection Cost</th><td class="text-end">${formatNumber(r.connection_cost)} €</td></tr>`);        // Infrastructure tables - now only showing non-connection distance information
+        $('#connection-details-table').append(`
+            <tr><th>Connection Cost</th><td class="text-end">${formatNumber(r.connection_cost)} €</td></tr>
+        `);
+        
+        // Add specific details based on the connection type
+        if (useDistribution === 1 && r.distribution_distance) {
+            $('#connection-details-table').append(`
+                <tr><th>Distribution Distance</th><td class="text-end">${formatDecimal(r.distribution_distance, 2)} m</td></tr>
+            `);
+        } else if (useTransmission === 1 && r.transmission_distance) {
+            $('#connection-details-table').append(`
+                <tr><th>Transmission Distance</th><td class="text-end">${formatDecimal(r.transmission_distance, 2)} m</td></tr>
+            `);
+        } else if (useHV === 1 && r.hv_distance) {
+            $('#connection-details-table').append(`
+                <tr><th>HV Distance</th><td class="text-end">${formatDecimal(r.powerline_distance, 2)} m</td></tr>
+            `);
+        }        // Infrastructure tables - now only showing non-connection distance information
         $('#infrastructure-distance-table').empty();
         
         // Add any other distance/capacity metrics that aren't connection-related
