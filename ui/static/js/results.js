@@ -23,7 +23,7 @@ $(document).ready(function() {
                     $('#no-results-message').hide();
                     // Sort results by name instead of date
                     data.results.sort((a, b) => a.name.localeCompare(b.name));
-                    
+                 
                     data.results.forEach(result => {
                         const dateStr = new Date(result.date * 1000).toISOString().split('T')[0];
                         const item = $(
@@ -34,6 +34,7 @@ $(document).ready(function() {
                                     <div class="result-info">
                                         <strong>${result.id}: ${result.type}</strong><br>
                                         <small class="text-muted text-truncate">${result.name}</small>
+
                                     </div>
                                     <small class="text-muted result-date">${dateStr}</small>
                                 </div>
@@ -260,7 +261,7 @@ $(document).ready(function() {
         compareResults(sel[0], sel[1]);
     });
     $('#test-loading-btn').click(() => $('.list-group-item').first().click());
-    
+   
     // Chart filter bindings for Energy Flows
     $('#show-demand, #show-grid-energy, #show-battery-discharge, #show-battery-charge, #show-grid-limit').change(function() {
         if (resultData) {
@@ -391,7 +392,6 @@ $(document).ready(function() {
                 </tr>`
             )
         );
-
         // Cost Breakdown Table and Chart
         const costData = {
             labels: ['Connection', 'Capacity', 'Battery', 'Transformer', 'Internal Cable', 'Chargers'],

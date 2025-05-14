@@ -53,3 +53,4 @@ if __name__ == '__main__':
     # Start Flask app with Socket.IO
     print("Starting ChargingHub Optimization UI at http://localhost:5000")
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=True)
+

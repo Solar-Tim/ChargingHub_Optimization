@@ -22,6 +22,7 @@
                     <div class="btn-group">
                         <button class="btn btn-sm btn-outline-light active" id="tab-overview">Overview</button>
                         <button class="btn btn-sm btn-outline-light" id="tab-charts">Charts</button>
+
                     </div>
                 </div>
                 <div class="card-body">
@@ -47,12 +48,15 @@
                         
                         <!-- Overview Tab -->
                         <div id="overview-content" class="result-tab-content d-none">
+
                             {% include "components/result_tabs/overview_new.html" %}
+
                         </div>
                         
                         <!-- Charts Tab -->
                         <div id="charts-content" class="result-tab-content d-none">
                             {% include "components/result_tabs/charts.html" %}
+
                         </div>
                     </div>
                 </div>
