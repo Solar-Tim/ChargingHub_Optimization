@@ -66,11 +66,13 @@ def run_optimization_for_strategy(strategy):
     
     
     # Toggle between calculated distances and manual distances
-    if use_distance_calculation: # type: ignore
-        distances = calculate_all_distances(ref_point, create_distance_maps) # type: ignore
+    if use_distance_calculation:
+        # Get custom ID from Config
+        custom_id = Config.RESULT_NAMING.get('CUSTOM_ID') if Config.RESULT_NAMING.get('USE_CUSTOM_ID', False) else None
+        distances = calculate_all_distances(ref_point, create_distance_maps)
         print(f"Using calculated distances for coordinates: ({location_longitude}, {location_latitude})")
     else:
-        distances = manual_distances # type: ignore
+        distances = manual_distances
         print("Using manual distances from config file")
 
 
@@ -688,7 +690,6 @@ def main():
     #    all_results.append(result)
 
     # Option 2: Parallel execution with ProcessPoolExecutor
-    # Change to:
     with ProcessPoolExecutor(max_workers=min(len(Config.CHARGING_CONFIG['STRATEGY']), os.cpu_count() or 1)) as executor:
         # Submit all strategies for processing
         futures = {executor.submit(process_strategy, strategy): strategy 
@@ -702,6 +703,10 @@ def main():
                 result = future.result()
                 all_results.append(result)
                 print(f"Completed optimization for strategy: {strategy}")
+                
+                # Also print energy throughput metrics if available
+                if 'energy_throughput_weekly_kwh' in result and 'energy_throughput_annual_gwh' in result:
+                    print(f"  Energy Throughput: {result['energy_throughput_weekly_kwh']:.2f} kWh/week, {result['energy_throughput_annual_gwh']:.2f} GWh/year")
             except Exception as e:
                 print(f"Error in strategy {strategy}: {e}")
                 all_results.append({'charging_strategy': strategy, 'error': str(e)})
@@ -717,13 +722,19 @@ def main():
     
     for result in all_results:
         if 'error' in result:
-            print(f"{result['charging_strategy']:<10} | {'ERROR':<15} | {'N/A':<12} | {'N/A':<10} | {'N/A'}")
+            print(f"{result['charging_strategy']:<10} | {'ERROR':<15} | {'N/A':<12} | {'N/A':<10} | {'N/A':<15} | {'N/A':<15} | {'N/A'}")
         else:
             connection_type = "HV Line" if result.get('use_hv', 0) > 0.5 else \
                             "Transmission" if result.get('use_transmission', 0) > 0.5 else \
                             "Distribution" if result.get('use_distribution', 0) > 0.5 else "Existing MV"
             
-            print(f"{result['charging_strategy']:<10} | €{result['total_cost']:,.2f} | {result['max_grid_load']:.2f} kW | {result['battery_capacity']:.2f} kWh | {connection_type}")
+            # Format energy values with appropriate units
+            weekly_energy = f"{result.get('energy_throughput_weekly_kwh', 0):.2f} kWh" 
+            annual_energy = f"{result.get('energy_throughput_annual_gwh', 0):.2f} GWh"
+            
+            print(f"{result['charging_strategy']:<10} | €{result['total_cost']:,.2f} | " +
+                  f"{result['max_grid_load']:.2f} kW | {result['battery_capacity']:.2f} kWh | " +
+                  f"{weekly_energy:<15} | {annual_energy:<15} | {connection_type}")
 
     # Print execution time
     end_time = time.time()

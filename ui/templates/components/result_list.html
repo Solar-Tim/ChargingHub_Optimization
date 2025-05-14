@@ -14,31 +14,33 @@
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-            </div>
-            <div id="result-list" class="list-group">
-                {% if result_files %}
-                    {% for result in result_files %}
-                        <a href="#" class="list-group-item list-group-item-action" 
-                           data-result-id="{{ result.id }}" 
-                           data-result-name="{{ result.name }}">
-                            <div class="d-flex justify-content-between">
-                                <div class="result-info">
-                                    <strong>{{ result.id }}: {{ result.type }}</strong><br>
-                                    <small class="text-muted text-truncate">{{ result.name }}</small>
+            </div>            <div class="results-container">
+                <div id="result-list" class="list-group">
+                    {% if result_files %}
+                        {% for result in result_files %}
+                            <a href="#" class="list-group-item list-group-item-action" 
+                               data-result-id="{{ result.id }}" 
+                               data-result-name="{{ result.name }}">
+                                <div class="d-flex justify-content-between">
+                                    <div class="result-info">
+                                        <strong>{{ result.id }}: {{ result.type }}</strong><br>
+                                        <small class="text-muted text-truncate">{{ result.name }}</small>
+                                    </div>
+                                    <small class="text-muted result-date">
+                                        {{ result.date_formatted }}
+                                    </small>
                                 </div>
-                                <small class="text-muted result-date">
-                                    {{ result.date_formatted }}
-                                </small>
-                            </div>
-                        </a>
-                    {% endfor %}
-                {% else %}
-                    <div class="text-center" id="no-results-message">
-                        <i class="fas fa-file-alt fa-2x mb-2 text-muted"></i><br>
-                        No result files found
-                    </div>
-                {% endif %}
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center" id="no-results-message">
+                            <i class="fas fa-file-alt fa-2x mb-2 text-muted"></i><br>
+                            No result files found
+                        </div>
+                    {% endif %}
+                </div>
             </div>
+            <!-- Pagination controls will be added here dynamically -->
         </div>
     </div>
     <div class="card">
@@ -46,19 +48,21 @@
             <h5 class="card-title mb-0">Actions</h5>
         </div>
         <div class="card-body">
-            <div class="btn-group w-100 mb-3">
-                <button id="download-json-btn" class="btn btn-outline-primary" disabled>
-                    <i class="fas fa-download"></i> JSON
-                </button>
-                <button id="download-csv-btn" class="btn btn-outline-primary" disabled>
-                    <i class="fas fa-download"></i> CSV
-                </button>
+            <div class="row mb-3">
+                <div class="col-6 pe-1">
+                    <button id="download-json-btn" class="btn btn-outline-primary w-100" disabled>
+                        <i class="fas fa-download"></i> JSON
+                    </button>
+                </div>
+                <div class="col-6 ps-1">
+                    <button id="download-csv-btn" class="btn btn-outline-secondary w-100" disabled title="CSV export not yet implemented">
+                        <i class="fas fa-download"></i> CSV
+                    </button>
+                </div>
             </div>
-            <button id="compare-btn" class="btn btn-outline-info btn-block mb-3" disabled>
+            <button id="compare-btn" class="btn btn-info w-100">
                 <i class="fas fa-balance-scale"></i> Compare Results
-            </button>
-            <button id="run-optimization-btn" class="btn btn-success btn-block">
-                <i class="fas fa-play"></i> Run New Optimization
+                <span class="small d-block mt-1">Select 2 files to highlight differences</span>
             </button>
         </div>
     </div>

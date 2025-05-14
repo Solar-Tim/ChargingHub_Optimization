@@ -339,7 +339,7 @@ def modellierung():
         # -------------------------------------
 
         if strategie == "T_min":
-            obj_expr = quicksum(((1/(t+1)) * (Pplus[(i, t)])) - (t * Pminus[(i, t)]) 
+            obj_expr = quicksum(((1/(t+1)) * (Pplus[(i, t)])) 
                                 for i in range(I) 
                                 for t in range(t_in[i], t_out[i]+1))
 

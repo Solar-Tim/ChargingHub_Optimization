@@ -6,22 +6,9 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>Configuration</h1>
             <div>
-                <button id="saveConfig" class="btn btn-primary me-2">
+                <button id="saveConfig" class="btn btn-primary">
                     <i class="fas fa-save me-1"></i> Save Configuration
                 </button>
-                <div class="btn-group">
-                    <button id="runOptimization" class="btn btn-success">
-                        <i class="fas fa-play me-1"></i> Run All
-                    </button>
-                    <button class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="visually-hidden">Toggle Dropdown</span>
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#" id="runTraffic">Run Traffic Calculation</a></li>
-                        <li><a class="dropdown-item" href="#" id="runChargingHub">Run Charging Hub Setup</a></li>
-                        <li><a class="dropdown-item" href="#" id="runGridOpt">Run Grid Optimization</a></li>
-                    </ul>
-                </div>
             </div>
         </div>
         
@@ -90,11 +77,20 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    // Document ready
+<script>    // Document ready
     $(document).ready(function() {
-        // Make the Execution tab active by default
+        // Fix: Ensure execution tab is always shown by default
         $('#execution-tab').tab('show');
+        // Make the Execution tab active by default and show its content
+        $('#execution-tab').addClass('active');
+        $('#execution').addClass('show active');
+        
+        // Ensure execution tab is active when navigating to the configuration page
+        if(window.location.pathname === '/configuration') {
+            setTimeout(function() {
+                $('#execution-tab').tab('show');
+            }, 100);
+        }
         
         // Toggle custom ID input based on checkbox
         $('#USE_CUSTOM_ID').change(function() {
@@ -476,62 +472,6 @@
                 }
             });
         });
-        
-        // Run optimization processes
-        $('#runOptimization').click(function() {
-            runProcess('/api/run/main');
-        });
-        
-        $('#runTraffic').click(function() {
-            runProcess('/api/run/traffic_calculation');
-        });
-        
-        $('#runChargingHub').click(function() {
-            runProcess('/api/run/charging_hub_setup');
-        });
-        
-        $('#runGridOpt').click(function() {
-            runProcess('/api/run/grid_optimization');
-        });
-        
-        // Helper function to run a process
-        function runProcess(url) {
-            // Save config first
-            $('#saveConfig').click();
-            
-            // Wait a bit to ensure config is saved
-            setTimeout(() => {
-                $.ajax({
-                    url: url,
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ useCurrentConfig: true }),
-                    success: function(response) {
-                        console.log('Process started:', response);
-                        // Show success message
-                        const alertHtml = `
-                            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                <i class="fas fa-check-circle me-1"></i> Process started successfully!
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        `;
-                        $('#configTabContent').prepend(alertHtml);
-                    },
-                    error: function(error) {
-                        console.error('Error starting process:', error);
-                        
-                        // Show error message
-                        const alertHtml = `
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                <i class="fas fa-exclamation-circle me-1"></i> Error starting process: ${error.responseJSON?.error || 'Unknown error'}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        `;
-                        $('#configTabContent').prepend(alertHtml);
-                    }
-                });
-            }, 1000);
-        }
     });
 </script>
 {% endblock %}
@@ -615,4 +555,11 @@
         crossorigin=""></script>
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 <script src="{{ url_for('static', filename='js/location-map.js') }}"></script>
+<script>
+    // When the page loads from navigation bar click, activate the execution tab
+    document.addEventListener('DOMContentLoaded', function() {
+        // Always show the execution tab by default, regardless of navigation path
+        $('#execution-tab').tab('show');
+    });
+</script>
 {% endblock %}
