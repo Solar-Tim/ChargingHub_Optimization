@@ -70,33 +70,61 @@
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> Select the results you want to compare.
+                        <i class="fas fa-info-circle"></i> <strong>Select exactly two results</strong> to compare their specifications and costs.
                     </div>
                     <div class="form-group">
-                        <label>Select Result Files to Compare:</label>
+                        <label for="compare-select"><i class="fas fa-file-alt"></i> Select Result Files:</label>
                         <select id="compare-select" class="form-control" multiple size="5">
                             <!-- Options will be added dynamically -->
                         </select>
+                        <small class="text-muted">Hold Ctrl (or Cmd) to select multiple items</small>
                     </div>
                     <div class="mt-3">
-                        <button id="do-compare" class="btn btn-primary btn-block">Compare</button>
+                        <button id="do-compare" class="btn btn-primary btn-block">
+                            <i class="fas fa-balance-scale"></i> Compare Selected Results
+                        </button>
                     </div>
                     <div id="compare-results" class="d-none">
-                        <h5 class="mt-4 mb-3">Comparison Results</h5>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Metric</th>
-                                        <th id="compare-col-1">Result 1</th>
-                                        <th id="compare-col-2">Result 2</th>
-                                        <th>Difference</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="compare-table">
-                                    <!-- Comparison data will be inserted here -->
-                                </tbody>
-                            </table>
+                        <div id="compare-summary" class="mb-3 mt-4"></div>
+                        
+                        <!-- Comparison Visualization -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Cost Comparison</h6>
+                            </div>
+                            <div class="card-body">
+                                <div style="height: 300px;">
+                                    <canvas id="comparison-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Comparison Table -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Detailed Comparison</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-striped table-hover">
+                                        <thead class="table-primary">
+                                            <tr>
+                                                <th>Metric</th>
+                                                <th id="compare-col-1" class="text-end">Result 1</th>
+                                                <th id="compare-col-2" class="text-end">Result 2</th>
+                                                <th class="text-end">Difference</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="compare-table">
+                                            <!-- Comparison data will be inserted here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-3 small text-muted">
+                                    <i class="fas fa-info-circle"></i> For costs, <span class="text-success">lower values are better</span>. 
+                                    For technical specifications, <span class="text-success">higher values may be better</span> depending on requirements.
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

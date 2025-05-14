@@ -18,7 +18,9 @@
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">                <ul class="navbar-nav">
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <!-- Main navigation items -->
+                <ul class="navbar-nav">
                     <li class="nav-item">
                         <a class="nav-link{% if request.path == '/dashboard' %} active{% endif %}" href="/dashboard">Dashboard</a>
                     </li>
@@ -31,8 +33,14 @@
                     <li class="nav-item">
                         <a class="nav-link{% if request.path == '/map' %} active{% endif %}" href="/map">Map</a>
                     </li>
+                </ul>
+                
+                <!-- Right-aligned logs item -->
+                <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link{% if request.path == '/logs' %} active{% endif %}" href="/logs">Logs</a>
+                        <a class="nav-link{% if request.path == '/logs' %} active{% endif %}" href="/logs">
+                            <i class="fas fa-file-alt me-1"></i>Logs
+                        </a>
                     </li>
                 </ul>
             </div>

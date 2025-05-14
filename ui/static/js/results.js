@@ -250,7 +250,6 @@ $(document).ready(function() {
         }
     });
     $('#download-json-btn').click(() => currentResult && (window.location.href = `${apiBase}/api/results/download/${currentResult}?format=json`));
-    $('#run-optimization-btn').click(() => window.location.href = '/configuration');
     $('#compare-btn').click(() => $('#compareModal').modal('show'));
     $('#do-compare').click(() => {
         const sel = $('#compare-select').val();
@@ -452,9 +451,6 @@ $(document).ready(function() {
         const useExistingMV = r.use_existing_mv != null ? (r.use_existing_mv > 0.5 ? 1 : 0) : 0;
         const useHV = r.use_hv != null ? (r.use_hv > 0.5 ? 1 : 0) : 0;
         
-        // Clear the connection details table and prepare to populate it
-        $('#connection-details-table').empty();
-        
         // Determine the connection type
         let connectionType = "None";
         if (useExistingMV === 1) {
@@ -467,55 +463,94 @@ $(document).ready(function() {
             connectionType = "New Substation";
         }
         
-        // Add connection type
-        $('#connection-details-table').append(`
-            <tr><th>Connection Type</th><td class="text-end">${connectionType}</td></tr>
+        // Update the connection details card to use a styled table like the Energy Metrics
+        $('#connection-details-table').parent().parent().html(`
+            <div class="card-header bg-primary text-white">
+                <h6 class="card-title mb-0">Connection Details</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-striped">
+                    <tbody>
+                        <tr>
+                            <th>Connection Type</th>
+                            <td class="text-end">${connectionType}</td>
+                        </tr>
+                        ${useDistribution === 1 && r.distribution_distance ? 
+                            `<tr>
+                                <th>Distribution Distance</th>
+                                <td class="text-end">${formatDecimal(r.distribution_distance, 2)} m</td>
+                            </tr>` : ''
+                        }
+                        ${useTransmission === 1 && r.transmission_distance ? 
+                            `<tr>
+                                <th>Transmission Distance</th>
+                                <td class="text-end">${formatDecimal(r.transmission_distance, 2)} m</td>
+                            </tr>` : ''
+                        }
+                        ${useHV === 1 && r.hv_distance ? 
+                            `<tr>
+                                <th>HV Distance</th>
+                                <td class="text-end">${formatDecimal(r.powerline_distance, 2)} m</td>
+                            </tr>` : ''
+                        }
+                        ${useExistingMV !== 1 ? (
+                            useDistribution === 1 && r.distribution_selected_size !== undefined ? 
+                                `<tr>
+                                    <th>Selected Cable Size</th>
+                                    <td class="text-end">${formatDecimal(r.distribution_selected_size, 1)} mm²</td>
+                                </tr>` : 
+                            useTransmission === 1 && r.transmission_selected_size !== undefined ? 
+                                `<tr>
+                                    <th>Selected Cable Size</th>
+                                    <td class="text-end">${formatDecimal(r.transmission_selected_size, 1)} mm²</td>
+                                </tr>` : 
+                            useHV === 1 && r.hv_selected_size !== undefined ? 
+                                `<tr>
+                                    <th>Selected Cable Size</th>
+                                    <td class="text-end">${formatDecimal(r.hv_selected_size, 1)} mm²</td>
+                                </tr>` : ''
+                        ) : ''}
+                        ${r.capacity_limit ? 
+                            `<tr>
+                                <th>Grid Connection Limit</th>
+                                <td class="text-end">${formatDecimal(r.capacity_limit, 2)} kW</td>
+                            </tr>` : ''
+                        }
+                        ${useExistingMV !== 1 ? (
+                            useDistribution === 1 && r.distribution_capacity ? 
+                                `<tr>
+                                    <th>Cable Power Limit</th>
+                                    <td class="text-end">${formatDecimal(r.distribution_capacity, 2)} kW</td>
+                                </tr>` : 
+                            useTransmission === 1 && r.transmission_capacity ? 
+                                `<tr>
+                                    <th>Cable Power Limit</th>
+                                    <td class="text-end">${formatDecimal(r.transmission_capacity, 2)} kW</td>
+                                </tr>` : 
+                            useHV === 1 && r.hv_capacity ? 
+                                `<tr>
+                                    <th>Cable Power Limit</th>
+                                    <td class="text-end">${formatDecimal(r.hv_capacity, 2)} kW</td>
+                                </tr>` : ''
+                        ) : ''}
+                        <tr>
+                            <th>Connection Cost</th>
+                            <td class="text-end">${formatNumber(r.connection_cost)} €</td>
+                        </tr>
+                        <tr>
+                            <th>Capacity Cost</th>
+                            <td class="text-end">${formatNumber(r.capacity_cost)} €</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         `);
-        
-        // Add grid connection limit
-        if (r.capacity_limit) {
-            $('#connection-details-table').append(`
-                <tr><th>Grid Connection Limit</th><td class="text-end">${formatDecimal(r.capacity_limit, 2)} kW</td></tr>
-            `);
-        }
-        
-        // Add cable power limit only for transmission, distribution, or HV connections
-        if (useExistingMV !== 1) {
-            if (useDistribution === 1 && r.distribution_capacity) {
-                $('#connection-details-table').append(`
-                    <tr><th>Cable Power Limit</th><td class="text-end">${formatDecimal(r.distribution_capacity, 2)} kW</td></tr>
-                `);
-            } else if (useTransmission === 1 && r.transmission_capacity) {
-                $('#connection-details-table').append(`
-                    <tr><th>Cable Power Limit</th><td class="text-end">${formatDecimal(r.transmission_capacity, 2)} kW</td></tr>
-                `);
-            } else if (useHV === 1 && r.hv_capacity) {
-                $('#connection-details-table').append(`
-                    <tr><th>Cable Power Limit</th><td class="text-end">${formatDecimal(r.hv_capacity, 2)} kW</td></tr>
-                `);
-            }
-        }
-        
-        // Add connection cost
-        $('#connection-details-table').append(`
-            <tr><th>Connection Cost</th><td class="text-end">${formatNumber(r.connection_cost)} €</td></tr>
-        `);
-        
-        // Add specific details based on the connection type
-        if (useDistribution === 1 && r.distribution_distance) {
-            $('#connection-details-table').append(`
-                <tr><th>Distribution Distance</th><td class="text-end">${formatDecimal(r.distribution_distance, 2)} m</td></tr>
-            `);
-        } else if (useTransmission === 1 && r.transmission_distance) {
-            $('#connection-details-table').append(`
-                <tr><th>Transmission Distance</th><td class="text-end">${formatDecimal(r.transmission_distance, 2)} m</td></tr>
-            `);
-        } else if (useHV === 1 && r.hv_distance) {
-            $('#connection-details-table').append(`
-                <tr><th>HV Distance</th><td class="text-end">${formatDecimal(r.powerline_distance, 2)} m</td></tr>
-            `);
-        }        // Infrastructure tables - now only showing non-connection distance information
+
+        // Infrastructure tables - now only showing non-connection distance information
         $('#infrastructure-distance-table').empty();
+        
+        // Populate the Alternative Connections table with unused connection types
+        populateAlternativeConnections(r, useExistingMV, useDistribution, useTransmission, useHV);
         
         // Add any other distance/capacity metrics that aren't connection-related
         // For example, if there are site-specific distances or capacities
@@ -524,36 +559,8 @@ $(document).ready(function() {
              <tr><th>Description</th><td>${r.transformer_description || '-'}</td></tr>`
         );
 
-        // Charger summary
-        $('#charger-summary-table').empty();
-        const chargerTypes = [
-            ['MCS_count', 'MCS'], 
-            ['HPC_count', 'HPC'], 
-            ['NCS_count', 'NCS']
-        ];
-        chargerTypes.forEach(([key, label]) => {
-            if (r[key] !== undefined) {
-                const sessions = r.weekly_charging_sessions?.[label] || '-';
-                const utilization = r.charger_utilization?.[label] 
-                    ? `${(r.charger_utilization[label] * 100).toFixed(1)}%` 
-                    : '-';
-                $('#charger-summary-table').append(
-                    `<tr>
-                        <td>${label}</td>
-                        <td>${r[key]}</td>
-                        <td>${sessions}</td>
-                        <td>${utilization}</td>
-                    </tr>`
-                );
-            }
-        });
-        
-        // If no charger data, add message
-        if ($('#charger-summary-table tr').length === 0) {
-            $('#charger-summary-table').append(
-                `<tr><td colspan="4" class="text-center">No charger data available</td></tr>`
-            );
-        }
+        // Call the new charger summary function instead of directly populating the table
+        populateChargerSummary(r);
     }
     
     // Initialize all charts
@@ -985,10 +992,20 @@ $(document).ready(function() {
         }
         
         const sessions = r.daily_charging_sessions;
-        const days = Object.keys(sessions);
-        const labels = days.map(d => `Day ${parseInt(d) + 1}`);
         
-        // Extract data for each charger type
+        // Define the correct order of days in German
+        const dayOrder = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+        
+        // Get the days from the data and sort them according to the defined order
+        let days = Object.keys(sessions);
+        days.sort((a, b) => {
+            return dayOrder.indexOf(a) - dayOrder.indexOf(b);
+        });
+        
+        // Use the sorted day names for labels
+        const labels = days;
+        
+        // Extract data for each charger type, ensuring it follows the sorted day order
         const chargerTypes = {};
         
         days.forEach(day => {
@@ -1063,26 +1080,44 @@ $(document).ready(function() {
         }
         
         const utilization = r.charger_utilization;
-        const labels = Object.keys(utilization);
+        
+        // Define the desired order of charger types
+        const desiredOrder = ['MCS', 'HPC', 'NCS'];
+        
+        // Filter and sort labels according to the desired order
+        let labels = Object.keys(utilization).filter(label => desiredOrder.includes(label));
+        labels.sort((a, b) => desiredOrder.indexOf(a) - desiredOrder.indexOf(b));
         
         // Get weekly totals for each charger type
         const weeklySessions = r.weekly_charging_totals || {};
         
         // Calculate absolute utilization numbers
         const absoluteValues = labels.map(label => {
-            // Get the number of chargers of this type
+            // Get the total weekly sessions for this type
+            return weeklySessions[label] || 0;
+        });
+        
+        // Calculate sessions per day per charger for tooltips
+        const sessionsPerDayPerCharger = labels.map(label => {
             const countKey = `${label}_count`;
             const numChargers = r[countKey] || 0;
-            
-            // Get the total weekly sessions for this type
             const totalSessions = weeklySessions[label] || 0;
             
-            return totalSessions;
+            // Calculate sessions per day per charger (weekly sessions / 7 days / number of chargers)
+            return numChargers > 0 ? (totalSessions / 7 / numChargers) : 0;
         });
         
         // Create chart
         const ctx = document.getElementById('utilization-chart').getContext('2d');
         if (charts.utilizationChart) charts.utilizationChart.destroy();
+        
+        // Choose appropriate colors based on the order
+        const backgroundColors = [];
+        labels.forEach(label => {
+            if (label === 'MCS') backgroundColors.push('#1cc88a'); // Green
+            else if (label === 'HPC') backgroundColors.push('#4e73df'); // Blue
+            else if (label === 'NCS') backgroundColors.push('#36b9cc'); // Cyan
+        });
         
         charts.utilizationChart = new Chart(ctx, {
             type: 'bar',
@@ -1091,7 +1126,7 @@ $(document).ready(function() {
                 datasets: [{
                     label: 'Weekly Sessions',
                     data: absoluteValues,
-                    backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc']
+                    backgroundColor: backgroundColors
                 }]
             },
             options: {
@@ -1120,14 +1155,15 @@ $(document).ready(function() {
                                 const label = context.dataset.label || '';
                                 const value = context.raw;
                                 const chargerType = context.label;
+                                const index = labels.indexOf(chargerType);
                                 const countKey = `${chargerType}_count`;
                                 const numChargers = r[countKey] || 0;
-                                const utilPercent = (utilization[chargerType] * 100).toFixed(1);
+                                const sessionsPerDay = sessionsPerDayPerCharger[index].toFixed(1);
                                 
                                 return [
                                     `${label}: ${value} sessions`,
                                     `Number of chargers: ${numChargers}`,
-                                    `Utilization: ${utilPercent}%`
+                                    `Sessions per day per charger: ${sessionsPerDay}`
                                 ];
                             }
                         }
@@ -1142,51 +1178,221 @@ $(document).ready(function() {
         const r1 = allResultsData[name1].results;
         const r2 = allResultsData[name2].results;
         
-        $('#compare-col-1').text(name1);
-        $('#compare-col-2').text(name2);
+        // Extract names without IDs for cleaner display
+        const displayName1 = name1.split('_').slice(1).join('_');
+        const displayName2 = name2.split('_').slice(1).join('_');
         
-        const metricsToCompare = [
-            { key: 'total_cost', label: 'Total Cost (€)', format: formatNumber },
-            { key: 'connection_cost', label: 'Connection Cost (€)', format: formatNumber },
-            { key: 'capacity_cost', label: 'Capacity Cost (€)', format: formatNumber },
-            { key: 'battery_cost', label: 'Battery Cost (€)', format: formatNumber },
-            { key: 'transformer_cost', label: 'Transformer Cost (€)', format: formatNumber },
-            { key: 'internal_cable_cost', label: 'Internal Cable Cost (€)', format: formatNumber },
-            { key: 'charger_cost', label: 'Charger Cost (€)', format: formatNumber },
-            { key: 'max_grid_load', label: 'Max Grid Load (kW)', format: formatDecimal },
-            { key: 'battery_capacity', label: 'Battery Capacity (kWh)', format: formatDecimal },
-            { key: 'battery_peak_power', label: 'Battery Peak Power (kW)', format: formatDecimal },
-            { key: 'energy_throughput_weekly_kwh', label: 'Weekly Energy (kWh)', format: formatDecimal },
-            { key: 'energy_throughput_annual_gwh', label: 'Annual Energy (GWh)', format: formatDecimal }
+        $('#compare-col-1').text(displayName1);
+        $('#compare-col-2').text(displayName2);
+        
+        // Organize metrics into categories for better presentation
+        const metricCategories = [
+            {
+                name: 'Cost Breakdown',
+                metrics: [
+                    { key: 'total_cost', label: 'Total Cost (€)', format: formatNumber, important: true },
+                    { key: 'connection_cost', label: 'Connection Cost (€)', format: formatNumber },
+                    { key: 'capacity_cost', label: 'Capacity Cost (€)', format: formatNumber },
+                    { key: 'battery_cost', label: 'Battery Cost (€)', format: formatNumber },
+                    { key: 'transformer_cost', label: 'Transformer Cost (€)', format: formatNumber },
+                    { key: 'internal_cable_cost', label: 'Internal Cable Cost (€)', format: formatNumber },
+                    { key: 'charger_cost', label: 'Charger Cost (€)', format: formatNumber }
+                ]
+            },
+            {
+                name: 'Technical Specifications',
+                metrics: [
+                    { key: 'max_grid_load', label: 'Max Grid Load (kW)', format: formatDecimal, important: true },
+                    { key: 'battery_capacity', label: 'Battery Capacity (kWh)', format: formatDecimal, important: true },
+                    { key: 'battery_peak_power', label: 'Battery Peak Power (kW)', format: formatDecimal },
+                    { key: 'energy_throughput_weekly_kwh', label: 'Weekly Energy (kWh)', format: formatDecimal },
+                    { key: 'energy_throughput_annual_gwh', label: 'Annual Energy (GWh)', format: formatDecimal }
+                ]
+            },
+            {
+                name: 'Charger Configuration',
+                metrics: [
+                    { key: 'MCS_count', label: 'MCS Chargers', format: formatDecimal },
+                    { key: 'HPC_count', label: 'HPC Chargers', format: formatDecimal },
+                    { key: 'NCS_count', label: 'NCS Chargers', format: formatDecimal }
+                ]
+            }
         ];
         
+        // Clear previous results
         $('#compare-table').empty();
         
-        metricsToCompare.forEach(metric => {
-            const val1 = r1[metric.key] !== undefined ? metric.format(r1[metric.key]) : '-';
-            const val2 = r2[metric.key] !== undefined ? metric.format(r2[metric.key]) : '-';
-            
-            let diff = '-';
-            let diffClass = '';
-            
-            if (r1[metric.key] !== undefined && r2[metric.key] !== undefined) {
-                const diffValue = r1[metric.key] - r2[metric.key];
-                diff = diffValue > 0 ? `+${metric.format(diffValue)}` : metric.format(diffValue);
-                diffClass = diffValue > 0 ? 'text-danger' : diffValue < 0 ? 'text-success' : '';
-            }
-            
+        // Create a more structured table with categories
+        metricCategories.forEach(category => {
+            // Add category header
             $('#compare-table').append(
-                `<tr>
-                    <td>${metric.label}</td>
-                    <td>${val1}</td>
-                    <td>${val2}</td>
-                    <td class="${diffClass}">${diff}</td>
+                `<tr class="table-secondary">
+                    <th colspan="4">${category.name}</th>
                 </tr>`
             );
+            
+            // Add metrics in this category
+            category.metrics.forEach(metric => {
+                // Skip metrics that don't exist in either result
+                if (r1[metric.key] === undefined && r2[metric.key] === undefined) return;
+                
+                const val1 = r1[metric.key] !== undefined ? metric.format(r1[metric.key]) : '-';
+                const val2 = r2[metric.key] !== undefined ? metric.format(r2[metric.key]) : '-';
+                
+                let diff = '-';
+                let diffClass = '';
+                let diffIcon = '';
+                
+                if (r1[metric.key] !== undefined && r2[metric.key] !== undefined) {
+                    const diffValue = r1[metric.key] - r2[metric.key];
+                    diff = diffValue > 0 ? `+${metric.format(diffValue)}` : metric.format(diffValue);
+                    
+                    // Determine if higher is better based on metric key (for costs, lower is better)
+                    const isLowerBetter = metric.key.includes('cost');
+                    
+                    if (diffValue > 0) {
+                        diffClass = isLowerBetter ? 'text-danger' : 'text-success';
+                        diffIcon = isLowerBetter ? 
+                            '<i class="fas fa-arrow-up text-danger"></i>' : 
+                            '<i class="fas fa-arrow-up text-success"></i>';
+                    } else if (diffValue < 0) {
+                        diffClass = isLowerBetter ? 'text-success' : 'text-danger';
+                        diffIcon = isLowerBetter ? 
+                            '<i class="fas fa-arrow-down text-success"></i>' : 
+                            '<i class="fas fa-arrow-down text-danger"></i>';
+                    }
+                    
+                    // Calculate percent difference if relevant
+                    if (r2[metric.key] !== 0) {
+                        const percentDiff = (diffValue / Math.abs(r2[metric.key]) * 100).toFixed(1);
+                        diff += ` (${percentDiff}%)`;
+                    }
+                }
+                
+                // Apply heavier styling to important metrics
+                const rowClass = metric.important ? 'fw-bold' : '';
+                
+                $('#compare-table').append(
+                    `<tr class="${rowClass}">
+                        <td>${metric.label}</td>
+                        <td class="text-end">${val1}</td>
+                        <td class="text-end">${val2}</td>
+                        <td class="text-end ${diffClass}">${diffIcon} ${diff}</td>
+                    </tr>`
+                );
+            });
         });
         
+        // Add a summary section highlighting the key differences
+        const totalCostDiff = r1.total_cost - r2.total_cost;
+        const costPercentDiff = ((totalCostDiff / r2.total_cost) * 100).toFixed(1);
+        const summaryMessage = totalCostDiff < 0 ? 
+            `<div class="alert alert-success mt-3">
+                <i class="fas fa-check-circle"></i> <strong>Result 1 costs ${formatNumber(Math.abs(totalCostDiff))}€ less</strong> 
+                than Result 2 (${costPercentDiff}% saving)
+            </div>` : 
+            `<div class="alert alert-warning mt-3">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Result 1 costs ${formatNumber(totalCostDiff)}€ more</strong> 
+                than Result 2 (${costPercentDiff}% increase)
+            </div>`;
+        
+        // Show result summary and explanation
+        $('#compare-summary').html(summaryMessage);
+        $('#compare-summary').show();
+        
+        // Show the key differences chart
+        createComparisonChart(name1, name2, r1, r2);
+        
         $('#compare-results').removeClass('d-none');
-    }    // Add scroll event handler for the results container
+    }
+
+    // Create a comparison chart to visualize differences
+    function createComparisonChart(name1, name2, r1, r2) {
+        // Prepare data for the chart
+        const costCategories = ['Connection', 'Capacity', 'Battery', 'Transformer', 'Internal Cable', 'Chargers'];
+        const costData1 = [
+            r1.connection_cost || 0,
+            r1.capacity_cost || 0, 
+            r1.battery_cost || 0,
+            r1.transformer_cost || 0,
+            r1.internal_cable_cost || 0,
+            r1.charger_cost || 0
+        ];
+        
+        const costData2 = [
+            r2.connection_cost || 0,
+            r2.capacity_cost || 0, 
+            r2.battery_cost || 0,
+            r2.transformer_cost || 0,
+            r2.internal_cable_cost || 0,
+            r2.charger_cost || 0
+        ];
+        
+        // Extract names without IDs for cleaner display
+        const displayName1 = name1.split('_').slice(1).join('_');
+        const displayName2 = name2.split('_').slice(1).join('_');
+        
+        // Create or update chart
+        const ctx = document.getElementById('comparison-chart').getContext('2d');
+        
+        if (charts.comparisonChart) {
+            charts.comparisonChart.destroy();
+        }
+        
+        charts.comparisonChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: costCategories,
+                datasets: [
+                    {
+                        label: displayName1,
+                        data: costData1,
+                        backgroundColor: '#4e73df',
+                        order: 1
+                    },
+                    {
+                        label: displayName2,
+                        data: costData2,
+                        backgroundColor: '#1cc88a',
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Cost (€)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Cost Comparison by Category'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${formatNumber(context.raw)} €`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Add scroll event handler for the results container
     $(document).on('scroll', '.results-container', function() {
         const container = $(this);
         const scrollPosition = container.scrollTop() + container.innerHeight();
@@ -1207,4 +1413,175 @@ $(document).ready(function() {
 
     // Initialize the page
     refreshResultsList();
+    
+    // Helper function to populate the Alternative Connections table
+    function populateAlternativeConnections(r, useExistingMV, useDistribution, useTransmission, useHV) {
+        const alternativeTable = $('#infrastructure-distance-table');
+        alternativeTable.empty();
+        
+        // If no data is available, show a message
+        if (!r) {
+            alternativeTable.append('<tr><td colspan="2" class="text-center">No alternative connection data available</td></tr>');
+            return;
+        }
+        
+        let alternativesFound = false;
+        
+        // Check for Distribution Line as an alternative
+        if (useDistribution !== 1 && r.distribution_distance !== undefined) {
+            alternativeTable.append(`
+                <tr class="table-secondary">
+                    <th colspan="2">Distribution Line</th>
+                </tr>
+                <tr>
+                    <th>Distance</th>
+                    <td class="text-end">${formatDecimal(r.distribution_distance, 2)} m</td>
+                </tr>
+            `);
+            
+            // Add cable size if available
+            if (r.distribution_selected_size !== undefined) {
+                alternativeTable.append(`
+                    <tr>
+                        <th>Cable Size</th>
+                        <td class="text-end">${formatDecimal(r.distribution_selected_size, 1)} mm²</td>
+                    </tr>
+                `);
+            }
+            
+            if (r.distribution_cost !== undefined) {
+                alternativeTable.append(`
+                    <tr>
+                        <th>Cost</th>
+                        <td class="text-end">${formatNumber(r.distribution_cost)} €</td>
+                    </tr>
+                `);
+            }
+            
+            alternativesFound = true;
+        }
+        
+        // Check for Transmission Line as an alternative
+        if (useTransmission !== 1 && r.transmission_distance !== undefined) {
+            alternativeTable.append(`
+                <tr class="table-secondary">
+                    <th colspan="2">Transmission Line</th>
+                </tr>
+                <tr>
+                    <th>Distance</th>
+                    <td class="text-end">${formatDecimal(r.transmission_distance, 2)} m</td>
+                </tr>
+            `);
+            
+            // Add cable size if available
+            if (r.transmission_selected_size !== undefined) {
+                alternativeTable.append(`
+                    <tr>
+                        <th>Cable Size</th>
+                        <td class="text-end">${formatDecimal(r.transmission_selected_size, 1)} mm²</td>
+                    </tr>
+                `);
+            }
+            
+            if (r.transmission_cost !== undefined) {
+                alternativeTable.append(`
+                    <tr>
+                        <th>Cost</th>
+                        <td class="text-end">${formatNumber(r.transmission_cost)} €</td>
+                    </tr>
+                `);
+            }
+            
+            alternativesFound = true;
+        }
+        
+        // Check for HV/New Substation as an alternative
+        if (useHV !== 1 && r.powerline_distance !== undefined) {
+            alternativeTable.append(`
+                <tr class="table-secondary">
+                    <th colspan="2">New Substation (HV)</th>
+                </tr>
+                <tr>
+                    <th>Distance</th>
+                    <td class="text-end">${formatDecimal(r.hv_distance || r.powerline_distance, 2)} m</td>
+                </tr>
+            `);
+            
+            // Add cable size if available
+            if (r.hv_selected_size !== undefined) {
+                alternativeTable.append(`
+                    <tr>
+                        <th>Cable Size</th>
+                        <td class="text-end">${formatDecimal(r.hv_selected_size, 1)} mm²</td>
+                    </tr>
+                `);
+            }
+            
+            if (r.hv_cost !== undefined) {
+                alternativeTable.append(`
+                    <tr>
+                        <th>Cost</th>
+                        <td class="text-end">${formatNumber(r.hv_cost)} €</td>
+                    </tr>
+                `);
+            }
+            
+            alternativesFound = true;
+        }
+        
+        // If no alternatives were found, show a message
+        if (!alternativesFound) {
+            alternativeTable.append('<tr><td colspan="2" class="text-center">No alternative connection data available</td></tr>');
+        }
+    }
+    
+    // Update the charger summary table with enhanced information
+    function populateChargerSummary(r) {
+        $('#charger-summary-table').empty();
+        const chargerTypes = [
+            ['MCS_count', 'MCS'], 
+            ['HPC_count', 'HPC'], 
+            ['NCS_count', 'NCS']
+        ];
+        
+        let hasData = false;
+        
+        chargerTypes.forEach(([key, label]) => {
+            if (r[key] !== undefined) {
+                hasData = true;
+                const count = r[key];
+                
+                // Get weekly sessions from the weekly_charging_totals if available
+                const weeklySessions = r.weekly_charging_totals && r.weekly_charging_totals[label] !== undefined 
+                    ? r.weekly_charging_totals[label] 
+                    : (r.weekly_charging_sessions && r.weekly_charging_sessions[label] ? r.weekly_charging_sessions[label] : 0);
+                
+                // Get utilization as sessions per charger per day
+                const utilization = r.charger_utilization && r.charger_utilization[label] !== undefined
+                    ? formatDecimal(r.charger_utilization[label], 1)
+                    : '-';
+                
+                // Sessions per week per charger, calculated if available
+                const sessionsPerWeekPerCharger = count > 0 && weeklySessions 
+                    ? formatDecimal(weeklySessions / count, 1) 
+                    : '-';
+                
+                $('#charger-summary-table').append(
+                    `<tr>
+                        <td class="text-center">${label}</td>
+                        <td class="text-center">${count}</td>
+                        <td class="text-center">${weeklySessions}</td>
+                        <td class="text-center">${utilization}</td>
+                    </tr>`
+                );
+            }
+        });
+        
+        // If no charger data, add a message
+        if (!hasData) {
+            $('#charger-summary-table').append(
+                `<tr><td colspan="4" class="text-center">No charger data available</td></tr>`
+            );
+        }
+    }
 });

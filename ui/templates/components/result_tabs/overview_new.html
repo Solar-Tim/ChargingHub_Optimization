@@ -1,7 +1,7 @@
 <!-- Overview Tab Component -->
-<div class="row">
+<div class="row mb-4">
     <div class="col-md-6">
-        <div class="card mb-3 h-100">
+        <div class="card h-100">
             <div class="card-header bg-primary text-white">
                 <h6 class="card-title mb-0">Configuration</h6>
             </div>
@@ -13,7 +13,7 @@
         </div>
     </div>
     <div class="col-md-6">
-        <div class="card mb-3 h-100">
+        <div class="card h-100">
             <div class="card-header bg-primary text-white">
                 <h6 class="card-title mb-0">Summary</h6>
             </div>
@@ -62,7 +62,7 @@
         </div>
         
         <!-- Battery status row - only shown when battery is included -->
-        <div class="row row-cols-1 row-cols-md-3 g-3 mt-2 d-none" id="battery-metrics-row">
+        <div class="row row-cols-1 row-cols-md-3 g-3 mt-4" id="battery-metrics-row">
             <div class="col">
                 <div class="card h-100 bg-light">
                     <div class="card-body text-center">
@@ -95,7 +95,7 @@
 </div>
 
 <!-- Energy and Connection row - MOVED UP below Key Metrics -->
-<div class="row mb-3">
+<div class="row mb-4">
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header bg-primary text-white">
@@ -134,7 +134,7 @@
 </div>
 
 <!-- Infrastructure rows - with swapped positions -->
-<div class="row mb-3">
+<div class="row mb-4">
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header bg-primary text-white">
@@ -150,7 +150,7 @@
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header bg-primary text-white">
-                <h6 class="card-title mb-0">Distance & Capacity</h6>
+                <h6 class="card-title mb-0">Alternative Connections</h6>
             </div>
             <div class="card-body">
                 <table class="table table-sm table-striped">
@@ -163,18 +163,18 @@
 
 <div class="card mb-4">
     <div class="card-header bg-primary text-white">
-        <h6 class="card-title mb-0">Charging Infrastructure</h6>
+        <h6 class="card-title mb-0">Charger Details</h6>
     </div>
     <div class="card-body">
         <div class="row">
             <div class="col-md-12">
-                <table class="table table-sm table-bordered">
-                    <thead class="table-light">
+                <table class="table table-sm table-striped">
+                    <thead>
                         <tr>
-                            <th>Charger Type</th>
-                            <th>Count</th>
-                            <th>Weekly Sessions</th>
-                            <th>Utilization</th>
+                            <th class="text-center">Charger Type</th>
+                            <th class="text-center">Count</th>
+                            <th class="text-center">Weekly Sessions</th>
+                            <th class="text-center">Sessions per Charger per Day</th>
                         </tr>
                     </thead>
                     <tbody id="charger-summary-table"></tbody>

@@ -12,7 +12,7 @@ class Config:
     PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
     CONTINUE_ON_ERROR = False
     FORECAST_YEAR = '2045'
-    RESULT_NAMING = {'USE_CUSTOM_ID': True, 'CUSTOM_ID': '045'}
+    RESULT_NAMING = {'USE_CUSTOM_ID': True, 'CUSTOM_ID': '000'}
     EXECUTION_FLAGS = {'RUN_TRAFFIC_CALCULATION': True,
         'RUN_CHARGING_HUB_SETUP': True, 'RUN_GRID_OPTIMIZATION': True,
         'RECALCULATE_BREAKS': False, 'RECALCULATE_TOLL_MIDPOINTS': False,
