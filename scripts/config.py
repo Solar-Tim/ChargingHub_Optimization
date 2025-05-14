@@ -11,14 +11,14 @@ class Config:
     """Global configuration parameters for the charging hub optimization project."""
     PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
     CONTINUE_ON_ERROR = False
-    FORECAST_YEAR = '2045'
-    RESULT_NAMING = {'USE_CUSTOM_ID': True, 'CUSTOM_ID': '000'}
+    FORECAST_YEAR = '2030'
+    RESULT_NAMING = {'USE_CUSTOM_ID': True, 'CUSTOM_ID': '999'}
     EXECUTION_FLAGS = {'RUN_TRAFFIC_CALCULATION': True,
         'RUN_CHARGING_HUB_SETUP': True, 'RUN_GRID_OPTIMIZATION': True,
         'RECALCULATE_BREAKS': False, 'RECALCULATE_TOLL_MIDPOINTS': False,
         'RUN_TRUCK_MATCHING': True, 'RUN_HUB_CONFIGURATION': True,
         'RUN_DEMAND_OPTIMIZATION': True, 'USE_DISTANCE_CALCULATION': True,
-        'CREATE_PLOT': False, 'CREATE_DISTANCE_MAPS': True,
+        'CREATE_PLOT': False, 'CREATE_DISTANCE_MAPS': False,
         'INCLUDE_BATTERY': False, 'USE_MANUAL_CHARGER_COUNT': False,
         'DEBUG_MODE': False}
     CHARGING_CONFIG = {'ALL_STRATEGIES': ['T_min', 'Konstant', 'Hub'],

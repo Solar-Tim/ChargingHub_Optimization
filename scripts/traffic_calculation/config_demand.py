@@ -17,6 +17,18 @@ neue_toll_midpoints = Config.EXECUTION_FLAGS['RECALCULATE_TOLL_MIDPOINTS']
 
 # Instead of copying these values, create property functions that always get the current value
 def get_default_location():
+    """
+    Get the default location, with support for environmental override.
+    This allows per-process location customization.
+    """
+    # Check if environment variables are set to override the default location
+    if 'OVERRIDE_LONGITUDE' in os.environ and 'OVERRIDE_LATITUDE' in os.environ:
+        return {
+            'LONGITUDE': float(os.environ['OVERRIDE_LONGITUDE']),
+            'LATITUDE': float(os.environ['OVERRIDE_LATITUDE'])
+        }
+    
+    # Otherwise return the default configuration
     return Config.DEFAULT_LOCATION
 
 # Replace static variables with property functions

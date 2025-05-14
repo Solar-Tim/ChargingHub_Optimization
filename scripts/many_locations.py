@@ -37,11 +37,28 @@ def process_single_location(location_data):
         # Debug output
         print(f"Processing location {location_id} with coordinates ({longitude}, {latitude})")
         
-        # Run the optimization with the local config
-        # Need to modify run_all_processes to accept a config parameter
-        run_all_processes(config=local_config)
+        # Create custom environment variables to override default location
+        # This ensures all modules will use this location even if they don't accept config param
+        os.environ['OVERRIDE_LONGITUDE'] = str(longitude)
+        os.environ['OVERRIDE_LATITUDE'] = str(latitude)
+        os.environ['LOCATION_ID'] = str(location_id)
         
-        return f"Location {location_id} completed successfully"
+        try:
+            # Run the optimization with the local config
+            run_all_processes(config=local_config)
+            
+            # Clear environment variables after processing
+            for var in ['OVERRIDE_LONGITUDE', 'OVERRIDE_LATITUDE', 'LOCATION_ID']:
+                if var in os.environ:
+                    del os.environ[var]
+                    
+            return f"Location {location_id} completed successfully"
+        except Exception as e:
+            # Ensure env vars are cleared even if an error occurs
+            for var in ['OVERRIDE_LONGITUDE', 'OVERRIDE_LATITUDE', 'LOCATION_ID']:
+                if var in os.environ:
+                    del os.environ[var]
+            raise
     except Exception as e:
         error_msg = f"Error processing location {location_id}: {str(e)}\n{traceback.format_exc()}"
         print(error_msg)
