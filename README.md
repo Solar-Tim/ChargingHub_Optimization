@@ -95,10 +95,10 @@ python main.py
 ```
 ChargingHub_Optimization/
 │
-├── data/                   # Directory for input data
-│   ├── load/               # Load profiles and metadata
-│   ├── osm/                # Power infrastructure GIS data
-│   └── traffic/            # Traffic analysis data
+├── data/                   # Directory for input data (user must provide required CSV/GeoJSON files)
+│   ├── load/               # (optional) Load profiles and metadata
+│   ├── osm/                # (optional) Power infrastructure GIS data
+│   └── traffic/            # (optional) Traffic analysis data
 │
 ├── logs/                   # Log files from various processes
 │
@@ -107,17 +107,34 @@ ChargingHub_Optimization/
 ├── scripts/                # Core scripts for optimization modules
 │   ├── charginghub_setup/  # Charging hub optimization
 │   ├── grid_optimization/  # Grid connection optimization
-│   └── visuals/            # Visualization generation
-│   └── main.py             # Entry Point for the whole Optimization Pipeline
+│   ├── traffic_calculation/# Traffic demand and break assignment
+│   ├── distance_scripts/   # Distance and routing calculations
+│   ├── visuals/            # Visualization generation
+│   ├── main.py             # Entry Point for the whole Optimization Pipeline
+│   ├── extract_results_to_csv.py # Export results to CSV
+│   └── config.py           # Central configuration
 │
 ├── ui/                     # Web interface components
-│   ├── static/             # JavaScript, CSS and other static files
+│   ├── static/             # JavaScript, CSS, images
 │   ├── templates/          # HTML templates
-│   └── app.py              # Flask web application
+│   ├── app.py              # Flask web application (main entry point for UI)
+│   └── run_ui.py           # Alternative script to start the UI
 │
-├── requirements.txt        # Dependencies
+├── requirements.txt        # Python dependencies
 └── README.md               # This file
 ```
+
+## Hinweise zum Datenordner
+Die benötigten Eingabedateien (CSV, GeoJSON) sind aus urheberrechtlichen Gründen nicht im Repository enthalten und müssen vom Nutzer bereitgestellt werden. Die genaue Struktur und Dateinamen sind im Abschnitt "Required Data" beschrieben.
+
+## Hinweise zum Starten des Webservers
+Um das Web-UI zu starten, führen Sie folgenden Befehl aus:
+
+```bash
+python -m ui.app
+```
+
+Das UI ist dann unter http://localhost:5000 erreichbar. Alternativ kann auch `python ui/run_ui.py` verwendet werden.
 
 ## Contributing
 Contributions to this project are welcome. Please follow these steps:
